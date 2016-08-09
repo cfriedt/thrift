@@ -23,17 +23,19 @@
 #include <thrift/transport/TBufferTransports.h>
 #include <thrift/transport/TVirtualTransport.h>
 
+extern "C" {
+
+#define WITH_POSIX 1
+#include <coap/coap.h>
+#undef WITH_POSIX
+
+
+}
+
 namespace apache {
 namespace thrift {
 namespace transport {
 
-/**
- * HTTP implementation of the thrift transport. This was irritating
- * to write, but the alternatives in C++ land are daunting. Linking CURL
- * requires 23 dynamic libraries last time I checked (WTF?!?). All we have
- * here is a VERY basic HTTP/1.1 client which supports HTTP 100 Continue,
- * chunked transfer encoding, keepalive, etc. Tested against Apache.
- */
 class TCoapTransport : public TVirtualTransport<TCoapTransport> {
 public:
   TCoapTransport(boost::shared_ptr<TTransport> transport);

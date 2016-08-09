@@ -122,10 +122,11 @@ libthriftz_la_SOURCES = src/thrift/transport/TZlibTransport.cpp \
                         src/thrift/transport/THeaderTransport.cpp \
                         src/thrift/protocol/THeaderProtocol.cpp 
 
+if AMX_HAVE_COAP
 libthriftcoap_la_SOURCES = src/thrift/transport/TCoapClient.cpp \
                            src/thrift/transport/TCoapServer.cpp \
                            src/thrift/transport/TCoapTransport.cpp
-
+endif
 
 libthriftqt_la_MOC = src/thrift/qt/moc_TQTcpServer.cpp
 nodist_libthriftqt_la_SOURCES = $(libthriftqt_la_MOC)
@@ -231,6 +232,13 @@ include_transport_HEADERS = \
                          src/thrift/transport/TBufferTransports.h \
                          src/thrift/transport/TShortReadTransport.h \
                          src/thrift/transport/TZlibTransport.h
+
+if AMX_HAVE_COAP
+include_transport_HEADERS += \
+                         src/thrift/transport/TCoapClient.h \
+                         src/thrift/transport/TCoapServer.h \
+                         src/thrift/transport/TCoapTransport.h
+endif
 
 include_serverdir = $(include_thriftdir)/server
 include_server_HEADERS = \
