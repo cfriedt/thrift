@@ -67,6 +67,14 @@ void THttpServer::parseHeader(char* header) {
   }
 }
 
+std::string THttpServer::getUri() {
+	return uri;
+}
+
+std::string THttpServer::getMethod() {
+	return method;
+}
+
 bool THttpServer::parseStatusLine(char* status) {
   char* method = status;
 
@@ -84,6 +92,11 @@ bool THttpServer::parseStatusLine(char* status) {
     throw TTransportException(string("Bad Status: ") + status);
   }
   *http = '\0';
+
+  this->uri.clear();
+  this->uri.append( path );
+  this->method.clear();
+  this->method.append( method );
 
   if (strcmp(method, "POST") == 0) {
     // POST method ok, looking for content.

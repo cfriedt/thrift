@@ -34,11 +34,17 @@ public:
 
   virtual void flush();
 
+  std::string getUri();
+  std::string getMethod();
+
 protected:
   void readHeaders();
   virtual void parseHeader(char* header);
   virtual bool parseStatusLine(char* status);
   std::string getTimeRFC1123();
+
+  std::string uri;
+  std::string method;
 };
 
 /**
