@@ -8,12 +8,12 @@ dnl and /opt/coap.
 dnl If these all fail, it will try the $COAP_ROOT environment variable.
 dnl
 dnl This macro calls:
-dnl   AC_SUBST(COAP_CPPFLAGS)
-dnl   AC_SUBST(COAP_LDFLAGS)
-dnl   AC_SUBST(COAP_LIBS)
+dnl   AC_SUBST(LIBCOAP_CPPFLAGS)
+dnl   AC_SUBST(LIBCOAP_LDFLAGS)
+dnl   AC_SUBST(LIBCOAP_LIBS)
 dnl
 dnl And (if coap is found):
-dnl   AC_DEFINE(HAVE_COAP)
+dnl   AC_DEFINE(HAVE_LIBCOAP)
 dnl
 dnl It also leaves the shell variables "success" and "ax_have_coap"
 dnl set to "yes" or "no".
@@ -44,21 +44,21 @@ AC_DEFUN([AX_LIB_COAP_DO_CHECK],
 
           # Set our flags if we are checking a specific directory.
           if test -n "$ax_coap_path" ; then
-            COAP_CPPFLAGS="-I$ax_coap_path/include"
-            COAP_LDFLAGS="-L$ax_coap_path/lib"
+            LIBCOAP_CPPFLAGS="-I$ax_coap_path/include"
+            LIBCOAP_LDFLAGS="-L$ax_coap_path/lib"
             LD_LIBRARY_PATH="$ax_coap_path/lib:$LD_LIBRARY_PATH"
           else
-            COAP_CPPFLAGS="-DWITH_POSIX=1"
-            COAP_LDFLAGS=""
+            LIBCOAP_CPPFLAGS="-DWITH_POSIX=1"
+            LIBCOAP_LDFLAGS=""
           fi
 
           # Required flag for coap.
-          COAP_LIBS="-lcoap-1"
+          LIBCOAP_LIBS="-lcoap-1"
 
           # Prepare the environment for compilation.
-          CPPFLAGS="$CPPFLAGS $COAP_CPPFLAGS"
-          LDFLAGS="$LDFLAGS $COAP_LDFLAGS"
-          LIBS="$LIBS $COAP_LIBS"
+          CPPFLAGS="$CPPFLAGS $LIBCOAP_CPPFLAGS"
+          LDFLAGS="$LDFLAGS $LIBCOAP_LDFLAGS"
+          LIBS="$LIBS $LIBCOAP_LIBS"
           export CPPFLAGS
           export LDFLAGS
           export LIBS
@@ -140,19 +140,19 @@ AC_DEFUN([AX_LIB_COAP],
 
             if test "$success" != "yes" ; then
               AC_MSG_RESULT(no)
-              COAP_CPPFLAGS=""
-              COAP_LDFLAGS=""
-              COAP_LIBS=""
+              LIBCOAP_CPPFLAGS=""
+              LIBCOAP_LDFLAGS=""
+              LIBCOAP_LIBS=""
             else
               AC_MSG_RESULT(yes)
-              AC_DEFINE(HAVE_COAP,,[define if coap is available])
+              AC_DEFINE(HAVE_LIBCOAP,,[define if coap is available])
             fi
 
             ax_have_coap="$success"
 
-            AC_SUBST(COAP_CPPFLAGS)
-            AC_SUBST(COAP_LDFLAGS)
-            AC_SUBST(COAP_LIBS)
+            AC_SUBST(LIBCOAP_CPPFLAGS)
+            AC_SUBST(LIBCOAP_LDFLAGS)
+            AC_SUBST(LIBCOAP_LIBS)
           fi
 
           ])

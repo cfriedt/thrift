@@ -44,6 +44,10 @@ TCoapTransport::TCoapTransport(boost::shared_ptr<TTransport> transport)
     httpBufLen_(0),
     httpBufSize_(1024) {
   init();
+
+  const std::string coap_ver = coap_package_version();
+
+
 }
 
 void TCoapTransport::init() {

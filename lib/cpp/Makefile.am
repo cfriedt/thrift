@@ -48,7 +48,7 @@ if AMX_HAVE_ZLIB
 lib_LTLIBRARIES += libthriftz.la
 pkgconfig_DATA += thrift-z.pc
 endif
-if AMX_HAVE_COAP
+if AMX_HAVE_LIBCOAP
 lib_LTLIBRARIES += libthriftcoap.la
 pkgconfig_DATA += thrift-coap.pc
 endif
@@ -122,11 +122,9 @@ libthriftz_la_SOURCES = src/thrift/transport/TZlibTransport.cpp \
                         src/thrift/transport/THeaderTransport.cpp \
                         src/thrift/protocol/THeaderProtocol.cpp 
 
-if AMX_HAVE_COAP
 libthriftcoap_la_SOURCES = src/thrift/transport/TCoapClient.cpp \
                            src/thrift/transport/TCoapServer.cpp \
                            src/thrift/transport/TCoapTransport.cpp
-endif
 
 libthriftqt_la_MOC = src/thrift/qt/moc_TQTcpServer.cpp
 nodist_libthriftqt_la_SOURCES = $(libthriftqt_la_MOC)
@@ -143,6 +141,7 @@ CLEANFILES += $(libthriftqt5_la_MOC)
 # Flags for the various libraries
 libthriftnb_la_CPPFLAGS = $(AM_CPPFLAGS) $(LIBEVENT_CPPFLAGS)
 libthriftz_la_CPPFLAGS  = $(AM_CPPFLAGS) $(ZLIB_CPPFLAGS)
+libthriftcoap_la_CPPFLAGS  = $(AM_CPPFLAGS) $(LIBCOAP_CPPFLAGS)
 libthriftqt_la_CPPFLAGS = $(AM_CPPFLAGS) $(QT_CFLAGS)
 libthriftqt5_la_CPPFLAGS = $(AM_CPPFLAGS) $(QT5_CFLAGS)
 if QT5_REDUCE_RELOCATIONS
@@ -154,6 +153,7 @@ libthriftqt_la_CXXFLAGS  = $(AM_CXXFLAGS)
 libthriftqt5_la_CXXFLAGS  = $(AM_CXXFLAGS)
 libthriftnb_la_LDFLAGS  = -release $(VERSION) $(BOOST_LDFLAGS)
 libthriftz_la_LDFLAGS   = -release $(VERSION) $(BOOST_LDFLAGS)
+libthriftcoap_la_LDFLAGS   = -release $(VERSION) $(LIBCOAP_LDFLAGS) $(LIBCOAP_LIBS)
 libthriftqt_la_LDFLAGS   = -release $(VERSION) $(BOOST_LDFLAGS) $(QT_LIBS)
 libthriftqt5_la_LDFLAGS   = -release $(VERSION) $(BOOST_LDFLAGS) $(QT5_LIBS)
 
@@ -230,10 +230,14 @@ include_transport_HEADERS = \
                          src/thrift/transport/TTransportException.h \
                          src/thrift/transport/TTransportUtils.h \
                          src/thrift/transport/TBufferTransports.h \
-                         src/thrift/transport/TShortReadTransport.h \
-                         src/thrift/transport/TZlibTransport.h
+                         src/thrift/transport/TShortReadTransport.h
 
-if AMX_HAVE_COAP
+if AMX_HAVE_ZLIB
+include_transport_HEADERS += \
+                         src/thrift/transport/TZlibTransport.h
+endif
+
+if AMX_HAVE_LIBCOAP
 include_transport_HEADERS += \
                          src/thrift/transport/TCoapClient.h \
                          src/thrift/transport/TCoapServer.h \
