@@ -48,6 +48,10 @@ if AMX_HAVE_ZLIB
 lib_LTLIBRARIES += libthriftz.la
 pkgconfig_DATA += thrift-z.pc
 endif
+if AMX_HAVE_COAP
+lib_LTLIBRARIES += libthriftcoap.la
+pkgconfig_DATA += thrift-coap.pc
+endif
 if AMX_HAVE_QT
 lib_LTLIBRARIES += libthriftqt.la
 pkgconfig_DATA += thrift-qt.pc
@@ -117,6 +121,10 @@ libthriftnb_la_SOURCES = src/thrift/server/TNonblockingServer.cpp \
 libthriftz_la_SOURCES = src/thrift/transport/TZlibTransport.cpp \
                         src/thrift/transport/THeaderTransport.cpp \
                         src/thrift/protocol/THeaderProtocol.cpp 
+
+libthriftcoap_la_SOURCES = src/thrift/transport/TCoapClient.cpp \
+                           src/thrift/transport/TCoapServer.cpp \
+                           src/thrift/transport/TCoapTransport.cpp
 
 
 libthriftqt_la_MOC = src/thrift/qt/moc_TQTcpServer.cpp
