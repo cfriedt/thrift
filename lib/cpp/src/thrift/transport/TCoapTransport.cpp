@@ -20,6 +20,9 @@
 #include <iostream>
 #include <sstream>
 
+#include <boost/make_shared.hpp>
+
+#include <thrift/transport/TSocket.h>
 #include <thrift/transport/TCoapTransport.h>
 
 namespace apache {
@@ -31,11 +34,9 @@ using namespace std;
 TCoapTransport::TCoapTransport( boost::shared_ptr<TTransport> transport )
 :
 	transport_( transport ),
-	origin_( "" ),
-	coap_address( toCoapAddress( transport ) )
+	origin_( "" )
 {
 	const std::string coap_ver = coap_package_version();
-	init();
 }
 
 TCoapTransport::~TCoapTransport() {
@@ -47,13 +48,35 @@ TCoapTransport::~TCoapTransport() {
 	coap_context.reset();
 }
 
+void TCoapTransport::open() {
+
+	std::cout << "open() called" << std::endl;
+
+	transport_->open();
+
+	std::cout << "getting coap address..." << std::endl;
+
+	coap_address = toCoapAddress( transport_ );
+
+	std::cout << "got coap address!!" << std::endl;
+
+	std::cout << "initializing coap context..." << std::endl;
+
+	coap_context = boost::shared_ptr<coap_context_t>( coap_new_context( coap_address.get() ) );
+	if ( NULL == coap_context.get() ) {
+		throw std::runtime_error( "coap_new_context() failed" );
+	}
+
+	std::cout << "initialized coap context!!!" << std::endl;
+}
+
 uint32_t TCoapTransport::read( uint8_t* buf, uint32_t len ) {
 	throw std::runtime_error( "TCoapTransport::read() not implemented" );
 	return 0;
 }
 
 uint32_t TCoapTransport::readEnd() {
-	throw std::runtime_error( "TCoapTransport::readEnd() not implemented" );
+	//throw std::runtime_error( "TCoapTransport::readEnd() not implemented" );
 	return 0;
 }
 
@@ -72,10 +95,6 @@ const std::string TCoapTransport::getOrigin() {
 }
 
 void TCoapTransport::init() {
-	coap_context = boost::shared_ptr<coap_context_t>( coap_new_context( coap_address.get() ) );
-	if ( NULL == coap_context.get() ) {
-		throw std::runtime_error( "coap_new_context() failed" );
-	}
 }
 
 boost::shared_ptr<coap_context_t> TCoapTransport::getCoapContext() {
@@ -83,8 +102,44 @@ boost::shared_ptr<coap_context_t> TCoapTransport::getCoapContext() {
 }
 
 boost::shared_ptr<coap_address_t> TCoapTransport::toCoapAddress( boost::shared_ptr<TTransport> trans ) {
-	throw std::runtime_error( "TCoapTransport::toCoapAddress() not implemented" );
-	//return boost::shared_ptr<coap_address_t>( NULL );
+
+	sockaddr *sock_p;
+	socklen_t sock_len;
+
+	boost::shared_ptr<TSocket> socket_trans;
+	boost::shared_ptr<coap_address_t> coap_address;
+
+	coap_address = boost::make_shared<coap_address_t>();
+	socket_trans = boost::static_pointer_cast<TSocket>( trans );
+
+	sock_p = socket_trans->getCachedAddress( & sock_len );
+	if ( NULL == sock_p ) {
+		throw std::runtime_error( "TSocket::getCachedAddress() returned NULL!" );
+	}
+
+	switch( sock_len ) {
+
+	case sizeof(sockaddr_in):
+
+		std::memcpy( & coap_address->addr.sin, sock_p, sock_len );
+		coap_address->addr.sin.sin_port = ntohs( coap_address->addr.sin.sin_port );
+		coap_address->addr.sin.sin_addr.s_addr = ntohl( coap_address->addr.sin.sin_addr.s_addr );
+
+		break;
+
+	case sizeof(sockaddr_in6):
+
+		std::memcpy( & coap_address->addr.sin6, sock_p, sock_len );
+		coap_address->addr.sin6.sin6_port = ntohs( coap_address->addr.sin6.sin6_port );
+
+		break;
+
+	default:
+		throw std::runtime_error( "unsupported socket length" );
+		break;
+	}
+
+	return coap_address;
 }
 
 }

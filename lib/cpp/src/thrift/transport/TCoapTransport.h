@@ -41,7 +41,7 @@ public:
 
   virtual ~TCoapTransport();
 
-  void open() { transport_->open(); }
+  void open();
 
   bool isOpen() { return transport_->isOpen(); }
 
