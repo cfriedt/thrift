@@ -29,7 +29,6 @@ extern "C" {
 #include <coap/coap.h>
 #undef WITH_POSIX
 
-
 }
 
 namespace apache {
@@ -38,7 +37,7 @@ namespace transport {
 
 class TCoapTransport : public TVirtualTransport<TCoapTransport> {
 public:
-  TCoapTransport(boost::shared_ptr<TTransport> transport);
+  TCoapTransport( boost::shared_ptr<TTransport> transport );
 
   virtual ~TCoapTransport();
 
@@ -60,6 +59,12 @@ public:
 
   virtual const std::string getOrigin();
 
+  // coap specific
+
+  boost::shared_ptr<coap_context_t> getCoapContext();
+
+  static boost::shared_ptr<coap_address_t> toCoapAddress( boost::shared_ptr<TTransport> trans );
+
 protected:
   boost::shared_ptr<TTransport> transport_;
   std::string origin_;
@@ -67,37 +72,10 @@ protected:
   TMemoryBuffer writeBuffer_;
   TMemoryBuffer readBuffer_;
 
-  bool readHeaders_;
-  bool chunked_;
-  bool chunkedDone_;
-  uint32_t chunkSize_;
-  uint32_t contentLength_;
-
-  char* httpBuf_;
-  uint32_t httpPos_;
-  uint32_t httpBufLen_;
-  uint32_t httpBufSize_;
+  boost::shared_ptr<coap_address_t> coap_address;
+  boost::shared_ptr<coap_context_t> coap_context;
 
   virtual void init();
-
-  uint32_t readMoreData();
-  char* readLine();
-
-  void readHeaders();
-  virtual void parseHeader(char* header) = 0;
-  virtual bool parseStatusLine(char* status) = 0;
-
-  uint32_t readChunked();
-  void readChunkedFooters();
-  uint32_t parseChunkSize(char* line);
-
-  uint32_t readContent(uint32_t size);
-
-  void refill();
-  void shift();
-
-  static const char* CRLF;
-  static const int CRLF_LEN;
 };
 }
 }

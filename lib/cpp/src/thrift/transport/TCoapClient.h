@@ -28,9 +28,9 @@ namespace transport {
 
 class TCoapClient : public TCoapTransport {
 public:
-  TCoapClient(boost::shared_ptr<TTransport> transport, std::string host, std::string path = "");
+  TCoapClient( boost::shared_ptr<TTransport> transport, std::string host, std::string path = "" );
 
-  TCoapClient(std::string host, int port, std::string path = "");
+  TCoapClient( std::string host, int port, std::string path = "");
 
   virtual ~TCoapClient();
 
@@ -39,9 +39,6 @@ public:
 protected:
   std::string host_;
   std::string path_;
-
-  virtual void parseHeader(char* header);
-  virtual bool parseStatusLine(char* status);
 };
 }
 }

@@ -23,9 +23,14 @@
 
 #include <thrift/transport/TCoapServer.h>
 #include <thrift/transport/TSocket.h>
-#if defined(_MSC_VER) || defined(__MINGW32__)
-  #include <Shlwapi.h>
-#endif
+
+extern "C" {
+
+#ifndef ARRAY_SIZE
+#define ARRAY_SIZE( x ) (int)( sizeof( x ) / sizeof( (x)[ 0 ] ) )
+#endif // ARRAY_SIZE
+
+}
 
 namespace apache {
 namespace thrift {
@@ -33,38 +38,14 @@ namespace transport {
 
 using namespace std;
 
-TCoapServer::TCoapServer(boost::shared_ptr<TTransport> transport) : TCoapTransport(transport) {
+TCoapServer::TCoapServer(boost::shared_ptr<TTransport> transport )
+:
+	TCoapTransport( transport )
+{
 }
 
 TCoapServer::~TCoapServer() {
-}
-
-#if defined(_MSC_VER) || defined(__MINGW32__)
-  #define THRIFT_strncasecmp(str1, str2, len) _strnicmp(str1, str2, len)
-  #define THRIFT_strcasestr(haystack, needle) StrStrIA(haystack, needle)
-#else
-  #define THRIFT_strncasecmp(str1, str2, len) strncasecmp(str1, str2, len)
-  #define THRIFT_strcasestr(haystack, needle) strcasestr(haystack, needle)
-#endif
-
-void TCoapServer::parseHeader(char* header) {
-  char* colon = strchr(header, ':');
-  if (colon == NULL) {
-    return;
-  }
-  size_t sz = colon - header;
-  char* value = colon + 1;
-
-  if (THRIFT_strncasecmp(header, "Transfer-Encoding", sz) == 0) {
-    if (THRIFT_strcasestr(value, "chunked") != NULL) {
-      chunked_ = true;
-    }
-  } else if (THRIFT_strncasecmp(header, "Content-length", sz) == 0) {
-    chunked_ = false;
-    contentLength_ = atoi(value);
-  } else if (strncmp(header, "X-Forwarded-For", sz) == 0) {
-    origin_ = value;
-  }
+	resource.clear();
 }
 
 std::string TCoapServer::getUri() {
@@ -75,60 +56,21 @@ std::string TCoapServer::getMethod() {
 	return method;
 }
 
-bool TCoapServer::parseStatusLine(char* status) {
-  char* method = status;
-
-  char* path = strchr(method, ' ');
-  if (path == NULL) {
-    throw TTransportException(string("Bad Status: ") + status);
-  }
-
-  *path = '\0';
-  while (*(++path) == ' ') {
-  };
-
-  char* http = strchr(path, ' ');
-  if (http == NULL) {
-    throw TTransportException(string("Bad Status: ") + status);
-  }
-  *http = '\0';
-
-  this->uri.clear();
-  this->uri.append( path );
-  this->method.clear();
-  this->method.append( method );
-
-  if (strcmp(method, "POST") == 0) {
-    // POST method ok, looking for content.
-    return true;
-  } else if (strcmp(method, "OPTIONS") == 0) {
-    // preflight OPTIONS method, we don't need further content.
-    // how to graciously close connection?
-    uint8_t* buf;
-    uint32_t len;
-    writeBuffer_.getBuffer(&buf, &len);
-
-    // Construct the HTTP header
-    std::ostringstream h;
-    h << "HTTP/1.1 200 OK" << CRLF << "Date: " << getTimeRFC1123() << CRLF
-      << "Access-Control-Allow-Origin: *" << CRLF << "Access-Control-Allow-Methods: POST, OPTIONS"
-      << CRLF << "Access-Control-Allow-Headers: Content-Type" << CRLF << CRLF;
-    string header = h.str();
-
-    // Write the header, then the data, then flush
-    transport_->write((const uint8_t*)header.c_str(), static_cast<uint32_t>(header.size()));
-    transport_->write(buf, len);
-    transport_->flush();
-
-    // Reset the buffer and header variables
-    writeBuffer_.resetBuffer();
-    readHeaders_ = true;
-    return true;
-  }
-  throw TTransportException(string("Bad Status (unsupported method): ") + status);
+void TCoapServer::requestResource( boost::shared_ptr<coap_resource_t> req ) {
+	coap_resource_t *res;
+	res = coap_resource_init( req->uri.s, req->uri.length, req->flags );
+	for( int j = 0; j < ARRAY_SIZE( req->handler ); j++ ) {
+		if ( NULL == req->handler[ j ] ) {
+			continue;
+		}
+		coap_register_handler( res, j, req->handler[ j ] );
+		coap_add_resource( getCoapContext().get(), res );
+	}
+	resource.push_back( boost::shared_ptr<coap_resource_t>( res ) );
 }
 
 void TCoapServer::flush() {
+/*
   // Fetch the contents of the write buffer
   uint8_t* buf;
   uint32_t len;
@@ -151,27 +93,9 @@ void TCoapServer::flush() {
   // Reset the buffer and header variables
   writeBuffer_.resetBuffer();
   readHeaders_ = true;
+*/
 }
 
-std::string TCoapServer::getTimeRFC1123() {
-  static const char* Days[] = {"Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"};
-  static const char* Months[]
-      = {"Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"};
-  char buff[128];
-  time_t t = time(NULL);
-  tm* broken_t = gmtime(&t);
-
-  sprintf(buff,
-          "%s, %d %s %d %d:%d:%d GMT",
-          Days[broken_t->tm_wday],
-          broken_t->tm_mday,
-          Months[broken_t->tm_mon],
-          broken_t->tm_year + 1900,
-          broken_t->tm_hour,
-          broken_t->tm_min,
-          broken_t->tm_sec);
-  return std::string(buff);
-}
 }
 }
 } // apache::thrift::transport

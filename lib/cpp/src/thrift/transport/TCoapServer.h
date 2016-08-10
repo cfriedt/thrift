@@ -26,9 +26,15 @@ namespace apache {
 namespace thrift {
 namespace transport {
 
+typedef struct coap_resource_initializer {
+
+
+
+} coap_resource_initializer_t;
+
 class TCoapServer : public TCoapTransport {
 public:
-  TCoapServer(boost::shared_ptr<TTransport> transport);
+  TCoapServer( boost::shared_ptr<TTransport> transport );
 
   virtual ~TCoapServer();
 
@@ -37,14 +43,13 @@ public:
   std::string getUri();
   std::string getMethod();
 
-protected:
-  void readHeaders();
-  virtual void parseHeader(char* header);
-  virtual bool parseStatusLine(char* status);
-  std::string getTimeRFC1123();
+  void requestResource( boost::shared_ptr<coap_resource_t> res );
 
+protected:
   std::string uri;
   std::string method;
+
+  std::vector<boost::shared_ptr<coap_resource_t>> resource;
 };
 
 /**
@@ -59,8 +64,8 @@ public:
   /**
    * Wraps the transport into a buffered one.
    */
-  virtual boost::shared_ptr<TTransport> getTransport(boost::shared_ptr<TTransport> trans) {
-    return boost::shared_ptr<TTransport>(new TCoapServer(trans));
+  virtual boost::shared_ptr<TTransport> getTransport( boost::shared_ptr<TTransport> trans ) {
+    return boost::shared_ptr<TTransport>( new TCoapServer( trans ) );
   }
 };
 }
