@@ -70,6 +70,7 @@ void TCoapServer::requestResource( boost::shared_ptr<coap_resource_t> req ) {
 }
 
 void TCoapServer::flush() {
+	throw std::runtime_error( "TCoapServer::flush() not implemented" );
 /*
   // Fetch the contents of the write buffer
   uint8_t* buf;

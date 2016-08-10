@@ -48,17 +48,18 @@ TCoapTransport::~TCoapTransport() {
 }
 
 uint32_t TCoapTransport::read( uint8_t* buf, uint32_t len ) {
-	std::cout << "read() not implemented" << std::endl;
+	throw std::runtime_error( "TCoapTransport::read() not implemented" );
 	return 0;
 }
 
 uint32_t TCoapTransport::readEnd() {
-	std::cout << "readEnd() not implemented" << std::endl;
+	throw std::runtime_error( "TCoapTransport::readEnd() not implemented" );
 	return 0;
 }
 
 void TCoapTransport::write( const uint8_t* buf, uint32_t len ) {
-	writeBuffer_.write( buf, len );
+	//writeBuffer_.write( buf, len );
+	throw std::runtime_error( "TCoapTransport::write() not implemented" );
 }
 
 const std::string TCoapTransport::getOrigin() {
@@ -82,7 +83,8 @@ boost::shared_ptr<coap_context_t> TCoapTransport::getCoapContext() {
 }
 
 boost::shared_ptr<coap_address_t> TCoapTransport::toCoapAddress( boost::shared_ptr<TTransport> trans ) {
-	return boost::shared_ptr<coap_address_t>( NULL );
+	throw std::runtime_error( "TCoapTransport::toCoapAddress() not implemented" );
+	//return boost::shared_ptr<coap_address_t>( NULL );
 }
 
 }

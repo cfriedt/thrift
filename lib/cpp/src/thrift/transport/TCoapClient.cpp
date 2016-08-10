@@ -51,6 +51,7 @@ TCoapClient::~TCoapClient() {
 }
 
 void TCoapClient::flush() {
+	throw std::runtime_error( "TCoapClient::flush() not implemented" );
 /*
   // Fetch the contents of the write buffer
   uint8_t* buf;
