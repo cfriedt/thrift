@@ -26,21 +26,55 @@ namespace apache {
 namespace thrift {
 namespace transport {
 
-class TCoapClient : public TCoapTransport {
+class TCoapClient: public TCoapTransport {
 public:
-  TCoapClient( boost::shared_ptr<TTransport> transport, std::string host, std::string path = "" );
 
-  TCoapClient( std::string host, int port, std::string path = "");
+	typedef enum {
+		CON = COAP_MESSAGE_CON,
+		NON,
+		ACK,
+		RST,
+	} coap_message_t;
 
-  virtual ~TCoapClient();
+	typedef enum {
+		GET = COAP_REQUEST_GET,
+		POST,
+		PUT,
+		DELETE,
+	} coap_method_t;
 
-  virtual void flush();
+	TCoapClient( boost::shared_ptr<TTransport> transport, std::string host, std::string path = "" );
+
+	TCoapClient( std::string host, int port, std::string path = "" );
+
+	virtual ~TCoapClient();
+
+	void open();
+
+	void flush();
+
+	coap_message_t getCoapMessageType();
+	void setCoapMessageType( coap_message_t message_type );
+
+	coap_method_t getCoapMethodType();
+	void setCoapMethodType( coap_method_t method_type );
 
 protected:
-  std::string host_;
-  std::string path_;
 
-  void handle_response( coap_context_t *context, coap_queue_t *sent, coap_queue_t *rcvd, uint8_t **buf, uint32_t *len );
+	std::string host_;
+	std::string path_;
+
+	coap_message_t message_type;
+	coap_method_t method_type;
+
+	static void coap_response_handler(
+		struct coap_context_t *ctx,
+		const coap_endpoint_t *local_interface, const coap_address_t *remote,
+		coap_pdu_t *sent, coap_pdu_t *received,
+		const coap_tid_t id
+	);
+
+	void handle_response( coap_context_t *context, coap_queue_t *sent, coap_queue_t *rcvd, uint8_t **buf, uint32_t *len );
 
 };
 }
