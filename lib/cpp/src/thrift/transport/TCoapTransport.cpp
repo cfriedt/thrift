@@ -81,8 +81,7 @@ uint32_t TCoapTransport::readEnd() {
 }
 
 void TCoapTransport::write( const uint8_t* buf, uint32_t len ) {
-	//writeBuffer_.write( buf, len );
-	throw std::runtime_error( "TCoapTransport::write() not implemented" );
+	writeBuffer_.write( buf, len );
 }
 
 const std::string TCoapTransport::getOrigin() {
@@ -106,16 +105,16 @@ boost::shared_ptr<coap_address_t> TCoapTransport::toCoapAddress( boost::shared_p
 	sockaddr *sock_p;
 	socklen_t sock_len;
 
-	boost::shared_ptr<TSocket> socket_trans;
 	boost::shared_ptr<coap_address_t> coap_address;
+	boost::shared_ptr<TSocket> socket_trans;
 
-	coap_address = boost::make_shared<coap_address_t>();
 	socket_trans = boost::static_pointer_cast<TSocket>( trans );
-
 	sock_p = socket_trans->getCachedAddress( & sock_len );
 	if ( NULL == sock_p ) {
 		throw std::runtime_error( "TSocket::getCachedAddress() returned NULL!" );
 	}
+
+	coap_address = boost::make_shared<coap_address_t>();
 
 	switch( sock_len ) {
 
