@@ -40,7 +40,7 @@ protected:
   std::string host_;
   std::string path_;
 
-  void handle_response( coap_context_t *context, coap_queue_t *sent, coap_queue_t *rcvd );
+  void handle_response( coap_context_t *context, coap_queue_t *sent, coap_queue_t *rcvd, uint8_t **buf, uint32_t *len );
 
 };
 }

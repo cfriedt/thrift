@@ -97,7 +97,7 @@ void TCoapServer::flush() {
 */
 }
 
-void TCoapServer::handle_request( coap_context_t *context, coap_queue_t *node ) {
+void TCoapServer::handle_request( coap_context_t *context, coap_queue_t *node, uint8_t **buf, uint32_t *len ) {
 
 	coap_method_handler_t h = NULL;
 	coap_pdu_t *response = NULL;

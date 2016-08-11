@@ -78,12 +78,15 @@ protected:
   // functions borrowed / modified from libcoap
 
   int coap_read( coap_context_t *context, uint8_t *data, uint32_t len );
-  virtual void handle_request( coap_context_t *context, coap_queue_t *node ) {
+
+  // XXX: @CF: beyond the usual libcoap parameters, we have the buf and len to pass to the handler
+  // this will allow us to dispatch the handler via Thrift
+  virtual void handle_request( coap_context_t *context, coap_queue_t *node, uint8_t **buf, uint32_t *len ) {
 	  THRIFT_UNUSED_VARIABLE( context );
 	  THRIFT_UNUSED_VARIABLE( node );
 	  throw TTransportException( TTransportException::UNKNOWN, "no implementation for CoAP handle_request()" );
   }
-  virtual void handle_response( coap_context_t *context, coap_queue_t *sent, coap_queue_t *rcvd ) {
+  virtual void handle_response( coap_context_t *context, coap_queue_t *sent, coap_queue_t *rcvd, uint8_t **buf, uint32_t *len ) {
 	  THRIFT_UNUSED_VARIABLE( context );
 	  THRIFT_UNUSED_VARIABLE( sent );
 	  THRIFT_UNUSED_VARIABLE( rcvd );

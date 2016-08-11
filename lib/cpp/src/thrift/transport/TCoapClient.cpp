@@ -74,7 +74,7 @@ void TCoapClient::flush() {
 */
 }
 
-void TCoapClient::handle_response( coap_context_t *context, coap_queue_t *sent, coap_queue_t *rcvd ) {
+void TCoapClient::handle_response( coap_context_t *context, coap_queue_t *sent, coap_queue_t *rcvd, uint8_t **buf, uint32_t *len ) {
 
 	coap_send_ack( context, &rcvd->local_if, &rcvd->remote, rcvd->pdu );
 

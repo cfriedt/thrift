@@ -309,9 +309,9 @@ int TCoapTransport::coap_read( coap_context_t *ctx, uint8_t *buf, uint32_t len )
 	//if ( handle_locally( ctx, rcvd ) ) {
 	if ( true ) {
 		if ( COAP_MESSAGE_IS_REQUEST( rcvd->pdu->hdr ) ) {
-			TCoapTransport::handle_request( ctx, rcvd );
+			TCoapTransport::handle_request( ctx, rcvd, & buf, & len );
 		} else if ( COAP_MESSAGE_IS_RESPONSE( rcvd->pdu->hdr ) ) {
-			TCoapTransport::handle_response( ctx, sent, rcvd );
+			TCoapTransport::handle_response( ctx, sent, rcvd, & buf, & len );
 		} else {
 			//debug( "dropped message with invalid code (%d.%02d)\n", COAP_RESPONSE_CLASS(rcvd->pdu->hdr->code), rcvd->pdu->hdr->code & 0x1f );
 
