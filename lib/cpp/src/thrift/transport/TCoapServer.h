@@ -50,6 +50,8 @@ protected:
   std::string method;
 
   std::vector<boost::shared_ptr<coap_resource_t>> resource;
+
+  void handle_request( coap_context_t *context, coap_queue_t *node );
 };
 
 /**

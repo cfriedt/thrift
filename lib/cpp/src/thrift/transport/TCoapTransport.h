@@ -78,8 +78,17 @@ protected:
   // functions borrowed / modified from libcoap
 
   int coap_read( coap_context_t *context, uint8_t *data, uint32_t len );
-  void handle_request( coap_context_t *context, coap_queue_t *node );
-  void handle_response( coap_context_t *context, coap_queue_t *sent, coap_queue_t *rcvd );
+  virtual void handle_request( coap_context_t *context, coap_queue_t *node ) {
+	  THRIFT_UNUSED_VARIABLE( context );
+	  THRIFT_UNUSED_VARIABLE( node );
+	  throw TTransportException( TTransportException::UNKNOWN, "no implementation for CoAP handle_request()" );
+  }
+  virtual void handle_response( coap_context_t *context, coap_queue_t *sent, coap_queue_t *rcvd ) {
+	  THRIFT_UNUSED_VARIABLE( context );
+	  THRIFT_UNUSED_VARIABLE( sent );
+	  THRIFT_UNUSED_VARIABLE( rcvd );
+	  throw TTransportException( TTransportException::UNKNOWN, "no implementation for CoAP handle_response()" );
+  }
 
   static bool no_response( coap_pdu_t *request, coap_pdu_t *response );
   static bool is_wkc( coap_key_t key );
