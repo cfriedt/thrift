@@ -51,8 +51,6 @@ public:
 
   uint32_t read(uint8_t* buf, uint32_t len);
 
-  uint32_t readEnd();
-
   void write(const uint8_t* buf, uint32_t len);
 
   virtual void flush() = 0;
@@ -70,12 +68,23 @@ protected:
   std::string origin_;
 
   TMemoryBuffer writeBuffer_;
-  TMemoryBuffer readBuffer_;
 
   boost::shared_ptr<coap_address_t> coap_address;
   boost::shared_ptr<coap_context_t> coap_context;
 
   virtual void init();
+  void replaceSocketAfterOpen();
+
+  // functions borrowed / modified from libcoap
+
+  int coap_read( coap_context_t *context, uint8_t *data, uint32_t len );
+  void handle_request( coap_context_t *context, coap_queue_t *node );
+  void handle_response( coap_context_t *context, coap_queue_t *sent, coap_queue_t *rcvd );
+
+  static bool no_response( coap_pdu_t *request, coap_pdu_t *response );
+  static bool is_wkc( coap_key_t key );
+  static bool WANT_WKC( coap_pdu_t *pdu, coap_key_t key );
+
 };
 }
 }
