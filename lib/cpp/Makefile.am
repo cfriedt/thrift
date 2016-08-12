@@ -91,6 +91,7 @@ libthrift_la_SOURCES = src/thrift/TApplicationException.cpp \
                        src/thrift/transport/TServerSocket.cpp \
                        src/thrift/transport/TSSLServerSocket.cpp \
                        src/thrift/transport/TTransportUtils.cpp \
+                       src/thrift/transport/TUdpSocket.cpp \
                        src/thrift/transport/TBufferTransports.cpp \
                        src/thrift/server/TConnectedClient.cpp \
                        src/thrift/server/TServer.cpp \
@@ -220,6 +221,7 @@ include_transport_HEADERS = \
                          src/thrift/transport/TTransport.h \
                          src/thrift/transport/TTransportException.h \
                          src/thrift/transport/TTransportUtils.h \
+                         src/thrift/transport/TUdpSocket.h \
                          src/thrift/transport/TBufferTransports.h \
                          src/thrift/transport/TShortReadTransport.h \
                          src/thrift/transport/TZlibTransport.h

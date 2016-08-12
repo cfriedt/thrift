@@ -90,7 +90,8 @@ TSocket::TSocket(const string& host, int port)
     lingerOn_(1),
     lingerVal_(0),
     noDelay_(1),
-    maxRecvRetries_(5) {
+    maxRecvRetries_(5),
+    socktype_hint( SOCK_STREAM ) {
 }
 
 TSocket::TSocket(const string& path)
@@ -105,7 +106,8 @@ TSocket::TSocket(const string& path)
     lingerOn_(1),
     lingerVal_(0),
     noDelay_(1),
-    maxRecvRetries_(5) {
+    maxRecvRetries_(5),
+    socktype_hint( SOCK_STREAM ) {
   cachedPeerAddr_.ipv4.sin_family = AF_UNSPEC;
 }
 
@@ -121,7 +123,8 @@ TSocket::TSocket()
     lingerOn_(1),
     lingerVal_(0),
     noDelay_(1),
-    maxRecvRetries_(5) {
+    maxRecvRetries_(5),
+    socktype_hint( SOCK_STREAM ) {
   cachedPeerAddr_.ipv4.sin_family = AF_UNSPEC;
 }
 
@@ -137,7 +140,8 @@ TSocket::TSocket(THRIFT_SOCKET socket)
     lingerOn_(1),
     lingerVal_(0),
     noDelay_(1),
-    maxRecvRetries_(5) {
+    maxRecvRetries_(5),
+    socktype_hint( SOCK_STREAM ) {
   cachedPeerAddr_.ipv4.sin_family = AF_UNSPEC;
 #ifdef SO_NOSIGPIPE
   {
@@ -160,7 +164,8 @@ TSocket::TSocket(THRIFT_SOCKET socket, boost::shared_ptr<THRIFT_SOCKET> interrup
     lingerOn_(1),
     lingerVal_(0),
     noDelay_(1),
-    maxRecvRetries_(5) {
+    maxRecvRetries_(5),
+    socktype_hint( SOCK_STREAM ) {
   cachedPeerAddr_.ipv4.sin_family = AF_UNSPEC;
 #ifdef SO_NOSIGPIPE
   {
@@ -340,7 +345,9 @@ void TSocket::openConnection(struct addrinfo* res) {
 #endif
 
   } else {
-    ret = connect(socket_, res->ai_addr, static_cast<int>(res->ai_addrlen));
+	if ( SOCK_STREAM == socktype_hint ) {
+		ret = connect(socket_, res->ai_addr, static_cast<int>(res->ai_addrlen));
+	}
   }
 
   // success case
@@ -440,7 +447,7 @@ void TSocket::local_open() {
   char port[sizeof("65535")];
   std::memset(&hints, 0, sizeof(hints));
   hints.ai_family = PF_UNSPEC;
-  hints.ai_socktype = SOCK_STREAM;
+  hints.ai_socktype = socktype_hint;
   hints.ai_flags = AI_PASSIVE | AI_ADDRCONFIG;
   sprintf(port, "%d", port_);
 
@@ -915,6 +922,7 @@ sockaddr* TSocket::getCachedAddress(socklen_t* len) const {
     return (sockaddr*)&cachedPeerAddr_.ipv6;
 
   default:
+	*len = 0;
     return NULL;
   }
 }

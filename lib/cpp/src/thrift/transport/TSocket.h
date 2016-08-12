@@ -266,6 +266,17 @@ public:
   void setCachedAddress(const sockaddr* addr, socklen_t len);
 
 protected:
+
+  int socktype_hint;
+
+  virtual int recv( int sockfd, void *buf, size_t len, int flags ) {
+	  return ::recv( sockfd, buf, len, flags );
+  }
+
+  virtual int send( int sockfd, const void *buf, size_t len, int flags ) {
+	  return ::send( sockfd, buf, len, flags );
+  }
+
   /** connect, called by open */
   void openConnection(struct addrinfo* res);
 
