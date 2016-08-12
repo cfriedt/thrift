@@ -43,41 +43,41 @@ using namespace std;
 TUdpSocket::TUdpSocket( const string& host, int port )
 :
 	TSocket::TSocket( host, port ),
-	src_addr_len( 0 ),
-	socktype_hint( SOCK_DGRAM )
+	src_addr_len( 0 )
 {
+	socktype_hint = SOCK_DGRAM;
 }
 
 TUdpSocket::TUdpSocket( const string& path )
 :
 	TSocket::TSocket( path ),
-	src_addr_len( 0 ),
-	socktype_hint( SOCK_DGRAM )
+	src_addr_len( 0 )
 {
+	socktype_hint = SOCK_DGRAM;
 }
 
 TUdpSocket::TUdpSocket()
 :
 	TSocket::TSocket(),
-	src_addr_len( 0 ),
-	socktype_hint( SOCK_DGRAM )
+	src_addr_len( 0 )
 {
+	socktype_hint = SOCK_DGRAM;
 }
 
 TUdpSocket::TUdpSocket(THRIFT_SOCKET socket)
 :
 	TSocket::TSocket( socket ),
-	src_addr_len( 0 ),
-	socktype_hint( SOCK_DGRAM )
+	src_addr_len( 0 )
 {
+	socktype_hint = SOCK_DGRAM;
 }
 
 TUdpSocket::TUdpSocket( THRIFT_SOCKET socket, boost::shared_ptr<THRIFT_SOCKET> interruptListener )
 :
 	TSocket::TSocket( socket, interruptListener ),
-	src_addr_len( 0 ),
-	socktype_hint( SOCK_DGRAM )
+	src_addr_len( 0 )
 {
+	socktype_hint = SOCK_DGRAM;
 }
 
 TUdpSocket::~TUdpSocket() {
