@@ -37,6 +37,7 @@ using namespace std;
 
 TCoapTransport::TCoapTransport( boost::shared_ptr<TTransport> transport )
 :
+	isOpen_called( false ),
 	transport_( transport ),
 	origin_( "" )
 {
@@ -71,21 +72,27 @@ void TCoapTransport::replaceSocketAfterOpen() {
 void TCoapTransport::open() {
 	transport_->open();
 	coap_address = toCoapAddress( transport_ );
+	if ( NULL == coap_address.get() ) {
+		throw TTransportException( TTransportException::INTERNAL_ERROR, "toCoapAddress() failed" );
+	}
 	coap_context = boost::shared_ptr<coap_context_t>( coap_new_context( coap_address.get() ) );
 	if ( NULL == coap_context.get() ) {
-		throw std::runtime_error( "coap_new_context() failed" );
+		throw TTransportException( TTransportException::INTERNAL_ERROR, "coap_new_context() failed" );
 	}
 	replaceSocketAfterOpen();
+	isOpen_called = true;
 }
 
+bool TCoapTransport::isOpen() {
+	return isOpen_called && transport_->isOpen();
+}
 
 uint32_t TCoapTransport::read( uint8_t* buf, uint32_t len ) {
 	uint32_t r;
-	coap_context_t *ctx;
-
-	ctx = getCoapContext().get();
-	r = TCoapTransport::coap_read( ctx, buf, len );
-
+	if ( ! isOpen() ) {
+		open();
+	}
+	r = TCoapTransport::coap_read( buf, len );
 	return r;
 }
 
@@ -113,6 +120,7 @@ boost::shared_ptr<coap_address_t> TCoapTransport::toCoapAddress( boost::shared_p
 
 	sockaddr *sock_p;
 	socklen_t sock_len;
+	int port;
 
 	boost::shared_ptr<coap_address_t> coap_address;
 	boost::shared_ptr<TSocket> socket_trans;
@@ -120,7 +128,7 @@ boost::shared_ptr<coap_address_t> TCoapTransport::toCoapAddress( boost::shared_p
 	socket_trans = boost::static_pointer_cast<TSocket>( trans );
 	sock_p = socket_trans->getCachedAddress( & sock_len );
 	if ( NULL == sock_p ) {
-		throw std::runtime_error( "TSocket::getCachedAddress() returned NULL!" );
+		throw TTransportException( TTransportException::INTERNAL_ERROR, "TSocket::getCachedAddress() returned NULL!" );
 	}
 
 	coap_address = boost::make_shared<coap_address_t>();
@@ -128,6 +136,7 @@ boost::shared_ptr<coap_address_t> TCoapTransport::toCoapAddress( boost::shared_p
 	switch( sock_len ) {
 
 	case sizeof(sockaddr_in):
+		// AF_INET
 
 		std::memcpy( & coap_address->addr.sin, sock_p, sock_len );
 		coap_address->addr.sin.sin_port = ntohs( coap_address->addr.sin.sin_port );
@@ -137,22 +146,26 @@ boost::shared_ptr<coap_address_t> TCoapTransport::toCoapAddress( boost::shared_p
 
 	case sizeof(sockaddr_in6):
 
+		// AF_INET6
+
 		std::memcpy( & coap_address->addr.sin6, sock_p, sock_len );
 		coap_address->addr.sin6.sin6_port = ntohs( coap_address->addr.sin6.sin6_port );
 
 		break;
 
 	default:
-		throw std::runtime_error( "unsupported socket length" );
+		throw TTransportException( TTransportException::INTERNAL_ERROR, "unsupported socket length" );
 		break;
 	}
+
+	coap_address->size = sock_len;
 
 	return coap_address;
 }
 
 // functions borrowed / modified from libcoap
 
-int TCoapTransport::coap_read( coap_context_t *ctx, uint8_t *buf, uint32_t len ) {
+int TCoapTransport::coap_read( uint8_t *buf, uint32_t len ) {
 	// XXX: @CF: I've squished a number of libcoap functions into 1 here
 	// The reason is that we do now want to rely on their application framework, only their
 	// transport layer. Direct libcoap library calls give us the flexibility to use
@@ -171,13 +184,28 @@ int TCoapTransport::coap_read( coap_context_t *ctx, uint8_t *buf, uint32_t len )
 	coap_pdu_t *response = NULL;
 	coap_opt_filter_t opt_filter;
 
+	coap_context_t *ctx;
+
 	boost::shared_ptr<TTransportException> ex;
+
+	if ( ! isOpen() ) {
+		throw TTransportException( TTransportException::INTERNAL_ERROR, "attempt to read from unopened transport" );
+	}
 
 	ctx = getCoapContext().get();
 
+	if ( NULL == ctx ) {
+		throw TTransportException( TTransportException::INTERNAL_ERROR, "transport opened, but coap context was NULL!" );
+	}
+
+	std::cout <<
+		"TCoapTransport::coap_read(): reading network traffic on " <<
+		toString( (struct sockaddr *) & ctx->endpoint->addr.addr, ctx->endpoint->addr.size ) <<
+		std::endl;
+
 	// [BEGIN] coap_read();
 
-	bytes_read = ctx->network_read(ctx->endpoint, & packet);
+	bytes_read = ctx->network_read( ctx->endpoint, & packet );
 	if ( bytes_read < 0 ) {
 		ex = boost::make_shared<TTransportException>( "coap network_read() returned an invalid value" );
 		goto throw_ex;
@@ -211,12 +239,19 @@ int TCoapTransport::coap_read( coap_context_t *ctx, uint8_t *buf, uint32_t len )
 		goto free_node;
 	}
 
+	std::cout <<
+		"TCoapTransport::coap_read(): processing pdu " <<
+		" with transaction id " << rcvd->pdu->hdr->id <<
+		" from address " << toString( (sockaddr *) & rcvd->remote.addr, rcvd->remote.size ) <<
+		std::endl;
+
 	pdu_get_data_success = coap_get_data( rcvd->pdu, (size_t *) & pdu_data_len, & pdu_data );
 	if ( ! pdu_get_data_success ) {
 		ex = boost::make_shared<TTransportException>( "unable to get coap payload" );
 		goto free_node;
 	}
-	// XXX: @CF: throw exception if read buffer is not large enough... maybe I *should* be using a readBuffer..
+	// XXX: @CF: throw exception if caller-supplied read buffer is not large enough...
+	// maybe I should be using an intermediate readBuffer..
 	if ( len < pdu_data_len ) {
 		ex = boost::make_shared<TTransportException>( "receive buffer too small" );
 		goto free_node;
@@ -379,6 +414,39 @@ bool TCoapTransport::WANT_WKC( coap_pdu_t *pdu, coap_key_t key ) {
 	return ( pdu->hdr->code == COAP_REQUEST_GET ) && is_wkc( key );
 }
 
+std::string TCoapTransport::toString( struct sockaddr *addr, socklen_t len ) {
+
+	int port;
+	stringstream ss;
+
+	char buffer[ INET6_ADDRSTRLEN ];
+
+	std::memset( buffer, 0, sizeof( buffer ) );
+
+	switch( addr->sa_family ) {
+	case AF_INET:
+		port = ((struct sockaddr_in *)addr)->sin_port;
+		break;
+	case AF_INET6:
+		port = ((struct sockaddr_in6 *)addr)->sin6_port;
+		break;
+	default:
+		port = -1;
+		break;
+	}
+
+	getnameinfo( addr, len, buffer, sizeof(buffer), 0, 0, NI_NUMERICHOST );
+
+	ss << buffer;
+	ss << ", port ";
+	ss << port;
+
+	return ss.str();
+}
+
+std::string TCoapTransport::toString( boost::shared_ptr<coap_address_t> coap_address ) {
+	return toString( (struct sockaddr *) &coap_address->addr, coap_address->size );
+}
 
 }
 }

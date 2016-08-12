@@ -67,15 +67,16 @@ protected:
 	coap_message_t message_type;
 	coap_method_t method_type;
 
+	void sendBufferedRequest();
+
+	void handle_response( coap_context_t *context, coap_queue_t *sent, coap_queue_t *rcvd, uint8_t **buf, uint32_t *len );
+
 	static void coap_response_handler(
 		struct coap_context_t *ctx,
 		const coap_endpoint_t *local_interface, const coap_address_t *remote,
 		coap_pdu_t *sent, coap_pdu_t *received,
 		const coap_tid_t id
 	);
-
-	void handle_response( coap_context_t *context, coap_queue_t *sent, coap_queue_t *rcvd, uint8_t **buf, uint32_t *len );
-
 };
 }
 }

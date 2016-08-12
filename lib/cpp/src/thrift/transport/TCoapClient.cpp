@@ -61,6 +61,37 @@ void TCoapClient::open() {
 
 void TCoapClient::flush() {
 
+	sendBufferedRequest();
+
+	// necessary?
+	transport_->flush();
+
+	// Reset the buffer and header variables
+	writeBuffer_.resetBuffer();
+}
+
+TCoapClient::coap_message_t
+TCoapClient::getCoapMessageType()
+{
+	return message_type;
+}
+void
+TCoapClient::setCoapMessageType( TCoapClient::coap_message_t message_type )
+{
+	this->message_type = message_type;
+}
+
+TCoapClient::coap_method_t
+TCoapClient::getCoapMethodType()
+{
+	return method_type;
+}
+void TCoapClient::setCoapMethodType( TCoapClient::coap_method_t method_type )
+{
+	this->method_type = method_type;
+}
+
+void TCoapClient::sendBufferedRequest() {
 	uint8_t *buf;
 	uint32_t len;
 	coap_uri_t uri;
@@ -78,13 +109,17 @@ void TCoapClient::flush() {
 	socklen_t sock_len;
 	boost::shared_ptr<TSocket> socket_trans;
 
+	ctx = getCoapContext().get();
+
+	if ( NULL == ctx ) {
+		return;
+	}
+
 	socket_trans = boost::static_pointer_cast<TSocket>( transport_ );
 	sock_p = socket_trans->getCachedAddress( & sock_len );
 	if ( NULL == sock_p ) {
 		throw std::runtime_error( "TSocket::getCachedAddress() returned NULL!" );
 	}
-
-	ctx = getCoapContext().get();
 
 	server_uri.clear();
 	server_uri.append( "coap://" );
@@ -119,39 +154,24 @@ void TCoapClient::flush() {
 		throw TTransportException( TTransportException::BAD_ARGS, "coap_add_data() failed" );
 	}
 
+	std::cout <<
+		"TCoapClient::sendBufferedRequest(): sending request" <<
+		" with transaction id " << request->hdr->id <<
+		" to address " << toString( sock_p, sock_len ) <<
+		std::endl;
+
 	send_r = coap_send_message_type( ctx, ctx->endpoint, & dst_addr, request, message_type );
 	if ( COAP_INVALID_TID == send_r ) {
 		throw TTransportException( TTransportException::BAD_ARGS, "coap_send_message_type() failed" );
 	}
-
-	transport_->flush();
-
-	// Reset the buffer and header variables
-	writeBuffer_.resetBuffer();
-}
-
-TCoapClient::coap_message_t
-TCoapClient::getCoapMessageType()
-{
-	return message_type;
-}
-void
-TCoapClient::setCoapMessageType( TCoapClient::coap_message_t message_type )
-{
-	this->message_type = message_type;
-}
-
-TCoapClient::coap_method_t
-TCoapClient::getCoapMethodType()
-{
-	return method_type;
-}
-void TCoapClient::setCoapMethodType( TCoapClient::coap_method_t method_type )
-{
-	this->method_type = method_type;
 }
 
 void TCoapClient::handle_response( coap_context_t *context, coap_queue_t *sent, coap_queue_t *rcvd, uint8_t **buf, uint32_t *len ) {
+
+	THRIFT_UNUSED_VARIABLE( buf );
+	THRIFT_UNUSED_VARIABLE( len );
+
+	std::cout << "TCoapClient::handle_response()" << std::endl;
 
 	coap_send_ack( context, &rcvd->local_if, &rcvd->remote, rcvd->pdu );
 
@@ -174,7 +194,7 @@ TCoapClient::coap_response_handler(
 	    coap_pdu_t *sent, coap_pdu_t *received,
 	    const coap_tid_t id
 ) {
-	std::cout << "received a response for transaction id " << id << std::endl;
+	std::cout << "TCoapClient::coap_response_handler(): received response to transaction id " << id << std::endl;
 }
 
 

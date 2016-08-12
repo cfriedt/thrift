@@ -43,7 +43,7 @@ public:
 
   void open();
 
-  bool isOpen() { return transport_->isOpen(); }
+  bool isOpen();
 
   bool peek() { return transport_->peek(); }
 
@@ -64,6 +64,9 @@ public:
   static boost::shared_ptr<coap_address_t> toCoapAddress( boost::shared_ptr<TTransport> trans );
 
 protected:
+
+  bool isOpen_called;
+
   boost::shared_ptr<TTransport> transport_;
   std::string origin_;
 
@@ -77,25 +80,32 @@ protected:
 
   // functions borrowed / modified from libcoap
 
-  int coap_read( coap_context_t *context, uint8_t *data, uint32_t len );
+  int coap_read( uint8_t *data, uint32_t len );
 
   // XXX: @CF: beyond the usual libcoap parameters, we have the buf and len to pass to the handler
   // this will allow us to dispatch the handler via Thrift
   virtual void handle_request( coap_context_t *context, coap_queue_t *node, uint8_t **buf, uint32_t *len ) {
 	  THRIFT_UNUSED_VARIABLE( context );
 	  THRIFT_UNUSED_VARIABLE( node );
+	  THRIFT_UNUSED_VARIABLE( buf );
+	  THRIFT_UNUSED_VARIABLE( len );
 	  throw TTransportException( TTransportException::UNKNOWN, "no implementation for CoAP handle_request()" );
   }
   virtual void handle_response( coap_context_t *context, coap_queue_t *sent, coap_queue_t *rcvd, uint8_t **buf, uint32_t *len ) {
 	  THRIFT_UNUSED_VARIABLE( context );
 	  THRIFT_UNUSED_VARIABLE( sent );
 	  THRIFT_UNUSED_VARIABLE( rcvd );
+	  THRIFT_UNUSED_VARIABLE( buf );
+	  THRIFT_UNUSED_VARIABLE( len );
 	  throw TTransportException( TTransportException::UNKNOWN, "no implementation for CoAP handle_response()" );
   }
 
   static bool no_response( coap_pdu_t *request, coap_pdu_t *response );
   static bool is_wkc( coap_key_t key );
   static bool WANT_WKC( coap_pdu_t *pdu, coap_key_t key );
+
+  static std::string toString( struct sockaddr *addr, socklen_t len );
+  static std::string toString( boost::shared_ptr<coap_address_t> coap_address );
 
 };
 }
