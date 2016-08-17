@@ -76,7 +76,6 @@ public:
 	 */
 	virtual void open();
 
-/*
 	inline void setNoDelay( bool on ) {
 		THRIFT_UNUSED_VARIABLE( on );
 	}
@@ -94,7 +93,6 @@ public:
 		THRIFT_UNUSED_VARIABLE( useLowMinRto );
 	}
 	static inline bool getUseLowMinRto() { return false; }
-*/
 
 	/**
 	 * Constructor to create socket from file descriptor.
