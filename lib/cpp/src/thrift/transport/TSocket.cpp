@@ -57,15 +57,7 @@
   #define AI_ADDRCONFIG 0x0400
 #endif
 
-template <class T>
-inline const SOCKOPT_CAST_T* const_cast_sockopt(const T* v) {
-  return reinterpret_cast<const SOCKOPT_CAST_T*>(v);
-}
-
-template <class T>
-inline SOCKOPT_CAST_T* cast_sockopt(T* v) {
-  return reinterpret_cast<SOCKOPT_CAST_T*>(v);
-}
+#include <thrift/transport/cast_sockopt.h>
 
 namespace apache {
 namespace thrift {

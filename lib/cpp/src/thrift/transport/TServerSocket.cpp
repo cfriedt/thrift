@@ -46,73 +46,20 @@
 #include <thrift/transport/TSocket.h>
 #include <thrift/transport/TServerSocket.h>
 #include <thrift/transport/PlatformSocket.h>
+#include <thrift/transport/TGetAddrInfoWrapper.h>
 #include <boost/shared_ptr.hpp>
 
 #ifndef AF_LOCAL
 #define AF_LOCAL AF_UNIX
 #endif
 
-#ifndef SOCKOPT_CAST_T
-#ifndef _WIN32
-#define SOCKOPT_CAST_T void
-#else
-#define SOCKOPT_CAST_T char
-#endif // _WIN32
-#endif
-
 #if defined(_WIN32) && (_WIN32_WINNT < 0x0600)
   #define AI_ADDRCONFIG 0x0400
 #endif
 
-template <class T>
-inline const SOCKOPT_CAST_T* const_cast_sockopt(const T* v) {
-  return reinterpret_cast<const SOCKOPT_CAST_T*>(v);
-}
-
-template <class T>
-inline SOCKOPT_CAST_T* cast_sockopt(T* v) {
-  return reinterpret_cast<SOCKOPT_CAST_T*>(v);
-}
-
 void destroyer_of_fine_sockets(THRIFT_SOCKET* ssock) {
   ::THRIFT_CLOSESOCKET(*ssock);
   delete ssock;
-}
-
-class TGetAddrInfoWrapper {
-public:
-  TGetAddrInfoWrapper(const char* node, const char* service, const struct addrinfo* hints);
-
-  virtual ~TGetAddrInfoWrapper();
-
-  int init();
-  const struct addrinfo* res();
-
-private:
-  const char* node_;
-  const char* service_;
-  const struct addrinfo* hints_;
-  struct addrinfo* res_;
-};
-
-TGetAddrInfoWrapper::TGetAddrInfoWrapper(const char* node,
-                                         const char* service,
-                                         const struct addrinfo* hints)
-  : node_(node), service_(service), hints_(hints), res_(NULL) {}
-
-TGetAddrInfoWrapper::~TGetAddrInfoWrapper() {
-  if (this->res_ != NULL)
-    freeaddrinfo(this->res_);
-}
-
-int TGetAddrInfoWrapper::init() {
-  if (this->res_ == NULL)
-    return getaddrinfo(this->node_, this->service_, this->hints_, &(this->res_));
-  return 0;
-}
-
-const struct addrinfo* TGetAddrInfoWrapper::res() {
-  return this->res_;
 }
 
 namespace apache {

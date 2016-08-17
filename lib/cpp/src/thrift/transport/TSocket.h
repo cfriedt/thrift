@@ -266,8 +266,14 @@ public:
   void setCachedAddress(const sockaddr* addr, socklen_t len);
 
 protected:
-  /** connect, called by open */
-  void openConnection(struct addrinfo* res);
+
+  virtual int recv( int sockfd, void *buf, size_t len, int flags ) {
+	  return ::recv( sockfd, buf, len, flags );
+  }
+
+  virtual int send( int sockfd, const void *buf, size_t len, int flags ) {
+	  return ::send( sockfd, buf, len, flags );
+  }
 
   /** Host to connect to */
   std::string host_;
@@ -330,6 +336,8 @@ protected:
   static bool useLowMinRto_;
 
 private:
+  /** connect, called by open */
+  void openConnection(struct addrinfo* res);
   void unix_open();
   void local_open();
 };

@@ -55,6 +55,7 @@ check_PROGRAMS = \
 	TestServer \
 	TestClient \
 	StressTest \
+	StressTestUdp \
 	StressTestNonBlocking
 
 # we currently do not run the testsuite, stop c++ server issue
@@ -85,6 +86,13 @@ StressTest_SOURCES = \
 	src/StressTest.cpp
 
 StressTest_LDADD = \
+	libstresstestgencpp.la \
+	$(top_builddir)/lib/cpp/libthrift.la
+
+StressTestUdp_SOURCES = \
+	src/StressTestUdp.cpp
+
+StressTestUdp_LDADD = \
 	libstresstestgencpp.la \
 	$(top_builddir)/lib/cpp/libthrift.la
 

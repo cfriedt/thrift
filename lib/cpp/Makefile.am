@@ -83,6 +83,7 @@ libthrift_la_SOURCES = src/thrift/TApplicationException.cpp \
                        src/thrift/transport/TTransportException.cpp \
                        src/thrift/transport/TFDTransport.cpp \
                        src/thrift/transport/TFileTransport.cpp \
+                       src/thrift/transport/TGetAddrInfoWrapper.cpp \
                        src/thrift/transport/TSimpleFileTransport.cpp \
                        src/thrift/transport/THttpTransport.cpp \
                        src/thrift/transport/THttpClient.cpp \
@@ -95,6 +96,8 @@ libthrift_la_SOURCES = src/thrift/TApplicationException.cpp \
                        src/thrift/transport/TServerSocket.cpp \
                        src/thrift/transport/TSSLServerSocket.cpp \
                        src/thrift/transport/TTransportUtils.cpp \
+                       src/thrift/transport/TUdpServerSocket.cpp \
+                       src/thrift/transport/TUdpSocket.cpp \
                        src/thrift/transport/TBufferTransports.cpp \
                        src/thrift/server/TConnectedClient.cpp \
                        src/thrift/server/TServer.cpp \
@@ -209,9 +212,11 @@ include_protocol_HEADERS = \
 
 include_transportdir = $(include_thriftdir)/transport
 include_transport_HEADERS = \
+                         src/thrift/transport/cast_sockopt.h \
                          src/thrift/transport/PlatformSocket.h \
                          src/thrift/transport/TFDTransport.h \
                          src/thrift/transport/TFileTransport.h \
+                         src/thrift/transport/TGetAddrInfoWrapper.h \
                          src/thrift/transport/THeaderTransport.h \
                          src/thrift/transport/TSimpleFileTransport.h \
                          src/thrift/transport/TServerSocket.h \
@@ -229,6 +234,8 @@ include_transport_HEADERS = \
                          src/thrift/transport/TTransport.h \
                          src/thrift/transport/TTransportException.h \
                          src/thrift/transport/TTransportUtils.h \
+                         src/thrift/transport/TUdpServerSocket.h \
+                         src/thrift/transport/TUdpSocket.h \
                          src/thrift/transport/TBufferTransports.h \
                          src/thrift/transport/TShortReadTransport.h
 
