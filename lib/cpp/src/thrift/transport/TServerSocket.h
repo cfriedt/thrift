@@ -25,6 +25,10 @@
 #include <thrift/cxxfunctional.h>
 #include <boost/shared_ptr.hpp>
 
+#include <thrift/transport/cast_sockopt.h>
+
+void destroyer_of_fine_sockets(THRIFT_SOCKET* ssock);
+
 namespace apache {
 namespace thrift {
 namespace transport {
@@ -125,31 +129,30 @@ protected:
   virtual boost::shared_ptr<TSocket> createSocket(THRIFT_SOCKET client);
   bool interruptableChildren_;
   boost::shared_ptr<THRIFT_SOCKET> pChildInterruptSockReader_; // if interruptableChildren_ this is shared with child TSockets
-
-private:
-  void notify(THRIFT_SOCKET notifySock);
-
+  bool listening_;
   int port_;
   std::string address_;
   std::string path_;
   THRIFT_SOCKET serverSocket_;
-  int acceptBacklog_;
-  int sendTimeout_;
+  THRIFT_SOCKET interruptSockWriter_;                          // is notified on interrupt()
+  THRIFT_SOCKET interruptSockReader_;                          // is used in select/poll with serverSocket_ for interruptability
+  THRIFT_SOCKET childInterruptSockWriter_;                     // is notified on interruptChildren()
   int recvTimeout_;
   int accTimeout_;
   int retryLimit_;
   int retryDelay_;
-  int tcpSendBuffer_;
-  int tcpRecvBuffer_;
   bool keepAlive_;
-  bool listening_;
-
-  THRIFT_SOCKET interruptSockWriter_;                          // is notified on interrupt()
-  THRIFT_SOCKET interruptSockReader_;                          // is used in select/poll with serverSocket_ for interruptability
-  THRIFT_SOCKET childInterruptSockWriter_;                     // is notified on interruptChildren()
+  int sendTimeout_;
 
   socket_func_t listenCallback_;
   socket_func_t acceptCallback_;
+
+private:
+  void notify(THRIFT_SOCKET notifySock);
+
+  int acceptBacklog_;
+  int tcpSendBuffer_;
+  int tcpRecvBuffer_;
 };
 }
 }
