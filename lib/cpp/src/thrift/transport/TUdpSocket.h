@@ -31,6 +31,7 @@ namespace transport {
  *
  */
 class TUdpSocket: virtual public TSocket {
+
 public:
 	/**
 	 * Constructs a new socket.
@@ -113,6 +114,10 @@ public:
 
 	static std::string sockaddrToString( struct sockaddr *sa,  socklen_t len );
 
+	uint32_t read( uint8_t* buf, uint32_t len );
+
+	void flush();
+
 protected:
 
 	int client_port;
@@ -121,12 +126,18 @@ protected:
 
 	int recv( int sockfd, void *buf, size_t len, int flags );
 	int send( int sockfd, const void *buf, size_t len, int flags );
-	std::vector<uint8_t> datagram_buffer;
 
 private:
 	void bindLocalEndpoint();
 	void saveRemoteEndpoint();
 
+	bool read_called_once;
+	int getWholeDatagram();
+
+	static const int UDP_SIZE_MAX;
+
+	std::vector<uint8_t> rx_buffer;
+	std::vector<uint8_t> tx_buffer;
 };
 }
 }

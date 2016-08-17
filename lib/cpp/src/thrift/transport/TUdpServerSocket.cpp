@@ -17,8 +17,6 @@
  * under the License.
  */
 
-#include <iostream>
-
 #include <thrift/thrift-config.h>
 
 #ifdef HAVE_SYS_SOCKET_H
@@ -313,10 +311,7 @@ boost::shared_ptr<TTransport> TUdpServerSocket::acceptImpl() {
 
   THRIFT_SOCKET clientSocket;
 
-  std::cout << "TUdpServerSocket::acceptImpl(): duplicating serverSocket_: " << serverSocket_ << " from endpoint " <<
-	  TUdpSocket::sockaddrToString( (sockaddr *) & client_address, client_address_size ) << std::endl;
   clientSocket = dup( serverSocket_ );
-  std::cout << "TUdpServerSocket::acceptImpl(): clientSocket: " << clientSocket << std::endl;
 
   if ( clientSocket == THRIFT_INVALID_SOCKET) {
     int errno_copy = THRIFT_GET_SOCKET_ERROR;
@@ -355,6 +350,7 @@ boost::shared_ptr<TTransport> TUdpServerSocket::acceptImpl() {
 	  break;
   }
 
+  /*
   int connect_r = ::connect( clientSocket, (struct sockaddr *) & client_address, client_address_size );
   if (-1 == connect_r ) {
     int errno_copy = THRIFT_GET_SOCKET_ERROR;
@@ -362,6 +358,7 @@ boost::shared_ptr<TTransport> TUdpServerSocket::acceptImpl() {
     GlobalOutput.perror("TServerSocket::acceptImpl() connect() ", errno_copy);
     throw TTransportException(TTransportException::UNKNOWN, "connect() failed", errno_copy);
   }
+  */
 
   boost::shared_ptr<TSocket> client = createSocket(clientSocket);
   if (sendTimeout_ > 0) {
@@ -375,8 +372,6 @@ boost::shared_ptr<TTransport> TUdpServerSocket::acceptImpl() {
   }
 
   client->setCachedAddress((sockaddr*)&client_address, client_address_size);
-
-  std::cout << "Accepted connection from peer " << TUdpSocket::sockaddrToString( (sockaddr *) & client_address, client_address_size ) << std::endl;
 
   if (acceptCallback_)
     acceptCallback_(clientSocket);
