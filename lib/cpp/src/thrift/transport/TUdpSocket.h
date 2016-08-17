@@ -30,7 +30,7 @@ namespace transport {
  * UDP Socket implementation of the TTransport interface.
  *
  */
-class TUdpSocket: TSocket {
+class TUdpSocket: virtual public TSocket {
 public:
 	/**
 	 * Constructs a new socket.
@@ -41,9 +41,19 @@ public:
 	 * Constructs a new socket.
 	 *
 	 * @param host An IP address or hostname to send datagrams to
-	 * @param port The port to send on
+	 * @param port The port to send on. Server and client ports are
+	 *        assumed equal.
 	 */
 	TUdpSocket( const std::string& host, int port );
+
+	/**
+	 * Constructs a new socket.
+	 *
+	 * @param host        An IP address or hostname to send datagrams to
+	 * @param server_port The port to send on
+	 * @param client_port The local port to receive on
+	 */
+	TUdpSocket( const std::string& host, int server_port, int client_port );
 
 	/**
 	 * Constructs a new Unix domain socket.
@@ -57,28 +67,33 @@ public:
 	 */
 	virtual ~TUdpSocket();
 
-	/**
-	 * Reads from the underlying socket.
-	 * \returns the number of bytes read or 0 indicates EOF
-	 * \throws TTransportException of types:
-	 *           INTERRUPTED means the socket was interrupted
-	 *                       out of a blocking call
-	 *           NOT_OPEN means the socket has been closed
-	 *           TIMED_OUT means the receive timeout expired
-	 *           UNKNOWN means something unexpected happened
-	 */
-	virtual uint32_t read( uint8_t* buf, uint32_t len );
 
 	/**
-	 * Writes to the underlying socket.  Loops until done or fail.
+	 * Creates and opens the UNIX socket.
+	 *
+	 * @throws TTransportException If the socket could not bind to the client port
 	 */
-	virtual void write( const uint8_t* buf, uint32_t len );
+	virtual void open();
 
-	inline void setLinger( bool on, int linger ) {}
-	inline void setConnTimeout( int ms ) {}
-	inline void setKeepAlive( bool keepAlive ) {}
-	static inline void setUseLowMinRto( bool useLowMinRto ) {}
+/*
+	inline void setNoDelay( bool on ) {
+		THRIFT_UNUSED_VARIABLE( on );
+	}
+	inline void setLinger( bool on, int linger ) {
+		THRIFT_UNUSED_VARIABLE( on );
+		THRIFT_UNUSED_VARIABLE( linger );
+	}
+	inline void setConnTimeout( int ms ) {
+		THRIFT_UNUSED_VARIABLE( ms );
+	}
+	inline void setKeepAlive( bool keepAlive ) {
+		THRIFT_UNUSED_VARIABLE( keepAlive );
+	}
+	static inline void setUseLowMinRto( bool useLowMinRto ) {
+		THRIFT_UNUSED_VARIABLE( useLowMinRto );
+	}
 	static inline bool getUseLowMinRto() { return false; }
+*/
 
 	/**
 	 * Constructor to create socket from file descriptor.
@@ -95,23 +110,22 @@ public:
 	 * Gets the source address of the most recently received datagram.
 	 */
 	sockaddr *getCachedSourceAddress( socklen_t *len );
+
+	static std::string sockaddrToString( struct sockaddr *sa,  socklen_t len );
+
 protected:
 
+	int client_port;
 	struct sockaddr_storage src_addr;
 	socklen_t src_addr_len;
 
-	virtual int recv( int sockfd, void *buf, size_t len, int flags ) {
-		std::memset( & src_addr, 0, sizeof( src_addr) );
-		src_addr_len = sizeof( src_addr );
-		return ::recvfrom( sockfd, buf, len, flags, (struct sockaddr *) & src_addr, & src_addr_len );
-	}
+	int recv( int sockfd, void *buf, size_t len, int flags );
+	int send( int sockfd, const void *buf, size_t len, int flags );
+	std::vector<uint8_t> datagram_buffer;
 
-	virtual int send( int sockfd, const void *buf, size_t len, int flags ) {
-		socklen_t dst_addr_len;
-		struct sockaddr *dst_addr;
-		dst_addr = getCachedAddress( & dst_addr_len );
-		return ::sendto( sockfd, buf, len, flags, dst_addr, dst_addr_len );
-	}
+private:
+	void bindLocalEndpoint();
+	void saveRemoteEndpoint();
 
 };
 }
