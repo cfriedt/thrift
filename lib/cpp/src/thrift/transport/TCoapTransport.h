@@ -107,6 +107,7 @@ protected:
   static std::string toString( struct sockaddr *addr, socklen_t len );
   static std::string toString( boost::shared_ptr<coap_address_t> coap_address );
 
+  coap_context_t *coap_new_context( int socket, int flags );
 };
 }
 }

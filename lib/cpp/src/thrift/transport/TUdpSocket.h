@@ -30,7 +30,7 @@ namespace transport {
  * UDP Socket implementation of the TTransport interface.
  *
  */
-class TUdpSocket: virtual public TSocket {
+class TUdpSocket: public TSocket {
 
 public:
 	/**

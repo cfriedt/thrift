@@ -46,6 +46,7 @@ public:
 	TCoapClient( boost::shared_ptr<TTransport> transport, std::string host, std::string path = "" );
 
 	TCoapClient( std::string host, int port, std::string path = "" );
+	TCoapClient( std::string host, int server_port, int client_port, std::string path );
 
 	virtual ~TCoapClient();
 

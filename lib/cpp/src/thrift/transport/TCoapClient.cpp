@@ -25,7 +25,7 @@
 #include <boost/algorithm/string.hpp>
 
 #include <thrift/transport/TCoapClient.h>
-#include <thrift/transport/TSocket.h>
+#include <thrift/transport/TUdpSocket.h>
 
 namespace apache {
 namespace thrift {
@@ -37,13 +37,25 @@ TCoapClient::TCoapClient( boost::shared_ptr<TTransport> transport, std::string h
 :
 	TCoapTransport( transport ),
 	host_( host ),
-	path_( path )
+	path_( path ),
+    message_type( CON ),
+    method_type( GET )
 {
 }
 
 TCoapClient::TCoapClient( string host, int port, string path )
 :
-	TCoapTransport( boost::shared_ptr<TTransport>( new TSocket( host, port ) ) ),
+	TCoapTransport( boost::shared_ptr<TTransport>( new TUdpSocket( host, port ) ) ),
+    host_(host),
+    path_(path),
+    message_type( CON ),
+    method_type( GET )
+{
+}
+
+TCoapClient::TCoapClient( string host, int server_port, int client_port, string path )
+:
+	TCoapTransport( boost::shared_ptr<TTransport>( new TUdpSocket( host, server_port, client_port ) ) ),
     host_(host),
     path_(path),
     message_type( CON ),

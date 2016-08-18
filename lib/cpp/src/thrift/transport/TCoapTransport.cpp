@@ -22,7 +22,7 @@
 
 #include <boost/make_shared.hpp>
 
-#include <thrift/transport/TSocket.h>
+#include <thrift/transport/TUdpSocket.h>
 #include <thrift/transport/TCoapTransport.h>
 
 extern "C" {
@@ -58,11 +58,20 @@ TCoapTransport::~TCoapTransport() {
 void TCoapTransport::replaceSocketAfterOpen() {
 	int old_socket_fd;
 	int new_socket_fd;
-	boost::shared_ptr<TSocket> socket_trans;
-	// FIXME: @CF: Assumes Socket Transport
-	socket_trans = boost::static_pointer_cast<TSocket>( transport_ );
+	struct sockaddr_storage addr;
+	socklen_t len = sizeof( addr );
+	boost::shared_ptr<TUdpSocket> socket_trans;
+
+	socket_trans = boost::static_pointer_cast<TUdpSocket>( transport_ );
 	old_socket_fd = socket_trans->getSocketFD();
 	new_socket_fd = coap_context->sockfd;
+
+	getsockname( old_socket_fd, (struct sockaddr *) &addr, &len );
+	std::cout << "TCoapTransport::replaceSocketAfterOpen(): replacing old socket ( " << old_socket_fd << ", " << TUdpSocket::sockaddrToString( (struct sockaddr *) &addr, len ) << " ) ";
+	len = sizeof( addr );
+	getsockname( new_socket_fd, (struct sockaddr *) &addr, &len );
+	std::cout << "with new socket ( " << new_socket_fd << ", " << TUdpSocket::sockaddrToString( (struct sockaddr *) &addr, len ) << " ) " << std::endl;
+
 	if ( new_socket_fd != old_socket_fd ) {
 		socket_trans->setSocketFD( new_socket_fd );
 		::close( old_socket_fd );
@@ -200,8 +209,8 @@ int TCoapTransport::coap_read( uint8_t *buf, uint32_t len ) {
 
 	std::cout <<
 		"TCoapTransport::coap_read(): reading network traffic on " <<
-		toString( (struct sockaddr *) & ctx->endpoint->addr.addr, ctx->endpoint->addr.size ) <<
-		std::endl;
+			TUdpSocket::sockaddrToString( (struct sockaddr *) & ctx->endpoint->addr.addr, ctx->endpoint->addr.size )
+		<< std::endl;
 
 	// [BEGIN] coap_read();
 
@@ -415,37 +424,71 @@ bool TCoapTransport::WANT_WKC( coap_pdu_t *pdu, coap_key_t key ) {
 }
 
 std::string TCoapTransport::toString( struct sockaddr *addr, socklen_t len ) {
-
-	int port;
-	stringstream ss;
-
-	char buffer[ INET6_ADDRSTRLEN ];
-
-	std::memset( buffer, 0, sizeof( buffer ) );
-
-	switch( addr->sa_family ) {
-	case AF_INET:
-		port = ((struct sockaddr_in *)addr)->sin_port;
-		break;
-	case AF_INET6:
-		port = ((struct sockaddr_in6 *)addr)->sin6_port;
-		break;
-	default:
-		port = -1;
-		break;
-	}
-
-	getnameinfo( addr, len, buffer, sizeof(buffer), 0, 0, NI_NUMERICHOST );
-
-	ss << buffer;
-	ss << ", port ";
-	ss << port;
-
-	return ss.str();
+	return TUdpSocket::sockaddrToString( addr, len );
 }
 
 std::string TCoapTransport::toString( boost::shared_ptr<coap_address_t> coap_address ) {
 	return toString( (struct sockaddr *) &coap_address->addr, coap_address->size );
+}
+
+coap_context_t *TCoapTransport::coap_new_context( int socket_fd, int flags ) {
+
+	coap_context_t *r = new coap_context_t;
+
+	struct sockaddr_storage addr;
+	socklen_t len;
+	int getsockname_r;
+	int on;
+
+	len = sizeof( addr );
+	getsockname_r = getsockname( socket_fd, (struct sockaddr *) &addr, &len );
+	if ( -1 == getsockname_r ) {
+		int errno_copy = THRIFT_GET_SOCKET_ERROR;
+		GlobalOutput.perror( "TCoapTransport::coap_new_context(): getsockname(): ", errno_copy );
+		throw TTransportException( TTransportException::UNKNOWN, "TCoapTransport::coap_new_context(): getsockname(): ", errno_copy );
+	}
+
+	coap_clock_init();
+
+	// initial message id
+	prng( (unsigned char * ) & r->message_id, sizeof(unsigned short) );
+
+	if ( setsockopt( socket_fd, SOL_SOCKET, SO_REUSEADDR, &on, sizeof( on ) ) < 0 ) {
+		coap_log( LOG_WARNING, "coap_new_endpoint: setsockopt SO_REUSEADDR" );
+	}
+
+	on = 1;
+	switch ( addr.ss_family ) {
+	case AF_INET:
+		if ( setsockopt( socket_fd, IPPROTO_IP, IP_PKTINFO, &on, sizeof( on ) ) < 0 ) {
+			coap_log( LOG_ALERT, "coap_new_endpoint: setsockopt IP_PKTINFO\n" );
+		}
+		break;
+	case AF_INET6:
+#ifdef IPV6_RECVPKTINFO
+		if (setsockopt( socket_fd, IPPROTO_IPV6, IPV6_RECVPKTINFO, &on, sizeof(on)) < 0 ) {
+			coap_log(LOG_ALERT, "coap_new_endpoint: setsockopt IPV6_RECVPKTINFO\n");
+		}
+#endif // IPV6_RECVPKTINFO
+#ifdef IPV6_PKTINFO
+		if ( setsockopt( socket_fd, IPPROTO_IPV6, IPV6_PKTINFO, &on, sizeof( on ) ) < 0 ) {
+			coap_log( LOG_ALERT, "coap_new_endpoint: setsockopt IPV6_PKTINFO\n" );
+		}
+#endif // IPV6_PKTINFO
+		break;
+	}
+
+	r->sockfd = socket_fd;
+	r->endpoint = new coap_endpoint_t;
+	r->endpoint->addr.size = len;
+	r->endpoint->addr.addr.st = addr;
+	// e.g. COAP_ENDPOINT_NOSEC
+	r->endpoint->flags = flags;
+
+	r->network_send = coap_network_send;
+	r->network_read = coap_network_read;
+
+	return r;
 }
 
 }

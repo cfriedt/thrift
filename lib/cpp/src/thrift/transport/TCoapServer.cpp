@@ -22,7 +22,6 @@
 #include <iostream>
 
 #include <thrift/transport/TCoapServer.h>
-#include <thrift/transport/TSocket.h>
 
 extern "C" {
 

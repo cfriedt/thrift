@@ -116,7 +116,7 @@ void TUdpSocket::bindLocalEndpoint() {
 #endif
 
 	if ( error ) {
-		string errStr = "TSocket::open() getaddrinfo() " + getSocketInfo() + string( THRIFT_GAI_STRERROR( error ) );
+		string errStr = "TUdpSocket::open() getaddrinfo() " + getSocketInfo() + string( THRIFT_GAI_STRERROR( error ) );
 		GlobalOutput( errStr.c_str() );
 		close();
 		throw TTransportException( TTransportException::NOT_OPEN, "Could not resolve host for client socket." );
@@ -125,6 +125,8 @@ void TUdpSocket::bindLocalEndpoint() {
 	for ( res = res0; res; res = res->ai_next ) {
 		socket_ = ::socket( res->ai_family, res->ai_socktype, res->ai_protocol );
 		if ( socket_ == THRIFT_INVALID_SOCKET ) {
+			int errno_copy = THRIFT_GET_SOCKET_ERROR;
+			GlobalOutput.perror( "TUdpSocket::open() ::socket(): " + sockaddrToString( res->ai_addr, res->ai_addrlen ) + ": ", errno_copy );
 			continue;
 		}
 
@@ -139,6 +141,8 @@ void TUdpSocket::bindLocalEndpoint() {
 		ret = ::bind( socket_, res->ai_addr, static_cast<int>( res->ai_addrlen ) );
 		// success case
 		if ( ret != 0 ) {
+			int errno_copy = THRIFT_GET_SOCKET_ERROR;
+			GlobalOutput.perror( "TUdpSocket::open() ::bind(): " + sockaddrToString( res->ai_addr, res->ai_addrlen ) + ": ", errno_copy );
 			close();
 			continue;
 		}
@@ -147,7 +151,7 @@ void TUdpSocket::bindLocalEndpoint() {
 
 	if ( -1 == socket_ ) {
 		int errno_copy = THRIFT_GET_SOCKET_ERROR;
-		GlobalOutput.perror( "TSocket::open() " + getSocketInfo(), errno_copy );
+		GlobalOutput.perror( "TUdpSocket::open() " + getSocketInfo(), errno_copy );
 		throw TTransportException( TTransportException::NOT_OPEN, "open() failed", errno_copy );
 	}
 
@@ -181,7 +185,7 @@ void TUdpSocket::saveRemoteEndpoint() {
 #endif
 
 	if ( error ) {
-		string errStr = "TSocket::open() getaddrinfo() " + getSocketInfo() + string( THRIFT_GAI_STRERROR( error ) );
+		string errStr = "TUdpSocket::open() getaddrinfo() " + getSocketInfo() + string( THRIFT_GAI_STRERROR( error ) );
 		GlobalOutput( errStr.c_str() );
 		close();
 		throw TTransportException( TTransportException::NOT_OPEN, "Could not resolve host for client socket." );
