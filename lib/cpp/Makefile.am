@@ -48,7 +48,7 @@ if AMX_HAVE_ZLIB
 lib_LTLIBRARIES += libthriftz.la
 pkgconfig_DATA += thrift-z.pc
 endif
-if AMX_HAVE_LIBCOAP
+if AMX_HAVE_COAP
 lib_LTLIBRARIES += libthriftcoap.la
 pkgconfig_DATA += thrift-coap.pc
 endif
@@ -244,7 +244,7 @@ include_transport_HEADERS += \
                          src/thrift/transport/TZlibTransport.h
 endif
 
-if AMX_HAVE_LIBCOAP
+if AMX_HAVE_COAP
 include_transport_HEADERS += \
                          src/thrift/transport/TCoapClient.h \
                          src/thrift/transport/TCoapServer.h \

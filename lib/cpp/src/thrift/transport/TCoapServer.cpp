@@ -23,14 +23,6 @@
 
 #include <thrift/transport/TCoapServer.h>
 
-extern "C" {
-
-#ifndef ARRAY_SIZE
-#define ARRAY_SIZE( x ) (int)( sizeof( x ) / sizeof( (x)[ 0 ] ) )
-#endif // ARRAY_SIZE
-
-}
-
 namespace apache {
 namespace thrift {
 namespace transport {
@@ -55,6 +47,10 @@ std::string TCoapServer::getMethod() {
 	return method;
 }
 
+void TCoapServer::flush() {
+}
+
+/*
 void TCoapServer::requestResource( boost::shared_ptr<coap_resource_t> req ) {
 	coap_resource_t *res;
 	res = coap_resource_init( req->uri.s, req->uri.length, req->flags );
@@ -70,7 +66,7 @@ void TCoapServer::requestResource( boost::shared_ptr<coap_resource_t> req ) {
 
 void TCoapServer::flush() {
 	throw std::runtime_error( "TCoapServer::flush() not implemented" );
-/*
+
   // Fetch the contents of the write buffer
   uint8_t* buf;
   uint32_t len;
@@ -235,7 +231,7 @@ void TCoapServer::handle_request( coap_context_t *context, coap_queue_t *node, u
 		coap_delete_pdu( response );
 	}
 }
-
+*/
 
 }
 }

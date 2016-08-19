@@ -25,7 +25,8 @@
 #include <boost/algorithm/string.hpp>
 
 #include <thrift/transport/TCoapClient.h>
-#include <thrift/transport/TUdpSocket.h>
+
+#include <cantcoap/cantcoap.h>
 
 namespace apache {
 namespace thrift {
@@ -38,8 +39,8 @@ TCoapClient::TCoapClient( boost::shared_ptr<TTransport> transport, std::string h
 	TCoapTransport( transport ),
 	host_( host ),
 	path_( path ),
-    message_type( CON ),
-    method_type( GET )
+    message_type( CoapPDU::COAP_CONFIRMABLE ),
+    method_type( CoapPDU::COAP_GET )
 {
 }
 
@@ -48,8 +49,8 @@ TCoapClient::TCoapClient( string host, int port, string path )
 	TCoapTransport( boost::shared_ptr<TTransport>( new TUdpSocket( host, port ) ) ),
     host_(host),
     path_(path),
-    message_type( CON ),
-    method_type( GET )
+    message_type( CoapPDU::COAP_CONFIRMABLE  ),
+    method_type( CoapPDU::COAP_GET )
 {
 }
 
@@ -58,8 +59,8 @@ TCoapClient::TCoapClient( string host, int server_port, int client_port, string 
 	TCoapTransport( boost::shared_ptr<TTransport>( new TUdpSocket( host, server_port, client_port ) ) ),
     host_(host),
     path_(path),
-    message_type( CON ),
-    method_type( GET )
+    message_type( CoapPDU::COAP_CONFIRMABLE  ),
+    method_type( CoapPDU::COAP_GET )
 {
 }
 
@@ -68,41 +69,59 @@ TCoapClient::~TCoapClient() {
 
 void TCoapClient::open() {
 	TCoapTransport::open();
-	coap_register_response_handler( getCoapContext().get(), coap_response_handler );
+	//coap_register_response_handler( getCoapContext().get(), coap_response_handler );
 }
 
 void TCoapClient::flush() {
 
-	sendBufferedRequest();
+	uint8_t *write_buffer;
+	unsigned write_buffer_sz;
 
-	// necessary?
+	CoapPDU pdu;
+
+	writeBuffer_.getBuffer( & write_buffer, & write_buffer_sz );
+
+	if ( 0 == write_buffer_sz ) {
+		goto out;
+	}
+
+	pdu.setVersion( 1 );
+	pdu.setType( (CoapPDU::Type) getCoapMessageType() );
+	pdu.setCode( (CoapPDU::Code) getCoapMethodType() );
+	pdu.setMessageID( ::random() );
+	pdu.setURI( (char *) path_.c_str() );
+	pdu.addOption( CoapPDU::COAP_CONTENT_FORMAT_APP_OCTET, write_buffer_sz, write_buffer );
+
+	transport_->write( pdu.getPDUPointer(), pdu.getPDULength() );
 	transport_->flush();
 
-	// Reset the buffer and header variables
 	writeBuffer_.resetBuffer();
+
+out:
+	return;
 }
 
-TCoapClient::coap_message_t
-TCoapClient::getCoapMessageType()
+int TCoapClient::getCoapMessageType()
 {
 	return message_type;
 }
 void
-TCoapClient::setCoapMessageType( TCoapClient::coap_message_t message_type )
+TCoapClient::setCoapMessageType( int message_type )
 {
 	this->message_type = message_type;
 }
 
-TCoapClient::coap_method_t
+int
 TCoapClient::getCoapMethodType()
 {
 	return method_type;
 }
-void TCoapClient::setCoapMethodType( TCoapClient::coap_method_t method_type )
+void TCoapClient::setCoapMethodType( int method_type )
 {
 	this->method_type = method_type;
 }
 
+/*
 void TCoapClient::sendBufferedRequest() {
 	uint8_t *buf;
 	uint32_t len;
@@ -177,7 +196,8 @@ void TCoapClient::sendBufferedRequest() {
 		throw TTransportException( TTransportException::BAD_ARGS, "coap_send_message_type() failed" );
 	}
 }
-
+*/
+/*
 void TCoapClient::handle_response( coap_context_t *context, coap_queue_t *sent, coap_queue_t *rcvd, uint8_t **buf, uint32_t *len ) {
 
 	THRIFT_UNUSED_VARIABLE( buf );
@@ -187,13 +207,12 @@ void TCoapClient::handle_response( coap_context_t *context, coap_queue_t *sent, 
 
 	coap_send_ack( context, &rcvd->local_if, &rcvd->remote, rcvd->pdu );
 
-	/* In a lossy context, the ACK of a separate response may have
-	 * been lost, so we need to stop retransmitting requests with the
-	 * same token.
-	 */
+//	In a lossy context, the ACK of a separate response may have
+//	been lost, so we need to stop retransmitting requests with the
+//	same token.
 	coap_cancel_all_messages( context, &rcvd->remote, rcvd->pdu->hdr->token, rcvd->pdu->hdr->token_length );
 
-	/* Call application-specific response handler when available. */
+//	Call application-specific response handler when available.
 	if ( context->response_handler ) {
 		context->response_handler( context, &rcvd->local_if, &rcvd->remote, sent ? sent->pdu : NULL, rcvd->pdu, rcvd->id );
 	}
@@ -208,7 +227,7 @@ TCoapClient::coap_response_handler(
 ) {
 	std::cout << "TCoapClient::coap_response_handler(): received response to transaction id " << id << std::endl;
 }
-
+*/
 
 }
 }

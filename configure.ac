@@ -153,8 +153,8 @@ if test "$with_cpp" = "yes";  then
   AX_LIB_ZLIB([1.2.3])
   have_zlib=$success
 
-  AX_LIB_COAP([1.0])
-  have_libcoap=$success
+  AX_COAP()
+  have_coap=$success
 
   AX_THRIFT_LIB(qt4, [Qt], yes)
   have_qt=no
@@ -186,7 +186,7 @@ fi
 AM_CONDITIONAL([WITH_CPP], [test "$have_cpp" = "yes"])
 AM_CONDITIONAL([AMX_HAVE_LIBEVENT], [test "$have_libevent" = "yes"])
 AM_CONDITIONAL([AMX_HAVE_ZLIB], [test "$have_zlib" = "yes"])
-AM_CONDITIONAL([AMX_HAVE_LIBCOAP], [test "$have_libcoap" = "yes"])
+AM_CONDITIONAL([AMX_HAVE_COAP], [test "$with_coap" = "yes"])
 AM_CONDITIONAL([AMX_HAVE_QT], [test "$have_qt" = "yes"])
 AM_CONDITIONAL([AMX_HAVE_QT5], [test "$have_qt5" = "yes"])
 AM_CONDITIONAL([QT5_REDUCE_RELOCATIONS], [test "x$qt_reduce_reloc" != "x"])
@@ -842,7 +842,7 @@ if test "$have_cpp" = "yes" ; then
   echo
   echo "C++ Library:"
   echo "   Build TZlibTransport ...... : $have_zlib"
-  echo "   Build TCoapTransport ...... : $have_libcoap"
+  echo "   Build TCoapTransport ...... : $have_coap"
   echo "   Build TNonblockingServer .. : $have_libevent"
   echo "   Build TQTcpServer (Qt4) .... : $have_qt"
   echo "   Build TQTcpServer (Qt5) .... : $have_qt5"

@@ -22,12 +22,9 @@
 
 #include <boost/make_shared.hpp>
 
-#include <thrift/transport/TUdpSocket.h>
 #include <thrift/transport/TCoapTransport.h>
 
-extern "C" {
-#include <unistd.h> // close(2)
-}
+#include <cantcoap/cantcoap.h>
 
 namespace apache {
 namespace thrift {
@@ -37,71 +34,116 @@ using namespace std;
 
 TCoapTransport::TCoapTransport( boost::shared_ptr<TTransport> transport )
 :
-	isOpen_called( false ),
 	transport_( transport ),
 	origin_( "" )
 {
-	const std::string coap_ver = coap_package_version();
 }
 
 TCoapTransport::~TCoapTransport() {
-	if ( NULL != coap_context.get() ) {
-		coap_context_t *ctx = coap_context.get();
-		coap_free_context( ctx );
-	}
-	coap_address.reset();
-	coap_context.reset();
 }
 
-// XXX: @CF: this is a workaround for the necessity to call coap_new_context() without
-// being able to pass in a custom file descriptor / socket.
-void TCoapTransport::replaceSocketAfterOpen() {
-	int old_socket_fd;
-	int new_socket_fd;
-	struct sockaddr_storage addr;
-	socklen_t len = sizeof( addr );
-	boost::shared_ptr<TUdpSocket> socket_trans;
+uint32_t TCoapTransport::transportAvail( boost::shared_ptr<TTransport> transport ) {
+	uint32_t r;
 
-	socket_trans = boost::static_pointer_cast<TUdpSocket>( transport_ );
-	old_socket_fd = socket_trans->getSocketFD();
-	new_socket_fd = coap_context->sockfd;
+	uint32_t sz;
+	uint8_t *buf;
+	uint8_t *bufp;
 
-	getsockname( old_socket_fd, (struct sockaddr *) &addr, &len );
-	std::cout << "TCoapTransport::replaceSocketAfterOpen(): replacing old socket ( " << old_socket_fd << ", " << TUdpSocket::sockaddrToString( (struct sockaddr *) &addr, len ) << " ) ";
-	len = sizeof( addr );
-	getsockname( new_socket_fd, (struct sockaddr *) &addr, &len );
-	std::cout << "with new socket ( " << new_socket_fd << ", " << TUdpSocket::sockaddrToString( (struct sockaddr *) &addr, len ) << " ) " << std::endl;
-
-	if ( new_socket_fd != old_socket_fd ) {
-		socket_trans->setSocketFD( new_socket_fd );
-		::close( old_socket_fd );
+	for(
+		sz = 1,
+			r = sz,
+			buf = new uint8_t[ sz ],
+			bufp = buf;
+		;
+		sz++,
+			r = sz,
+			delete buf,
+			buf = new uint8_t[ sz ],
+			bufp = buf
+	) {
+		bufp = transport->borrow( bufp, & r );
+		if ( bufp != buf ) {
+			r = 0;
+			break;
+		}
 	}
-}
 
-void TCoapTransport::open() {
-	transport_->open();
-	coap_address = toCoapAddress( transport_ );
-	if ( NULL == coap_address.get() ) {
-		throw TTransportException( TTransportException::INTERNAL_ERROR, "toCoapAddress() failed" );
-	}
-	coap_context = boost::shared_ptr<coap_context_t>( coap_new_context( coap_address.get() ) );
-	if ( NULL == coap_context.get() ) {
-		throw TTransportException( TTransportException::INTERNAL_ERROR, "coap_new_context() failed" );
-	}
-	replaceSocketAfterOpen();
-	isOpen_called = true;
-}
-
-bool TCoapTransport::isOpen() {
-	return isOpen_called && transport_->isOpen();
+	delete buf;
+	return r;
 }
 
 uint32_t TCoapTransport::read( uint8_t* buf, uint32_t len ) {
+
 	uint32_t r;
+
+	uint8_t *read_buffer;
+	uint32_t read_buffer_size;
+	uint32_t read_buffer_avail;
+	uint32_t transport_avail;
+
+	uint32_t read_sz;
+
+	uint8_t *payload_ptr;
+	unsigned payload_len;
+
+	CoapPDU::Type pdu_type;
+
+	CoapPDU pdu;
+
 	if ( ! isOpen() ) {
 		open();
 	}
-	r = TCoapTransport::coap_read( buf, len );
+
+	transport_avail = transportAvail( transport_ );
+	read_buffer_avail = readBuffer_.available_write();
+
+	read_sz = std::min( read_buffer_avail, transport_avail );
+
+	if ( 0 == read_sz ) {
+		r = 0;
+		goto out;
+	}
+
+	transport_->read( readBuffer_.getWritePtr( read_sz ), read_sz );
+
+	readBuffer_.getBuffer( & read_buffer, & read_buffer_size );
+
+	pdu( read_buffer, read_buffer_size );
+
+	if ( ! pdu.validate() ) {
+		readBuffer_.resetBuffer();
+		r = 0;
+		goto out;
+	}
+
+	pdu_type = pdu.getType();
+
+	switch( pdu_type ) {
+
+	case CoapPDU::COAP_CONFIRMABLE:
+	case CoapPDU::COAP_NON_CONFIRMABLE:
+	case CoapPDU::COAP_ACKNOWLEDGEMENT:
+
+		payload_len = pdu.getPayloadLength();
+		if ( 0 == payload_len ) {
+			r = 0;
+			goto out;
+		}
+		payload_ptr = pdu.getPayloadPointer();
+		std::memcpy( buf, payload_ptr, payload_len );
+		r = payload_len;
+
+		break;
+
+	case CoapPDU::COAP_RESET:
+	default:
+
+		r = 0;
+
+		break;
+	}
+
+out:
 	return r;
 }
 
@@ -118,62 +160,9 @@ const std::string TCoapTransport::getOrigin() {
 	return oss.str();
 }
 
-void TCoapTransport::init() {
-}
-
-boost::shared_ptr<coap_context_t> TCoapTransport::getCoapContext() {
-	return coap_context;
-}
-
-boost::shared_ptr<coap_address_t> TCoapTransport::toCoapAddress( boost::shared_ptr<TTransport> trans ) {
-
-	sockaddr *sock_p;
-	socklen_t sock_len;
-	int port;
-
-	boost::shared_ptr<coap_address_t> coap_address;
-	boost::shared_ptr<TSocket> socket_trans;
-
-	socket_trans = boost::static_pointer_cast<TSocket>( trans );
-	sock_p = socket_trans->getCachedAddress( & sock_len );
-	if ( NULL == sock_p ) {
-		throw TTransportException( TTransportException::INTERNAL_ERROR, "TSocket::getCachedAddress() returned NULL!" );
-	}
-
-	coap_address = boost::make_shared<coap_address_t>();
-
-	switch( sock_len ) {
-
-	case sizeof(sockaddr_in):
-		// AF_INET
-
-		std::memcpy( & coap_address->addr.sin, sock_p, sock_len );
-		coap_address->addr.sin.sin_port = ntohs( coap_address->addr.sin.sin_port );
-		coap_address->addr.sin.sin_addr.s_addr = ntohl( coap_address->addr.sin.sin_addr.s_addr );
-
-		break;
-
-	case sizeof(sockaddr_in6):
-
-		// AF_INET6
-
-		std::memcpy( & coap_address->addr.sin6, sock_p, sock_len );
-		coap_address->addr.sin6.sin6_port = ntohs( coap_address->addr.sin6.sin6_port );
-
-		break;
-
-	default:
-		throw TTransportException( TTransportException::INTERNAL_ERROR, "unsupported socket length" );
-		break;
-	}
-
-	coap_address->size = sock_len;
-
-	return coap_address;
-}
-
 // functions borrowed / modified from libcoap
 
+/*
 int TCoapTransport::coap_read( uint8_t *buf, uint32_t len ) {
 	// XXX: @CF: I've squished a number of libcoap functions into 1 here
 	// The reason is that we do now want to rely on their application framework, only their
@@ -277,24 +266,18 @@ int TCoapTransport::coap_read( uint8_t *buf, uint32_t len ) {
 
 	memset(opt_filter, 0, sizeof(coap_opt_filter_t));
 
-	/* version has been checked in coap_handle_message() */
-	/* if ( rcvd->pdu->hdr->version != COAP_DEFAULT_VERSION ) { */
-	/*   debug("dropped packet with unknown version %u\n", rcvd->pdu->hdr->version); */
-	/*   goto cleanup; */
-	/* } */
-
 	switch ( rcvd->pdu->hdr->type ) {
 	case COAP_MESSAGE_ACK:
-		/* find transaction in sendqueue to stop retransmission */
+		// find transaction in sendqueue to stop retransmission
 		coap_remove_from_queue( &ctx->sendqueue, rcvd->id, &sent );
 
 		if ( rcvd->pdu->hdr->code == 0 ) {
 			goto coap_dispatch_cleanup;
 		}
 
-		/* if sent code was >= 64 the message might have been a
-		 * notification. Then, we must flag the observer to be alive
-		 * by setting obs->fail_cnt = 0. */
+		// if sent code was >= 64 the message might have been a
+		// notification. Then, we must flag the observer to be alive
+		// by setting obs->fail_cnt = 0.
 		if ( sent && COAP_RESPONSE_CLASS(sent->pdu->hdr->code) == 2 ) {
 			const str token = { sent->pdu->hdr->token_length, sent->pdu->hdr->token };
 			coap_touch_observer( ctx, &sent->remote, &token );
@@ -302,11 +285,11 @@ int TCoapTransport::coap_read( uint8_t *buf, uint32_t len ) {
 		break;
 
 	case COAP_MESSAGE_RST:
-		/* We have sent something the receiver disliked, so we remove
-		 * not only the transaction but also the subscriptions we might
-		 * have. */
+		// We have sent something the receiver disliked, so we remove
+		// not only the transaction but also the subscriptions we might
+		// have.
 
-		/* find transaction in sendqueue to stop retransmission */
+		// find transaction in sendqueue to stop retransmission
 		coap_remove_from_queue( &ctx->sendqueue, rcvd->id, &sent );
 
 		if ( sent ) {
@@ -317,17 +300,17 @@ int TCoapTransport::coap_read( uint8_t *buf, uint32_t len ) {
 
 		break;
 
-	case COAP_MESSAGE_NON: /* check for unknown critical options */
+	case COAP_MESSAGE_NON: // check for unknown critical options
 		if ( coap_option_check_critical( ctx, rcvd->pdu, opt_filter ) == 0 ) {
 			goto coap_dispatch_cleanup;
 		}
 		break;
 
-	case COAP_MESSAGE_CON: /* check for unknown critical options */
+	case COAP_MESSAGE_CON: // check for unknown critical options
 		if ( coap_option_check_critical( ctx, rcvd->pdu, opt_filter ) == 0 ) {
 
-			/* FIXME: send response only if we have received a request. Otherwise,
-			 * send RST. */
+			// FIXME: send response only if we have received a request. Otherwise,
+			// send RST.
 			response = coap_new_error_response( rcvd->pdu, COAP_RESPONSE_CODE( 402 ), opt_filter );
 
 			if ( !response ) {
@@ -347,8 +330,8 @@ int TCoapTransport::coap_read( uint8_t *buf, uint32_t len ) {
 		break;
 	}
 
-	/* Pass message to upper layer if a specific handler was
-	 * registered for a request that should be handled locally. */
+	// Pass message to upper layer if a specific handler was
+	// registered for a request that should be handled locally.
 	//if ( handle_locally( ctx, rcvd ) ) {
 	if ( true ) {
 		if ( COAP_MESSAGE_IS_REQUEST( rcvd->pdu->hdr ) ) {
@@ -490,6 +473,7 @@ coap_context_t *TCoapTransport::coap_new_context( int socket_fd, int flags ) {
 
 	return r;
 }
+*/
 
 }
 }
