@@ -61,7 +61,7 @@ uint32_t TCoapTransport::transportAvail( boost::shared_ptr<TTransport> transport
 			buf = new uint8_t[ sz ],
 			bufp = buf
 	) {
-		bufp = transport->borrow( bufp, & r );
+		bufp = (uint8_t *) transport->borrow( bufp, & r );
 		if ( bufp != buf ) {
 			r = 0;
 			break;
@@ -78,6 +78,9 @@ uint32_t TCoapTransport::read( uint8_t* buf, uint32_t len ) {
 
 	uint8_t *read_buffer;
 	uint32_t read_buffer_size;
+	uint8_t *write_buffer;
+	uint32_t write_buffer_size;
+
 	uint32_t read_buffer_avail;
 	uint32_t transport_avail;
 
@@ -94,6 +97,7 @@ uint32_t TCoapTransport::read( uint8_t* buf, uint32_t len ) {
 		open();
 	}
 
+
 	transport_avail = transportAvail( transport_ );
 	read_buffer_avail = readBuffer_.available_write();
 
@@ -104,16 +108,25 @@ uint32_t TCoapTransport::read( uint8_t* buf, uint32_t len ) {
 		goto out;
 	}
 
-	transport_->read( readBuffer_.getWritePtr( read_sz ), read_sz );
+	write_buffer = readBuffer_.getWritePtr( read_sz );
+
+	transport_->read( write_buffer, read_sz );
 
 	readBuffer_.getBuffer( & read_buffer, & read_buffer_size );
 
-	pdu( read_buffer, read_buffer_size );
+	pdu = CoapPDU( read_buffer, read_buffer_size, read_buffer_size );
 
 	if ( ! pdu.validate() ) {
 		readBuffer_.resetBuffer();
 		r = 0;
 		goto out;
+	}
+
+	last_token_len_ = pdu.getTokenLength();
+	if ( 0 == last_token_len_ ) {
+		last_token_ = 0;
+	} else {
+		memcpy( & last_token_, pdu.getTokenPointer(), last_token_len_ );
 	}
 
 	pdu_type = pdu.getType();

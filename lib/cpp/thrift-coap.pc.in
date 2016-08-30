@@ -26,5 +26,5 @@ Name: Thrift
 Description: Thrift Coap API
 Version: @VERSION@
 Requires: thrift = @VERSION@
-Libs: -L${libdir} -lthriftcoap -lcoap-1
+Libs: -L${libdir} -lthriftcoap -lcantcoap
 Cflags: -I${includedir}

@@ -24,6 +24,7 @@
 #include <sstream>
 #include <boost/algorithm/string.hpp>
 
+#include <thrift/transport/TUdpSocket.h>
 #include <thrift/transport/TCoapClient.h>
 
 #include <cantcoap/cantcoap.h>
@@ -77,6 +78,12 @@ void TCoapClient::flush() {
 	uint8_t *write_buffer;
 	unsigned write_buffer_sz;
 
+	uint8_t *pdu_ptr;
+	unsigned pdu_len;
+
+	uint64_t token;
+	uint8_t  token_len = sizeof( uint64_t );
+
 	CoapPDU pdu;
 
 	writeBuffer_.getBuffer( & write_buffer, & write_buffer_sz );
@@ -89,10 +96,19 @@ void TCoapClient::flush() {
 	pdu.setType( (CoapPDU::Type) getCoapMessageType() );
 	pdu.setCode( (CoapPDU::Code) getCoapMethodType() );
 	pdu.setMessageID( ::random() );
+	token = ::random();
+	pdu.setToken( (uint8_t *) & token, token_len );
 	pdu.setURI( (char *) path_.c_str() );
-	pdu.addOption( CoapPDU::COAP_CONTENT_FORMAT_APP_OCTET, write_buffer_sz, write_buffer );
+	pdu.setPayload( write_buffer, write_buffer_sz );
 
-	transport_->write( pdu.getPDUPointer(), pdu.getPDULength() );
+	if ( ! pdu.validate() ) {
+		throw TTransportException( TTransportException::CORRUPTED_DATA, "unable to validate CoAP PDU!!" );
+	}
+
+	pdu_ptr = pdu.getPDUPointer();
+	pdu_len = pdu.getPDULength();
+
+	transport_->write( pdu_ptr, pdu_len );
 	transport_->flush();
 
 	writeBuffer_.resetBuffer();

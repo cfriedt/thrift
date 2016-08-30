@@ -23,6 +23,8 @@
 
 #include <thrift/transport/TCoapServer.h>
 
+#include <cantcoap/cantcoap.h>
+
 namespace apache {
 namespace thrift {
 namespace transport {
@@ -36,7 +38,7 @@ TCoapServer::TCoapServer(boost::shared_ptr<TTransport> transport )
 }
 
 TCoapServer::~TCoapServer() {
-	resource.clear();
+	//resource.clear();
 }
 
 std::string TCoapServer::getUri() {
@@ -48,6 +50,31 @@ std::string TCoapServer::getMethod() {
 }
 
 void TCoapServer::flush() {
+	uint8_t *write_buffer;
+	unsigned write_buffer_sz;
+
+	CoapPDU pdu;
+
+	writeBuffer_.getBuffer( & write_buffer, & write_buffer_sz );
+
+	if ( 0 == write_buffer ) {
+		goto out;
+	}
+
+	pdu.setVersion( 1 );
+	pdu.setType( CoapPDU::Type::COAP_CONFIRMABLE );
+	pdu.setCode( CoapPDU::Code::COAP_CONTENT );
+	pdu.setMessageID( ::random() );
+	pdu.setToken( (uint8_t *) & last_token_, (uint8_t) last_token_len_ );
+	pdu.addOption( CoapPDU::COAP_CONTENT_FORMAT_APP_OCTET, write_buffer_sz, write_buffer );
+
+	transport_->write( pdu.getPDUPointer(), pdu.getPDULength() );
+	transport_->flush();
+
+	writeBuffer_.resetBuffer();
+
+out:
+	return;
 }
 
 /*
@@ -89,9 +116,10 @@ void TCoapServer::flush() {
   // Reset the buffer and header variables
   writeBuffer_.resetBuffer();
   readHeaders_ = true;
-*/
 }
+*/
 
+/*
 void TCoapServer::handle_request( coap_context_t *context, coap_queue_t *node, uint8_t **buf, uint32_t *len ) {
 
 	coap_method_handler_t h = NULL;
@@ -104,30 +132,30 @@ void TCoapServer::handle_request( coap_context_t *context, coap_queue_t *node, u
 
 	coap_option_filter_clear( opt_filter );
 
-	/* try to find the resource from the request URI */
+	// try to find the resource from the request URI
 	coap_hash_request_uri( node->pdu, key );
 	resource = coap_get_resource_from_key( context, key );
 
 	if ( !resource ) {
-		/* The resource was not found. Check if the request URI happens to
-		 * be the well-known URI. In that case, we generate a default
-		 * response, otherwise, we return 4.04 */
+		// The resource was not found. Check if the request URI happens to
+		// be the well-known URI. In that case, we generate a default
+		// response, otherwise, we return 4.04
 
 		switch ( node->pdu->hdr->code ) {
 
 		case COAP_REQUEST_GET:
-			if ( is_wkc( key ) ) { /* GET request for .well-known/core */
+			if ( is_wkc( key ) ) { // GET request for .well-known/core
 //				info( "create default response for %s\n", COAP_DEFAULT_URI_WELLKNOWN );
 				response = coap_wellknown_response( context, node->pdu );
 
-			} else { /* GET request for any another resource, return 4.04 */
+			} else { // GET request for any another resource, return 4.04
 
 //				debug( "GET for unknown resource 0x%02x%02x%02x%02x, return 4.04\n", key[ 0 ], key[ 1 ], key[ 2 ], key[ 3 ] );
 				response = coap_new_error_response( node->pdu, COAP_RESPONSE_CODE( 404 ), opt_filter );
 			}
 			break;
 
-		default: /* any other request type */
+		default: // any other request type
 
 //			debug( "unhandled request for unknown resource 0x%02x%02x%02x%02x\r\n", key[ 0 ], key[ 1 ], key[ 2 ], key[ 3 ] );
 
@@ -145,7 +173,7 @@ void TCoapServer::handle_request( coap_context_t *context, coap_queue_t *node, u
 
 // XXX: @CF: [Begin] SNIP
 
-	/* the resource was found, check if there is a registered handler */
+	// the resource was found, check if there is a registered handler
 	if ( (size_t) node->pdu->hdr->code - 1 < sizeof( resource->handler ) / sizeof(coap_method_handler_t) ) {
 		h = resource->handler[ node->pdu->hdr->code - 1 ];
 	}
@@ -154,15 +182,15 @@ void TCoapServer::handle_request( coap_context_t *context, coap_queue_t *node, u
 		//debug( "call custom handler for resource 0x%02x%02x%02x%02x\n", key[ 0 ], key[ 1 ], key[ 2 ], key[ 3 ] );
 		response = coap_pdu_init( node->pdu->hdr->type == COAP_MESSAGE_CON ? COAP_MESSAGE_ACK : COAP_MESSAGE_NON, 0, node->pdu->hdr->id, COAP_MAX_PDU_SIZE );
 
-		/* Implementation detail: coap_add_token() immediately returns 0
-		 if response == NULL */
+		// Implementation detail: coap_add_token() immediately returns 0
+		//if response == NULL
 		if ( coap_add_token( response, node->pdu->hdr->token_length, node->pdu->hdr->token ) ) {
 			str token = { node->pdu->hdr->token_length, node->pdu->hdr->token };
 			coap_opt_iterator_t opt_iter;
 			coap_opt_t *observe = NULL;
 			int observe_action = COAP_OBSERVE_CANCEL;
 
-			/* check for Observe option */
+			// check for Observe option
 			if ( resource->observable ) {
 				observe = coap_check_option( node->pdu, COAP_OPTION_OBSERVE, &opt_iter );
 				if ( observe ) {
@@ -191,12 +219,12 @@ void TCoapServer::handle_request( coap_context_t *context, coap_queue_t *node, u
 					coap_delete_observer( resource, &node->remote, &token );
 				}
 
-				/* If original request contained a token, and the registered
-				 * application handler made no changes to the response, then
-				 * this is an empty ACK with a token, which is a malformed
-				 * PDU */
+				// If original request contained a token, and the registered
+				// application handler made no changes to the response, then
+				// this is an empty ACK with a token, which is a malformed
+				// PDU
 				if ( ( response->hdr->type == COAP_MESSAGE_ACK ) && ( response->hdr->code == 0 ) ) {
-					/* Remove token from otherwise-empty acknowledgment PDU */
+					// Remove token from otherwise-empty acknowledgment PDU
 					response->hdr->token_length = 0;
 					response->length = sizeof(coap_hdr_t);
 				}

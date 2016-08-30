@@ -49,6 +49,8 @@ public:
 
   virtual const std::string getOrigin();
 
+  void getLastToken( uint8_t *val, uint8_t *len );
+
 protected:
 
   boost::shared_ptr<TTransport> transport_;
@@ -56,6 +58,9 @@ protected:
 
   TMemoryBuffer writeBuffer_;
   TMemoryBuffer readBuffer_;
+
+  uint64_t last_token_;
+  uint8_t last_token_len_;
 
   static uint32_t transportAvail( boost::shared_ptr<TTransport> transport_ );
 };

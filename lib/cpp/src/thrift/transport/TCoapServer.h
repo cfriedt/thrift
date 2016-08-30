@@ -43,15 +43,15 @@ public:
   std::string getUri();
   std::string getMethod();
 
-  void requestResource( boost::shared_ptr<coap_resource_t> res );
+  //void requestResource( boost::shared_ptr<coap_resource_t> res );
 
 protected:
   std::string uri;
   std::string method;
 
-  std::vector<boost::shared_ptr<coap_resource_t>> resource;
+  //std::vector<boost::shared_ptr<coap_resource_t>> resource;
 
-  void handle_request( coap_context_t *context, coap_queue_t *node, uint8_t **buf, uint32_t *len );
+  //void handle_request( coap_context_t *context, coap_queue_t *node, uint8_t **buf, uint32_t *len );
 };
 
 /**

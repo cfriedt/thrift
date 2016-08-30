@@ -154,7 +154,7 @@ if test "$with_cpp" = "yes";  then
   have_zlib=$success
 
   AX_COAP()
-  have_coap=$success
+  with_coap=$success
 
   AX_THRIFT_LIB(qt4, [Qt], yes)
   have_qt=no
@@ -842,7 +842,7 @@ if test "$have_cpp" = "yes" ; then
   echo
   echo "C++ Library:"
   echo "   Build TZlibTransport ...... : $have_zlib"
-  echo "   Build TCoapTransport ...... : $have_coap"
+  echo "   Build TCoapTransport ...... : $with_coap"
   echo "   Build TNonblockingServer .. : $have_libevent"
   echo "   Build TQTcpServer (Qt4) .... : $have_qt"
   echo "   Build TQTcpServer (Qt5) .... : $have_qt5"
