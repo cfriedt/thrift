@@ -60,10 +60,15 @@ uint32_t TCoapTransport::transportAvail( boost::shared_ptr<TTransport> transport
 		sz = r,
 			delete[] buf,
 			buf = new uint8_t[ sz ],
-			bufp = buf
+			bufp = buf,
+			prev_r = r,
+			r++
 	) {
 		try {
 			bufp = (uint8_t *) transport->borrow( bufp, & r );
+			if ( r >= 64 ) {
+				std::cout << std::endl;
+			}
 		} catch( TTransportException &te ) {
 			r = prev_r;
 			if ( -1 == r ) {
@@ -88,6 +93,7 @@ void TCoapTransport::readMoreData() {
 	uint8_t *tbufp;
 	uint32_t r;
 	unsigned payload_len;
+	unsigned pdu_len;
 	uint8_t *payload_ptr;
 
 	CoapPDU::Type pdu_type;
@@ -107,6 +113,8 @@ void TCoapTransport::readMoreData() {
 	if ( ! pdu.validate() ) {
 		goto out;
 	}
+
+	pdu_len = pdu.getPDULength();
 
 	payload_len = pdu.getPayloadLength();
 
@@ -146,7 +154,7 @@ void TCoapTransport::readMoreData() {
 	}
 
 consume:
-	transport_->consume( pdu.getPDULength() );
+	transport_->consume( pdu_len );
 
 out:
 	delete[] tbuf;
