@@ -380,7 +380,7 @@ uint32_t TUdpSocket::avail() {
 		src_addr_len = sizeof( src_addr );
 
 		rr = ::recvfrom( socket_, buf, sz, MSG_PEEK, (struct sockaddr *) & src_addr, & src_addr_len );
-		if ( -1 == r ) {
+		if ( -1 == rr ) {
 		    int errno_copy = THRIFT_GET_SOCKET_ERROR;
 		    std::string sockaddr_str = sockaddrToString( (struct sockaddr *) & src_addr, src_addr_len );
 		    GlobalOutput.perror("TUdpSocket::avail(): " + sockaddr_str, errno_copy);
@@ -431,6 +431,24 @@ const uint8_t *TUdpSocket::borrow_virt( uint8_t *buf, uint32_t *len ) {
 	r = (const uint8_t *)buf;
 
 	return r;
+}
+
+void TUdpSocket::consume_virt( uint32_t len ) {
+	int rr;
+	uint8_t *buf;
+
+	struct sockaddr_storage src_addr;
+	socklen_t src_addr_len;
+
+	buf = new uint8_t[ len ];
+	rr = ::recvfrom( socket_, buf, len, 0, (struct sockaddr *) & src_addr, & src_addr_len );
+	if ( -1 == rr ) {
+	    int errno_copy = THRIFT_GET_SOCKET_ERROR;
+	    std::string sockaddr_str = sockaddrToString( (struct sockaddr *) & src_addr, src_addr_len );
+	    GlobalOutput.perror("TUdpSocket::borrow() recvfrom(): " + sockaddr_str, errno_copy);
+	    throw TTransportException(TTransportException::UNKNOWN, "TUdpSocket::borrow() recvfrom()", errno_copy);
+	}
+	delete[] buf;
 }
 
 std::string TUdpSocket::sockaddrToString( struct sockaddr *sa,  socklen_t len )
