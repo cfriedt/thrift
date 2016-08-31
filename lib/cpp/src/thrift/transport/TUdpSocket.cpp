@@ -265,40 +265,10 @@ int TUdpSocket::getWholeDatagram() {
 	int sz;
 	uint8_t *buf;
 
-	// iteratively peek for a larger and larger message size until we know its exact size
-	for(
-		sz = 16,
-			buf = new uint8_t[ sz ];
-		sz < UDP_SIZE_MAX;
-		sz *= 2,
-			delete buf,
-			buf = new uint8_t[ sz ]
-   ) {
-		src_addr_len = sizeof( src_addr );
+	uint32_t available = avail();
 
-		r = ::recvfrom( socket_, buf, sz, MSG_PEEK, (struct sockaddr *) & src_addr, & src_addr_len );
-
-		if ( 0 == r ) {
-			goto out;
-		}
-
-		if ( -1 == r ) {
-			goto out;
-		}
-
-		if ( r < sz ) {
-			break;
-		}
-	}
-
-	if ( sz > UDP_SIZE_MAX ) {
-		r = -1;
-		goto out;
-	}
-
-	// finally, read the message out of the socket
-	r = ::recvfrom( socket_, buf, sz, 0, (struct sockaddr *) & src_addr, & src_addr_len );
-
+	buf = new uint8_t[ available ];
+	r = ::recvfrom( socket_, buf, available, 0, (struct sockaddr *) & src_addr, & src_addr_len );
 	if ( -1 != r ) {
 		rx_buffer.clear();
 		rx_buffer.insert( rx_buffer.end(), (uint8_t *) buf, (uint8_t *)buf + r );
@@ -385,6 +355,82 @@ void TUdpSocket::flush() {
 	}
 
 	tx_buffer.clear();
+}
+
+uint32_t TUdpSocket::avail() {
+
+	uint32_t r;
+
+	int rr;
+	int sz;
+	uint8_t *buf;
+
+	struct sockaddr_storage src_addr;
+	socklen_t src_addr_len;
+
+	// iteratively peek for a larger and larger message size until we know its exact size
+	for(
+		sz = 1,
+			buf = new uint8_t[ sz ];
+		sz < UDP_SIZE_MAX;
+		sz *= 2,
+			delete buf,
+			buf = new uint8_t[ sz ]
+   ) {
+		src_addr_len = sizeof( src_addr );
+
+		rr = ::recvfrom( socket_, buf, sz, MSG_PEEK, (struct sockaddr *) & src_addr, & src_addr_len );
+		if ( -1 == r ) {
+		    int errno_copy = THRIFT_GET_SOCKET_ERROR;
+		    std::string sockaddr_str = sockaddrToString( (struct sockaddr *) & src_addr, src_addr_len );
+		    GlobalOutput.perror("TUdpSocket::avail(): " + sockaddr_str, errno_copy);
+		    throw TTransportException(TTransportException::UNKNOWN, "TUdpSocket::avail() recvfrom()", errno_copy);
+		}
+
+		if ( 0 == rr ) {
+			goto out;
+		}
+
+		if ( rr < sz ) {
+			break;
+		}
+	}
+
+	if ( sz > UDP_SIZE_MAX ) {
+		rr = -1;
+		goto out;
+	}
+
+out:
+	delete buf;
+	r = rr >= 0 ? rr : 0;
+	return r;
+}
+
+const uint8_t *TUdpSocket::borrow_virt( uint8_t *buf, uint32_t *len ) {
+	const uint8_t *r;
+	int rr;
+
+	uint32_t available;
+
+	available = avail();
+
+	if ( *len > available ) {
+		throw TTransportException( TTransportException::UNKNOWN, "not enough data available" );
+	}
+
+	rr = ::recvfrom( socket_, buf, *len, MSG_PEEK, (struct sockaddr *) & src_addr, & src_addr_len );
+	if ( -1 == rr ) {
+	    int errno_copy = THRIFT_GET_SOCKET_ERROR;
+	    std::string sockaddr_str = sockaddrToString( (struct sockaddr *) & src_addr, src_addr_len );
+	    GlobalOutput.perror("TUdpSocket::borrow() recvfrom(): " + sockaddr_str, errno_copy);
+	    throw TTransportException(TTransportException::UNKNOWN, "TUdpSocket::borrow() recvfrom()", errno_copy);
+	}
+
+	*len = rr;
+	r = (const uint8_t *)buf;
+
+	return r;
 }
 
 std::string TUdpSocket::sockaddrToString( struct sockaddr *sa,  socklen_t len )

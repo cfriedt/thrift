@@ -116,6 +116,8 @@ public:
 
 	void flush();
 
+	const uint8_t *borrow_virt( uint8_t *buf, uint32_t *len );
+
 protected:
 
 	int client_port;
@@ -136,6 +138,8 @@ private:
 
 	std::vector<uint8_t> rx_buffer;
 	std::vector<uint8_t> tx_buffer;
+
+	uint32_t avail();
 };
 }
 }
