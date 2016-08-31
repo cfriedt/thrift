@@ -117,6 +117,7 @@ public:
 	void flush();
 
 	const uint8_t *borrow_virt( uint8_t *buf, uint32_t *len );
+	void consume_virt( uint32_t len );
 
 protected:
 
