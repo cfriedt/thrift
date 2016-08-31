@@ -63,6 +63,7 @@ protected:
   uint8_t last_token_len_;
 
   static uint32_t transportAvail( boost::shared_ptr<TTransport> transport_ );
+  void readMoreData();
 };
 
 }

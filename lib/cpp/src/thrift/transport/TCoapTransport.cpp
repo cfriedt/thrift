@@ -45,6 +45,8 @@ TCoapTransport::~TCoapTransport() {
 uint32_t TCoapTransport::transportAvail( boost::shared_ptr<TTransport> transport ) {
 	uint32_t r;
 
+	uint32_t prev_r;
+
 	uint32_t sz;
 	uint8_t *buf;
 	uint8_t *bufp;
@@ -55,16 +57,22 @@ uint32_t TCoapTransport::transportAvail( boost::shared_ptr<TTransport> transport
 			buf = new uint8_t[ sz ],
 			bufp = buf;
 		;
-		sz++,
-			r = sz,
-			delete buf,
+		sz = r,
+			delete[] buf,
 			buf = new uint8_t[ sz ],
 			bufp = buf
 	) {
-		bufp = (uint8_t *) transport->borrow( bufp, & r );
-		if ( bufp != buf ) {
-			r = 0;
+		try {
+			bufp = (uint8_t *) transport->borrow( bufp, & r );
+		} catch( TTransportException &te ) {
+			r = prev_r;
+			if ( -1 == r ) {
+				r = 0;
+			}
 			break;
+		}
+		if ( NULL == bufp || 0 == r ) {
+			throw TTransportException( TTransportException::UNKNOWN, "underlying transport likely does not support borrow :(" );
 		}
 	}
 
@@ -72,61 +80,51 @@ uint32_t TCoapTransport::transportAvail( boost::shared_ptr<TTransport> transport
 	return r;
 }
 
-uint32_t TCoapTransport::read( uint8_t* buf, uint32_t len ) {
+void TCoapTransport::readMoreData() {
 
+	unsigned len;
+	unsigned write_space_avail;
+	uint8_t *tbuf;
+	uint8_t *tbufp;
 	uint32_t r;
-
-	uint8_t *read_buffer;
-	uint32_t read_buffer_size;
-	uint8_t *write_buffer;
-	uint32_t write_buffer_size;
-
-	uint32_t read_buffer_avail;
-	uint32_t transport_avail;
-
-	uint32_t read_sz;
-
-	uint8_t *payload_ptr;
 	unsigned payload_len;
+	uint8_t *payload_ptr;
 
 	CoapPDU::Type pdu_type;
-
 	CoapPDU pdu;
 
-	if ( ! isOpen() ) {
-		open();
-	}
+	len = transportAvail( transport_ );
+	tbuf = new uint8_t[ len ];
+	tbufp = tbuf;
+	r = len;
 
-
-	transport_avail = transportAvail( transport_ );
-	read_buffer_avail = readBuffer_.available_write();
-
-	read_sz = std::min( read_buffer_avail, transport_avail );
-
-	if ( 0 == read_sz ) {
-		r = 0;
+	tbufp = (uint8_t *) transport_->borrow( tbufp, & len );
+	if ( 0 == len || NULL == tbufp ) {
 		goto out;
 	}
 
-	write_buffer = readBuffer_.getWritePtr( read_sz );
-
-	transport_->read( write_buffer, read_sz );
-
-	readBuffer_.getBuffer( & read_buffer, & read_buffer_size );
-
-	pdu = CoapPDU( read_buffer, read_buffer_size, read_buffer_size );
-
+	pdu = CoapPDU( tbufp, r, r );
 	if ( ! pdu.validate() ) {
-		readBuffer_.resetBuffer();
-		r = 0;
 		goto out;
 	}
+
+	payload_len = pdu.getPayloadLength();
+
+	write_space_avail = readBuffer_.available_write();
+	if ( write_space_avail < payload_len ) {
+		// do not consume PDU if readBuffer_ underflow were to occur
+		goto out;
+	}
+	if ( 0 == payload_len ) {
+		goto consume;
+	}
+	payload_ptr = pdu.getPayloadPointer();
 
 	last_token_len_ = pdu.getTokenLength();
 	if ( 0 == last_token_len_ ) {
 		last_token_ = 0;
 	} else {
-		memcpy( & last_token_, pdu.getTokenPointer(), last_token_len_ );
+		std::memcpy( & last_token_, pdu.getTokenPointer(), last_token_len_ );
 	}
 
 	pdu_type = pdu.getType();
@@ -137,27 +135,43 @@ uint32_t TCoapTransport::read( uint8_t* buf, uint32_t len ) {
 	case CoapPDU::COAP_NON_CONFIRMABLE:
 	case CoapPDU::COAP_ACKNOWLEDGEMENT:
 
-		payload_len = pdu.getPayloadLength();
-		if ( 0 == payload_len ) {
-			r = 0;
-			goto out;
-		}
-		payload_ptr = pdu.getPayloadPointer();
-		std::memcpy( buf, payload_ptr, payload_len );
-		r = payload_len;
+		readBuffer_.write( payload_ptr, payload_len );
 
 		break;
 
 	case CoapPDU::COAP_RESET:
 	default:
 
-		r = 0;
-
 		break;
 	}
 
+consume:
+	transport_->consume( pdu.getPDULength() );
+
 out:
-	return r;
+	delete[] tbuf;
+}
+
+uint32_t TCoapTransport::read( uint8_t* buf, uint32_t len ) {
+
+	unsigned read_buffer_avail;
+
+	if ( ! isOpen() ) {
+		open();
+	}
+
+	read_buffer_avail = readBuffer_.available_read();
+
+	if ( read_buffer_avail < len ) {
+		// a best-effort approach
+		readMoreData();
+	}
+
+	len = std::min( readBuffer_.available_read(), len );
+
+	len = readBuffer_.read( buf, len );
+
+	return len;
 }
 
 void TCoapTransport::write( const uint8_t* buf, uint32_t len ) {
