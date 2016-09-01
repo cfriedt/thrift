@@ -43,32 +43,26 @@ TCoapTransport::~TCoapTransport() {
 }
 
 uint32_t TCoapTransport::transportAvail( boost::shared_ptr<TTransport> transport ) {
+
 	uint32_t r;
 
 	uint32_t prev_r;
 
 	uint32_t sz;
-	uint8_t *buf;
+	uint8_t buf[ 1024 ];
+
 	uint8_t *bufp;
 
 	for(
 		sz = 1,
-			r = sz,
-			buf = new uint8_t[ sz ],
-			bufp = buf;
+			r = sz;
 		;
 		sz = r,
-			delete[] buf,
-			buf = new uint8_t[ sz ],
-			bufp = buf,
 			prev_r = r,
 			r++
 	) {
 		try {
-			bufp = (uint8_t *) transport->borrow( bufp, & r );
-			if ( r >= 64 ) {
-				std::cout << std::endl;
-			}
+			bufp = (uint8_t *) transport->borrow( buf, & r );
 		} catch( TTransportException &te ) {
 			r = prev_r;
 			if ( -1 == r ) {
@@ -81,40 +75,53 @@ uint32_t TCoapTransport::transportAvail( boost::shared_ptr<TTransport> transport
 		}
 	}
 
-	delete buf;
 	return r;
 }
 
 void TCoapTransport::readMoreData() {
 
-	unsigned len;
+	uint32_t len;
+	uint32_t tmp;
 	unsigned write_space_avail;
-	uint8_t *tbuf;
+	uint8_t tbuf[ 1024 ];
 	uint8_t *tbufp;
-	uint32_t r;
 	unsigned payload_len;
-	unsigned pdu_len;
 	uint8_t *payload_ptr;
 
 	CoapPDU::Type pdu_type;
 	CoapPDU pdu;
 
 	len = transportAvail( transport_ );
-	tbuf = new uint8_t[ len ];
+	if ( 0 == len ) {
+		return;
+	}
+//	tbuf = new uint8_t[ len ];
 	tbufp = tbuf;
-	r = len;
+	tmp = len;
 
-	tbufp = (uint8_t *) transport_->borrow( tbufp, & len );
-	if ( 0 == len || NULL == tbufp ) {
+	try {
+		tbufp = (uint8_t *) transport_->borrow( tbufp, & tmp );
+	} catch( TTransportException &te ) {
+		std::cout << std::endl;
+	}
+	if ( 0 == tmp || NULL == tbufp ) {
+		std::cout << "TCoapTransport::readMoreData(): no more data available" << std::endl;
+		goto out;
+	}
+	if ( tmp != len ) {
+		throw TTransportException( TTransportException::INTERNAL_ERROR, "available size and borrowed size do not match" );
+	}
+
+	if ( len < 4 ) {
 		goto out;
 	}
 
-	pdu = CoapPDU( tbufp, r, r );
+	pdu = CoapPDU( tbufp, len, len );
 	if ( ! pdu.validate() ) {
+		pdu.validate();
+		throw TTransportException( TTransportException::INTERNAL_ERROR, "NOT A VALID PDU!!!" );
 		goto out;
 	}
-
-	pdu_len = pdu.getPDULength();
 
 	payload_len = pdu.getPayloadLength();
 
@@ -123,9 +130,11 @@ void TCoapTransport::readMoreData() {
 		// do not consume PDU if readBuffer_ underflow were to occur
 		goto out;
 	}
+
 	if ( 0 == payload_len ) {
-		goto consume;
+		goto do_consume;
 	}
+
 	payload_ptr = pdu.getPayloadPointer();
 
 	last_token_len_ = pdu.getTokenLength();
@@ -134,7 +143,6 @@ void TCoapTransport::readMoreData() {
 	} else {
 		std::memcpy( & last_token_, pdu.getTokenPointer(), last_token_len_ );
 	}
-
 	pdu_type = pdu.getType();
 
 	switch( pdu_type ) {
@@ -153,11 +161,11 @@ void TCoapTransport::readMoreData() {
 		break;
 	}
 
-consume:
-	transport_->consume( pdu_len );
+do_consume:
+	transport_->consume( pdu.getPDULength() );
 
 out:
-	delete[] tbuf;
+	return;
 }
 
 uint32_t TCoapTransport::read( uint8_t* buf, uint32_t len ) {

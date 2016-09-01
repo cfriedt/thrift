@@ -66,7 +66,11 @@ void TCoapServer::flush() {
 	pdu.setCode( CoapPDU::Code::COAP_CONTENT );
 	pdu.setMessageID( ::random() );
 	pdu.setToken( (uint8_t *) & last_token_, (uint8_t) last_token_len_ );
-	pdu.addOption( CoapPDU::COAP_CONTENT_FORMAT_APP_OCTET, write_buffer_sz, write_buffer );
+	pdu.setPayload( write_buffer, write_buffer_sz );
+
+	if ( ! pdu.validate() ) {
+		throw TTransportException( TTransportException::INTERNAL_ERROR, "NOT A VALID PDU!!!" );
+	}
 
 	transport_->write( pdu.getPDUPointer(), pdu.getPDULength() );
 	transport_->flush();
