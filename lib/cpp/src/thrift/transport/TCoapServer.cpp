@@ -42,18 +42,70 @@ TCoapServer::~TCoapServer() {
 }
 
 std::string TCoapServer::getUri() {
-	return uri;
+
+	std::string r;
+
+	int i;
+	int uri_len;
+	unsigned opt_base;
+	CoapPDU::Option opt_type;
+	CoapPDU::CoapOption *opt;
+
+	for ( uri_len = 0, i = 0, opt_base = 0, opt = pdu->getOptions(); i < pdu->getNumOptions(); i++ ) {
+		opt_type = static_cast<CoapPDU::Option>( opt_base + opt[ i ].optionDelta );
+		switch( opt_type ) {
+		case CoapPDU::COAP_OPTION_URI_PATH:
+			uri_len += opt[ i ].optionValueLength;
+			opt_base += CoapPDU::COAP_OPTION_URI_PATH;
+			break;
+		case CoapPDU::COAP_OPTION_URI_QUERY:
+			uri_len += opt[ i ].optionValueLength;
+			opt_base += CoapPDU::COAP_OPTION_URI_PATH;
+			break;
+		default:
+			break;
+		}
+	}
+	if ( 0 != uri_len ) {
+		uint8_t lastURI[ uri_len + 16 ];
+		pdu->getURI( (char *)lastURI, uri_len + 16, (int *) & uri_len );
+		r = std::string( (char *) lastURI, ::strlen( (char *) lastURI ) );
+	}
+
+	return r;
 }
 
 std::string TCoapServer::getMethod() {
-	return method;
+	std::string r;
+	if ( NULL == pdu.get() ) {
+		goto out;
+	}
+	switch( pdu->getCode() ) {
+	case CoapPDU::COAP_GET:
+		r = "GET";
+		break;
+	case CoapPDU::COAP_POST:
+		r = "POST";
+		break;
+	case CoapPDU::COAP_PUT:
+		r = "PUT";
+		break;
+	case CoapPDU::COAP_DELETE:
+		r = "DELETE";
+		break;
+	default:
+		throw TTransportException( TTransportException::BAD_ARGS, "invalid method" );
+		break;
+	}
+out:
+	return r;
 }
 
 void TCoapServer::flush() {
 	uint8_t *write_buffer;
 	unsigned write_buffer_sz;
 
-	CoapPDU pdu;
+	CoapPDU tx_pdu;
 
 	writeBuffer_.getBuffer( & write_buffer, & write_buffer_sz );
 
@@ -61,18 +113,18 @@ void TCoapServer::flush() {
 		goto out;
 	}
 
-	pdu.setVersion( 1 );
-	pdu.setType( CoapPDU::Type::COAP_CONFIRMABLE );
-	pdu.setCode( CoapPDU::Code::COAP_CONTENT );
-	pdu.setMessageID( ::random() );
-	pdu.setToken( (uint8_t *) & last_token_, (uint8_t) last_token_len_ );
-	pdu.setPayload( write_buffer, write_buffer_sz );
+	tx_pdu.setVersion( 1 );
+	tx_pdu.setType( CoapPDU::Type::COAP_CONFIRMABLE );
+	tx_pdu.setCode( CoapPDU::Code::COAP_CONTENT );
+	tx_pdu.setMessageID( ::random() );
+	tx_pdu.setToken( (uint8_t *) & last_token_, (uint8_t) last_token_len_ );
+	tx_pdu.setPayload( write_buffer, write_buffer_sz );
 
-	if ( ! pdu.validate() ) {
+	if ( ! tx_pdu.validate() ) {
 		throw TTransportException( TTransportException::INTERNAL_ERROR, "NOT A VALID PDU!!!" );
 	}
 
-	transport_->write( pdu.getPDUPointer(), pdu.getPDULength() );
+	transport_->write( tx_pdu.getPDUPointer(), tx_pdu.getPDULength() );
 	transport_->flush();
 
 	writeBuffer_.resetBuffer();

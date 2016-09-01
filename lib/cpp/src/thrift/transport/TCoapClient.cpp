@@ -84,7 +84,11 @@ void TCoapClient::flush() {
 	uint64_t token;
 	uint8_t  token_len = sizeof( uint64_t );
 
-	CoapPDU pdu;
+	uint16_t ot;
+	uint16_t ol;
+	uint8_t *ov;
+
+	CoapPDU tx_pdu;
 
 	writeBuffer_.getBuffer( & write_buffer, & write_buffer_sz );
 
@@ -92,21 +96,28 @@ void TCoapClient::flush() {
 		goto out;
 	}
 
-	pdu.setVersion( 1 );
-	pdu.setType( (CoapPDU::Type) getCoapMessageType() );
-	pdu.setCode( (CoapPDU::Code) getCoapMethodType() );
-	pdu.setMessageID( ::random() );
+	tx_pdu.setVersion( 1 );
+	tx_pdu.setType( (CoapPDU::Type) getCoapMessageType() );
+	tx_pdu.setCode( (CoapPDU::Code) getCoapMethodType() );
+	tx_pdu.setMessageID( ::random() );
 	token = ::random();
-	pdu.setToken( (uint8_t *) & token, token_len );
-	pdu.setURI( (char *) path_.c_str() );
-	pdu.setPayload( write_buffer, write_buffer_sz );
+	tx_pdu.setToken( (uint8_t *) & token, token_len );
+	// tx_pdu.setURI( (char *) path_.c_str() );
+	ot = (uint16_t) CoapPDU::COAP_OPTION_URI_PATH;
+	ol = ::strlen( path_.c_str() );
+	ov = (uint8_t *) path_.c_str();
+	if ( ol >= 1 && '/' == ov[ 0 ] ) {
+		ov++;
+	}
+	tx_pdu.addOption( ot, ol, ov );
+	tx_pdu.setPayload( write_buffer, write_buffer_sz );
 
-	if ( ! pdu.validate() ) {
+	if ( ! tx_pdu.validate() ) {
 		throw TTransportException( TTransportException::CORRUPTED_DATA, "unable to validate CoAP PDU!!" );
 	}
 
-	pdu_ptr = pdu.getPDUPointer();
-	pdu_len = pdu.getPDULength();
+	pdu_ptr = tx_pdu.getPDUPointer();
+	pdu_len = tx_pdu.getPDULength();
 
 	transport_->write( pdu_ptr, pdu_len );
 	transport_->flush();

@@ -23,6 +23,8 @@
 #include <thrift/transport/TBufferTransports.h>
 #include <thrift/transport/TVirtualTransport.h>
 
+#include <cantcoap/cantcoap.h>
+
 namespace apache {
 namespace thrift {
 namespace transport {
@@ -59,8 +61,12 @@ protected:
   TMemoryBuffer writeBuffer_;
   TMemoryBuffer readBuffer_;
 
+  // Memory length 1. Ideally, we would maintain a map<token,pdu> of
+  // messages that needed to be acked, or required a resonse.
   uint64_t last_token_;
   uint8_t last_token_len_;
+
+  boost::shared_ptr<CoapPDU> pdu;
 
   static uint32_t transportAvail( boost::shared_ptr<TTransport> transport_ );
   void readMoreData();

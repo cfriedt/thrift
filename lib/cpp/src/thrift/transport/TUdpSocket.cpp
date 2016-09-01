@@ -367,8 +367,8 @@ uint32_t TUdpSocket::avail() {
 	socklen_t src_addr_len;
 
 	int prev_recv_timeout_ms;
-	// conservative-ish value based on dns timeout in windows and linux
-	static const int default_recv_timeout_ms = 10000;
+	// conservative-ish value based on dns timeout in windows (10000) and linux (5000)
+	static const int default_recv_timeout_ms = 1000;
 
 	prev_recv_timeout_ms = recvTimeout_;
 	if ( 0 == prev_recv_timeout_ms ) {
@@ -416,7 +416,7 @@ out:
 	delete buf;
 	r = rr >= 0 ? rr : 0;
 
-	setRecvTimeout( prev_recv_timeout );
+	setRecvTimeout( prev_recv_timeout_ms );
 
 	return r;
 }

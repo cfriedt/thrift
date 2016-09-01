@@ -87,9 +87,14 @@ void TCoapTransport::readMoreData() {
 	uint8_t *tbufp;
 	unsigned payload_len;
 	uint8_t *payload_ptr;
+	unsigned uri_len;
+	CoapPDU::Option opt_type;
+	int i;
+	uint8_t *lastURI;
 
 	CoapPDU::Type pdu_type;
-	CoapPDU pdu;
+	CoapPDU::CoapOption *opt;
+	int opt_base;
 
 	len = transportAvail( transport_ );
 	if ( 0 == len ) {
@@ -116,14 +121,14 @@ void TCoapTransport::readMoreData() {
 		goto out;
 	}
 
-	pdu = CoapPDU( tbufp, len, len );
-	if ( ! pdu.validate() ) {
-		pdu.validate();
+	pdu = boost::make_shared<CoapPDU>( tbufp, len, len );
+	if ( ! pdu->validate() ) {
+		pdu->validate();
 		throw TTransportException( TTransportException::INTERNAL_ERROR, "NOT A VALID PDU!!!" );
 		goto out;
 	}
 
-	payload_len = pdu.getPayloadLength();
+	payload_len = pdu->getPayloadLength();
 
 	write_space_avail = readBuffer_.available_write();
 	if ( write_space_avail < payload_len ) {
@@ -135,15 +140,15 @@ void TCoapTransport::readMoreData() {
 		goto do_consume;
 	}
 
-	payload_ptr = pdu.getPayloadPointer();
+	payload_ptr = pdu->getPayloadPointer();
 
-	last_token_len_ = pdu.getTokenLength();
+	last_token_len_ = pdu->getTokenLength();
 	if ( 0 == last_token_len_ ) {
 		last_token_ = 0;
 	} else {
-		std::memcpy( & last_token_, pdu.getTokenPointer(), last_token_len_ );
+		std::memcpy( & last_token_, pdu->getTokenPointer(), last_token_len_ );
 	}
-	pdu_type = pdu.getType();
+	pdu_type = pdu->getType();
 
 	switch( pdu_type ) {
 
@@ -162,7 +167,7 @@ void TCoapTransport::readMoreData() {
 	}
 
 do_consume:
-	transport_->consume( pdu.getPDULength() );
+	transport_->consume( pdu->getPDULength() );
 
 out:
 	return;
