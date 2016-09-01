@@ -416,7 +416,7 @@ out:
 	delete buf;
 	r = rr >= 0 ? rr : 0;
 
-	setRecvTimeout( prev_recv_timeout );
+	setRecvTimeout( prev_recv_timeout_ms );
 
 	return r;
 }
