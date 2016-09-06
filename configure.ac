@@ -716,6 +716,7 @@ AC_CONFIG_FILES([
   lib/Makefile
   lib/cpp/Makefile
   lib/cpp/test/Makefile
+  lib/cpp/thrift-coap.pc
   lib/cpp/thrift-nb.pc
   lib/cpp/thrift-z.pc
   lib/cpp/thrift-qt.pc
