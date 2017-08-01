@@ -19,9 +19,11 @@
 
 SUBDIRS =
 
+if WITH_TESTS
 if WITH_JAVA
 # Schema validation test depends on java
 SUBDIRS += test
+endif
 endif
 
 EXTRA_DIST = \

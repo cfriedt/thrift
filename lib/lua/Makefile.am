@@ -19,7 +19,7 @@
 
 AUTOMAKE_OPTIONS = subdir-objects
 
-SUBDIRS = .
+SUBDIRS =
 
 lib_LTLIBRARIES = \
 			libluasocket.la \

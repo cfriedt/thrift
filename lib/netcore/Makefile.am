@@ -17,7 +17,7 @@
 # under the License.
 #
 
-SUBDIRS = . 
+SUBDIRS =
 
 THRIFT = $(top_builddir)/compiler/cpp/thrift
 

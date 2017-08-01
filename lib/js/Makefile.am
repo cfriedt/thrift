@@ -19,7 +19,9 @@
 
 # Make sure this doesn't fail if ant is not configured.
 
+if WITH_TESTS
 SUBDIRS = test
+endif
 
 check-local: all
 	npm install

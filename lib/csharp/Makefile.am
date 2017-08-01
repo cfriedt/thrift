@@ -17,7 +17,9 @@
 # under the License.
 #
 
-SUBDIRS = . test/Multiplex
+if WITH_TESTS
+SUBDIRS = test/Multiplex
+endif
 
 THRIFTCODE = \
             src/Collections/THashSet.cs \
