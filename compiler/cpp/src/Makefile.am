@@ -76,9 +76,12 @@ thrift_thrift_bootstrap_SOURCES = \
                  thrift/generate/t_html_generator.h \
                  thrift/windows/config.h \
                  thrift/version.h \
-                 thrift/generate/t_cpp_generator.cc \
                  thrift/main.h \
                  thrift/main.cc
+
+if GENERATE_CPP
+thrift_thrift_bootstrap_SOURCES += thrift/generate/t_cpp_generator.cc
+endif
 
 main.cc: version.h
 

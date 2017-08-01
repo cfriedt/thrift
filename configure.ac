@@ -557,6 +557,54 @@ AM_CONDITIONAL(HAVE_DEIMOS_OPENSSL, [test "$have_deimos_openssl" = "yes"])
 AM_CONDITIONAL(WITH_D_SSL_TESTS, [test "$with_d_ssl_tests" = "yes"])
 AC_SUBST(DMD_OPENSSL_FLAGS)
 
+AVAILABLE_GENERATORS="as3,c_glib,cocoa,cpp,csharp,d,dart,delphi,erl,go,gv,haxe,hs,html,java,javame,js,json,lua,netcore,ocaml,perl,php,py,rb,rs,st,swift,xml,xsd"
+for _gen in $(echo "${AVAILABLE_GENERATORS}" | sed -e 's|,|\ |g'); do
+  eval generate_${_gen}="no"
+done
+AC_ARG_ENABLE([generators],
+	AS_HELP_STRING([--enable-generators], [build generators [default=all]]),
+	[], enable_generators=all
+)
+if test "$eneable_generators" = "all"; then
+  enable_generators="${AVAILABLE_GENERATORS}"
+fi
+for _gen in "$(echo "$enable_generators" | sed -e 's|,|\ |g')"; do
+	if ! test -e "compiler/cpp/src/thrift/generate/t_${_gen}_generator.cc"; then
+	  continue
+	fi
+	eval generate_${_gen}="yes"
+done
+AM_CONDITIONAL( GENERATE_AS3, [test "$generate_as3" = "yes"] )
+AM_CONDITIONAL( GENERATE_C_GLIB, [test "$generate_c_glib" = "yes"] )
+AM_CONDITIONAL( GENERATE_COCOA, [test "$generate_cocoa" = "yes"] )
+AM_CONDITIONAL( GENERATE_CPP, [test "$generate_cpp" = "yes"] )
+AM_CONDITIONAL( GENERATE_CSHARP, [test "$generate_csharp" = "yes"] )
+AM_CONDITIONAL( GENERATE_D, [test "$generate_d" = "yes"] )
+AM_CONDITIONAL( GENERATE_DART, [test "$generate_dart" = "yes"] )
+AM_CONDITIONAL( GENERATE_DELPHI, [test "$generate_delphi" = "yes"] )
+AM_CONDITIONAL( GENERATE_ERL, [test "$generate_erl" = "yes"] )
+AM_CONDITIONAL( GENERATE_GO, [test "$generate_go" = "yes"] )
+AM_CONDITIONAL( GENERATE_GV, [test "$generate_gv" = "yes"] )
+AM_CONDITIONAL( GENERATE_HAXE, [test "$generate_haxe" = "yes"] )
+AM_CONDITIONAL( GENERATE_HS, [test "$generate_hs" = "yes"] )
+AM_CONDITIONAL( GENERATE_HTML, [test "$generate_html" = "yes"] )
+AM_CONDITIONAL( GENERATE_JAVA, [test "$generate_java" = "yes"] )
+AM_CONDITIONAL( GENERATE_JAVAME, [test "$generate_javame" = "yes"] )
+AM_CONDITIONAL( GENERATE_JS, [test "$generate_js" = "yes"] )
+AM_CONDITIONAL( GENERATE_JSON, [test "$generate_json" = "yes"] )
+AM_CONDITIONAL( GENERATE_LUA, [test "$generate_lua" = "yes"] )
+AM_CONDITIONAL( GENERATE_NETCORE, [test "$generate_netcore" = "yes"] )
+AM_CONDITIONAL( GENERATE_OCAML, [test "$generate_ocaml" = "yes"] )
+AM_CONDITIONAL( GENERATE_PERL, [test "$generate_perl" = "yes"] )
+AM_CONDITIONAL( GENERATE_PHP, [test "$generate_php" = "yes"] )
+AM_CONDITIONAL( GENERATE_PY, [test "$generate_py" = "yes"] )
+AM_CONDITIONAL( GENERATE_RB, [test "$generate_rb" = "yes"] )
+AM_CONDITIONAL( GENERATE_RS, [test "$generate_rs" = "yes"] )
+AM_CONDITIONAL( GENERATE_ST, [test "$generate_st" = "yes"] )
+AM_CONDITIONAL( GENERATE_SWIFT, [test "$generate_swift" = "yes"] )
+AM_CONDITIONAL( GENERATE_XML, [test "$generate_xml" = "yes"] )
+AM_CONDITIONAL( GENERATE_XSD, [test "$generate_xsd" = "yes"] )
+
 AC_ARG_ENABLE([tests],
   AS_HELP_STRING([--enable-tests], [build tests [default=yes]]),
   [], enable_tests=yes

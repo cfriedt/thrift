@@ -79,36 +79,96 @@ thrift_SOURCES = src/thrift/main.h \
                  src/thrift/audit/t_audit.h
 
 # Specific client generator source
-thrift_SOURCES += src/thrift/generate/t_c_glib_generator.cc \
-                  src/thrift/generate/t_cpp_generator.cc \
-                  src/thrift/generate/t_java_generator.cc \
-                  src/thrift/generate/t_json_generator.cc \
-                  src/thrift/generate/t_as3_generator.cc \
-                  src/thrift/generate/t_dart_generator.cc \
-                  src/thrift/generate/t_haxe_generator.cc \
-                  src/thrift/generate/t_csharp_generator.cc \
-                  src/thrift/generate/t_netcore_generator.cc \
-                  src/thrift/generate/t_py_generator.cc \
-                  src/thrift/generate/t_rb_generator.cc \
-                  src/thrift/generate/t_perl_generator.cc \
-                  src/thrift/generate/t_php_generator.cc \
-                  src/thrift/generate/t_erl_generator.cc \
-                  src/thrift/generate/t_cocoa_generator.cc \
-                  src/thrift/generate/t_swift_generator.cc \
-                  src/thrift/generate/t_st_generator.cc \
-                  src/thrift/generate/t_ocaml_generator.cc \
-                  src/thrift/generate/t_hs_generator.cc \
-                  src/thrift/generate/t_xsd_generator.cc \
-                  src/thrift/generate/t_xml_generator.cc \
-                  src/thrift/generate/t_html_generator.cc \
-                  src/thrift/generate/t_js_generator.cc \
-                  src/thrift/generate/t_javame_generator.cc \
-                  src/thrift/generate/t_delphi_generator.cc \
-                  src/thrift/generate/t_go_generator.cc \
-                  src/thrift/generate/t_gv_generator.cc \
-                  src/thrift/generate/t_d_generator.cc \
-                  src/thrift/generate/t_lua_generator.cc \
-                  src/thrift/generate/t_rs_generator.cc
+if GENERATE_C_GLIB
+thrift_SOURCES += src/thrift/generate/t_c_glib_generator.cc
+endif
+if GENERATE_CPP
+thrift_SOURCES += src/thrift/generate/t_cpp_generator.cc
+endif
+if GENERATE_JAVA
+thrift_SOURCES += src/thrift/generate/t_java_generator.cc
+endif
+if GENERATE_JSON
+thrift_SOURCES += src/thrift/generate/t_json_generator.cc
+endif
+if GENERATE_AS3
+thrift_SOURCES += src/thrift/generate/t_as3_generator.cc
+endif
+if GENERATE_DART
+thrift_SOURCES += src/thrift/generate/t_dart_generator.cc
+endif
+if GENERATE_HAXE
+thrift_SOURCES += src/thrift/generate/t_haxe_generator.cc
+endif
+if GENERATE_CSHARP
+thrift_SOURCES += src/thrift/generate/t_csharp_generator.cc
+endif
+if GENERATE_NETCORE
+thrift_SOURCES += src/thrift/generate/t_netcore_generator.cc
+endif
+if GENERATE_PY
+thrift_SOURCES += src/thrift/generate/t_py_generator.cc
+endif
+if GENERATE_RB
+thrift_SOURCES += src/thrift/generate/t_rb_generator.cc
+endif
+if GENERATE_PERL
+thrift_SOURCES += src/thrift/generate/t_perl_generator.cc
+endif
+if GENERATE_PHP
+thrift_SOURCES += src/thrift/generate/t_php_generator.cc
+endif
+if GENERATE_ERL
+thrift_SOURCES += src/thrift/generate/t_erl_generator.cc
+endif
+if GENERATE_COCOA
+thrift_SOURCES += src/thrift/generate/t_cocoa_generator.cc
+endif
+if GENERATE_SWIFT
+thrift_SOURCES += src/thrift/generate/t_swift_generator.cc
+endif
+if GENERATE_ST
+thrift_SOURCES += src/thrift/generate/t_st_generator.cc
+endif
+if GENERATE_OCAML
+thrift_SOURCES += src/thrift/generate/t_ocaml_generator.cc
+endif
+if GENERATE_HS
+thrift_SOURCES += src/thrift/generate/t_hs_generator.cc
+endif
+if GENERATE_XSD
+thrift_SOURCES += src/thrift/generate/t_xsd_generator.cc
+endif
+if GENERATE_XML
+thrift_SOURCES += src/thrift/generate/t_xml_generator.cc
+endif
+if GENERATE_HTML
+thrift_SOURCES += src/thrift/generate/t_html_generator.cc
+endif
+if GENERATE_JS
+thrift_SOURCES += src/thrift/generate/t_js_generator.cc
+endif
+if GENERATE_JAVAME
+thrift_SOURCES += src/thrift/generate/t_javame_generator.cc
+endif
+if GENERATE_DELPHI
+thrift_SOURCES += src/thrift/generate/t_delphi_generator.cc
+endif
+if GENERATE_GO
+thrift_SOURCES += src/thrift/generate/t_go_generator.cc
+endif
+if GENERATE_GV
+thrift_SOURCES += src/thrift/generate/t_gv_generator.cc
+endif
+if GENERATE_D
+thrift_SOURCES += src/thrift/generate/t_d_generator.cc
+endif
+if GENERATE_LUA
+thrift_SOURCES += src/thrift/generate/t_lua_generator.cc
+endif
+if GENERATE_RS
+thrift_SOURCES += src/thrift/generate/t_rs_generator.cc
+endif
 
 thrift_CPPFLAGS = -I$(srcdir)/src
 thrift_CXXFLAGS = -Wall -Wextra -pedantic
