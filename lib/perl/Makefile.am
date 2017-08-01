@@ -64,12 +64,12 @@ EXTRA_DIST = \
 	lib/Thrift/Transport.pm \
 	README.md
 
+if WITH_TESTS
 THRIFT = @top_builddir@/compiler/cpp/thrift
 THRIFT_IF = @top_srcdir@/test/ThriftTest.thrift
 NAME_BENCHMARKSERVICE =  @top_srcdir@/lib/rb/benchmark/Benchmark.thrift
 NAME_AGGR = @top_srcdir@/contrib/async-test/aggr.thrift
 
-if WITH_TESTS
 THRIFTTEST_GEN = \
 	gen-perl/ThriftTest/Constants.pm \
 	gen-perl/ThriftTest/SecondService.pm \
@@ -80,13 +80,6 @@ BENCHMARK_GEN = \
 	gen-perl/BenchmarkService.pm \
 	gen-perl/Constants.pm \
 	gen-perl/Types.pm
-
-else
-THRIFTTEST_GEN =
-BENCHMARK_GEN = \
-	gen-perl/Constants.pm \
-	gen-perl/Types.pm
-endif
 
 AGGR_GEN = \
 	gen-perl2/Aggr.pm \
@@ -100,14 +93,12 @@ PERL_GEN = \
 
 BUILT_SOURCES = $(PERL_GEN)
 
-if WITH_TESTS
 check-local: $(PERL_GEN)
 	$(PERL) -Iblib/lib -I@abs_srcdir@ -I@builddir@/gen-perl2 -I@builddir@/gen-perl \
 		@abs_srcdir@/test.pl @abs_srcdir@/test/*.t
 
 $(THRIFTTEST_GEN): $(THRIFT_IF) $(THRIFT)
 	$(THRIFT) --gen perl $<
-endif
 
 $(BENCHMARK_GEN): $(NAME_BENCHMARKSERVICE) $(THRIFT)
 	$(THRIFT) --gen perl $<
@@ -115,3 +106,4 @@ $(BENCHMARK_GEN): $(NAME_BENCHMARKSERVICE) $(THRIFT)
 $(AGGR_GEN): $(NAME_AGGR) $(THRIFT)
 	$(MKDIR_P) gen-perl2
 	$(THRIFT) -out gen-perl2 --gen perl $<
+endif
