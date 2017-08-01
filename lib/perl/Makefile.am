@@ -17,7 +17,9 @@
 # under the License.
 #
 
+if WITH_TESTS
 SUBDIRS = test
+endif
 
 Makefile-perl.mk : Makefile.PL
 	$(PERL) Makefile.PL MAKEFILE=Makefile-perl.mk INSTALLDIRS=$(INSTALLDIRS) INSTALL_BASE=$(PERL_PREFIX)
@@ -67,6 +69,7 @@ THRIFT_IF = @top_srcdir@/test/ThriftTest.thrift
 NAME_BENCHMARKSERVICE =  @top_srcdir@/lib/rb/benchmark/Benchmark.thrift
 NAME_AGGR = @top_srcdir@/contrib/async-test/aggr.thrift
 
+if WITH_TESTS
 THRIFTTEST_GEN = \
 	gen-perl/ThriftTest/Constants.pm \
 	gen-perl/ThriftTest/SecondService.pm \
@@ -77,6 +80,13 @@ BENCHMARK_GEN = \
 	gen-perl/BenchmarkService.pm \
 	gen-perl/Constants.pm \
 	gen-perl/Types.pm
+
+else
+THRIFTTEST_GEN =
+BENCHMARK_GEN = \
+	gen-perl/Constants.pm \
+	gen-perl/Types.pm
+endif
 
 AGGR_GEN = \
 	gen-perl2/Aggr.pm \
@@ -90,12 +100,14 @@ PERL_GEN = \
 
 BUILT_SOURCES = $(PERL_GEN)
 
+if WITH_TESTS
 check-local: $(PERL_GEN)
 	$(PERL) -Iblib/lib -I@abs_srcdir@ -I@builddir@/gen-perl2 -I@builddir@/gen-perl \
 		@abs_srcdir@/test.pl @abs_srcdir@/test/*.t
 
 $(THRIFTTEST_GEN): $(THRIFT_IF) $(THRIFT)
 	$(THRIFT) --gen perl $<
+endif
 
 $(BENCHMARK_GEN): $(NAME_BENCHMARKSERVICE) $(THRIFT)
 	$(THRIFT) --gen perl $<
