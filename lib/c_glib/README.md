@@ -1,4 +1,4 @@
-Thrift C Software Library
+Thrift C (Glib) Software Library
 
 License
 =======
@@ -20,8 +20,8 @@ KIND, either express or implied. See the License for the
 specific language governing permissions and limitations
 under the License.
 
-Using Thrift with C
-===================
+Using Thrift with C (Glib)
+==========================
 
 The Thrift C libraries are built using the GNU tools.  Follow the instructions
 in the top-level README in order to generate the Makefiles.

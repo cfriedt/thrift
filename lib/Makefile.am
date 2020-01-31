@@ -24,6 +24,10 @@ if WITH_CPP
 SUBDIRS += cpp
 endif
 
+if WITH_C
+SUBDIRS += c
+endif
+
 if WITH_C_GLIB
 SUBDIRS += c_glib
 endif
