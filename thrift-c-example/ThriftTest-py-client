@@ -1,0 +1,69 @@
+#!/usr/bin/env python3
+import sys
+import pprint
+
+from thrift import Thrift
+from thrift.transport import TTransport, TSocket, TSSLSocket, THttpClient
+from thrift.protocol.TBinaryProtocol import TBinaryProtocol
+
+from ThriftTest import ThriftTest
+from ThriftTest.ttypes import *
+
+host = '127.0.0.1'
+port = 9090
+
+def main(arg):
+    socket = TSocket.TSocket(host, port)
+    transport = TTransport.TBufferedTransport(socket)
+    protocol = TBinaryProtocol(transport)
+
+    client = ThriftTest.Client(protocol)
+
+    transport.open()
+
+    print('calling testVoid()')
+    client.testVoid()
+    print('calling testVoid()')
+    x = client.testString("hello")
+    print('received response: {}'.format(x))
+    x = True
+    print('calling testBool({})'.format(x))
+    x = client.testBool(x)
+    print('received response: {}'.format(x))
+    x = 8
+    print('calling testByte({})'.format(x))
+    x = client.testByte(x)
+    print('received response: {}'.format(x))
+    print('calling testVoid()')
+    x = 32
+    print('calling testI32({})'.format(x))
+    x = client.testI32(x)
+    print('received response: {}'.format(x))
+    x = 64
+    print('calling testI64({})'.format(x))
+    x = client.testI64(x)
+    print('received response: {}'.format(x))
+    x = 3.14159
+    print('calling testDouble({})'.format(x))
+    x = client.testDouble(x)
+    print('received response: {}'.format(x))
+    x = bytes([0xa,0xb,0xc,0x1,0x2,0x3])
+    print('calling testBinary({})'.format(x))
+    x = client.testBinary(x)
+    print('received response: {}'.format(x))
+    x = XStruct()
+    x.string_thing = "string"
+    x.byte_thing = 8
+    x.i32_thing = 32
+    x.i64_thing = 64
+    print('calling testStruct({})'.format(x))
+    x = client.testStruct(x)
+    print('received response: {}'.format(x))
+
+    transport.close()
+
+if __name__ == '__main__':
+    try:
+        main(sys.argv)
+    except Thrift.TException as tx:
+        print('%s' % tx.message)

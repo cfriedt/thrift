@@ -1,0 +1,55 @@
+#include <iostream>
+
+#include <thrift/protocol/TBinaryProtocol.h>
+#include <thrift/server/TSimpleServer.h>
+#include <thrift/transport/TServerSocket.h>
+#include <thrift/transport/TBufferTransports.h>
+
+#include "Hello.h"
+
+using namespace std;
+
+using namespace ::apache::thrift;
+using namespace ::apache::thrift::protocol;
+using namespace ::apache::thrift::transport;
+using namespace ::apache::thrift::server;
+
+class HelloHandler : virtual public HelloIf {
+ public:
+  HelloHandler() {
+    // Your initialization goes here
+  }
+
+  void greet(HelloResponse& rsp, const HelloRequest& req) {
+    cout << "received request: " << req << endl;
+    string answer;
+    if ( req.__isset.language ) {
+        switch( req.language ) {
+        case Language::EN: answer = "hi"; break;
+        case Language::FR: answer = "salut"; break;
+        case Language::DE: answer = "moin, moin"; break;
+        case Language::ES: answer = "ola"; break;
+        }
+    } else {
+        answer = "hi";
+    }
+    rsp.__set_answer(answer);
+  }
+
+};
+
+int main(int argc, char **argv) {
+    (void) argc;
+    (void) argv;
+  int port = 9090;
+  ::std::shared_ptr<HelloHandler> handler(new HelloHandler());
+  ::std::shared_ptr<TProcessor> processor(new HelloProcessor(handler));
+  ::std::shared_ptr<TServerTransport> serverTransport(new TServerSocket(port));
+  ::std::shared_ptr<TTransportFactory> transportFactory(new TBufferedTransportFactory());
+  ::std::shared_ptr<TProtocolFactory> protocolFactory(new TBinaryProtocolFactory());
+
+  TSimpleServer server(processor, serverTransport, transportFactory, protocolFactory);
+  server.serve();
+  return 0;
+}
+

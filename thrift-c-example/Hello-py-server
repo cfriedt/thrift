@@ -1,0 +1,52 @@
+#!/usr/bin/env python3
+import sys
+import pprint
+
+from thrift import Thrift
+from thrift.transport import TTransport, TSocket, TSSLSocket, THttpClient
+from thrift.protocol.TBinaryProtocol import TBinaryProtocol, TBinaryProtocolFactory
+from thrift.server import TServer
+
+from hello import Hello
+from hello.ttypes import *
+
+host = 'localhost'
+port = 9090
+
+class HelloHandler(object):
+    def __init__(self):
+        pass
+    
+    def greet(self, req):
+        print('received request: {}'.format(req))
+        rsp = HelloResponse()
+        if req.language is not None:
+            if Language.EN == req.language:
+                rsp.answer = 'hi'
+            elif Language.FR == req.language:
+                rsp.answer = 'salut'
+            elif Language.DE == req.language:
+                rsp.answer = 'moin, moin'
+            elif Language.ES == req.language:
+                rsp.answer = 'ola'
+        else:
+            rsp.answer = 'hi'
+        return rsp
+
+def main(arg):
+
+    handler = HelloHandler()
+    processor = Hello.Processor(handler)
+    transport = TSocket.TServerSocket(host='localhost', port=9090)
+    tfactory = TTransport.TBufferedTransportFactory()
+    pfactory = TBinaryProtocolFactory()
+
+    server = TServer.TSimpleServer(processor, transport, tfactory, pfactory)
+
+    server.serve()
+
+if __name__ == '__main__':
+    try:
+        main(sys.argv)
+    except Thrift.TException as tx:
+        print('%s' % tx.message)

@@ -1,0 +1,51 @@
+#include <iostream>
+
+#include <thrift/protocol/TBinaryProtocol.h>
+#include <thrift/transport/TSocket.h>
+#include <thrift/transport/TTransportUtils.h>
+
+#include "Hello.h"
+
+using namespace ::std;
+
+using namespace ::apache::thrift;
+using namespace ::apache::thrift::protocol;
+using namespace ::apache::thrift::transport;
+
+int main(int argc, char **argv) {
+
+    (void) argc;
+    (void) argv;
+
+    int r = 0;
+
+    shared_ptr<TTransport> socket(new TSocket("localhost", 9090));
+    shared_ptr<TTransport> transport(new TBufferedTransport(socket));
+    shared_ptr<TProtocol> protocol(new TBinaryProtocol(transport));
+    HelloClient helloClient(protocol);
+
+    try {
+        transport->open();
+    } catch( ... ) {
+        cout << "failed to open transport" << endl;
+        return -1;
+    }
+
+    try {
+
+        HelloRequest req;
+        req.__set_language(Language::ES);
+        req.__set_greeting("buenas tardes");
+
+        HelloResponse rsp;
+        helloClient.greet( rsp, req );
+
+        cout << "received response: " << rsp << endl;
+
+    } catch ( ... ) {
+        cout << "an exception was thrown" << endl;
+    }
+    transport->close();
+
+    return r;
+}

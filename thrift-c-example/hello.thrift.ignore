@@ -1,0 +1,38 @@
+enum Language {
+	EN = 1
+	FR = 2
+	DE = 3
+	ES = 4
+}
+
+struct HelloRequest {
+	1: string greeting
+	2: optional Language language
+}
+
+struct HelloResponse {
+	1: string answer
+}
+/*
+exception HelloException {
+	1: i32 error
+	2: optional string description
+}
+*/
+
+service Hello {
+	HelloResponse greet( 1: HelloRequest req ),
+/*
+	i8 i8Method( 1: i8 foo ),
+	i16 i16Method( 1: i16 foo ),
+	i32 i32Method( 1: i32 foo ),
+	i64 i64Method( 1: i64 foo ),
+	double doubleMethod( 1: double foo ),
+	string stringMethod( 1: string foo ),
+	list<string> listMethod( 1: list<string> foo ),
+	set<string> setMethod( 1: set<string> foo ),
+	map<i32,string> mapI32StringMethod( 1: map<i32,string> foo ),
+	map<string,i32> mapStringI32Method( 1: map<string,i32> foo ),
+	void except() throws ( 1: HelloException e ),
+*/
+}
