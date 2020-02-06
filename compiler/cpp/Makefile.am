@@ -69,6 +69,7 @@ thrift_SOURCES = src/thrift/audit/t_audit.cpp \
 
 # Specific client generator source
 thrift_SOURCES += src/thrift/generate/t_as3_generator.cc \
+                  src/thrift/generate/t_c_generator.cc \
                   src/thrift/generate/t_c_glib_generator.cc \
                   src/thrift/generate/t_cl_generator.cc \
                   src/thrift/generate/t_cpp_generator.cc \
