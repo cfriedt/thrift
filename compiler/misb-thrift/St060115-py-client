@@ -1,0 +1,39 @@
+#!/usr/bin/env python3
+import sys
+import pprint
+
+from thrift import Thrift
+from thrift.transport import TTransport, TSocket, TSSLSocket, THttpClient
+from thrift.protocol.TBinaryProtocol import TBinaryProtocol
+
+from st060115 import St060115
+from st060115.ttypes import *
+
+host = 'localhost'
+port = 9090
+
+def main(arg):
+    socket = TSocket.TSocket(host, port)
+    transport = TTransport.TBufferedTransport(socket)
+    protocol = TBinaryProtocol(transport)
+
+    client = St060115.Client(protocol)
+
+    transport.open()
+
+    msg = St060115Message()
+    # comment the line below to demonstrate that required fields are verified
+    msg.checksum = -1
+    msg.precisionTimeStamp = -1
+    msg.uasDatalinkLsVersionNumber = 15
+    msg.alternatePlatformName = 'Hello, from Python!'
+
+    client.update(msg)
+
+    transport.close()
+
+if __name__ == '__main__':
+    try:
+        main(sys.argv)
+    except Thrift.TException as tx:
+        print('%s' % tx.message)
