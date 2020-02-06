@@ -7,9 +7,14 @@ List of Additional Annotations
 Note, that annotations below describe modifications to data prior to being encoded.
 It should be noted, that the inverse operation should be performed prior to decoding.
 
+Also note, that the preferred style is to use as few annotations as possible. They
+are present to denote special consideration. If an annotation is redundant, it should be
+removed. E.g. annotating an `int8_t` value with `MaxValue = "127"` is redundant. Similarly,
+annotating an `int8_t` with `MaxLength = "1"` is also redundant.  
+
 | Annotation | Description |
 |------------|-------------|
-| `MinLength = "N"` | Denotes the minimum length (in bytes) of a value |
+| `MaxValue = "N"` | Denotes the maximum value of a value |
 | `MaxLength = "N"` | Denotes the maximum length (in bytes) of a value |
 | `FixedLength = "N"` | Denotes the exact length (in bytes) of a value |
 | `IMAPA = "X, Y, Z"` | Denotes the parameters used to encode a `double` argument as an integer (See [ST 1201.4](https://gwg.nga.mil/misb/docs/standards/ST1201.4.pdf)) |
@@ -18,10 +23,12 @@ It should be noted, that the inverse operation should be performed prior to deco
 | `ScaledUp = "N"` | Denotes that an integer value should be multiplied by `N` before encoding |
 | `ScaledDown = "N"` | Denotes that an integer value should be divided by `N` before encoding |
 | `SinglePrecision` | Hints to the code generator that it may use `float` instead of `double` for IEEE-754 representation |
-| `Unsigned` | Hints to the code generator that it may use an appropriate unsigned value instead of a signed integer value |
+| `Unsigned` | Hints to the code generator that it may use an appropriate unsigned type instead of the usual signed type |
 | `DLP` | Data should be encoded as a Defined-Length Pack |
 | `VLP` | Data should be encoded as a Variable-Length Pack |
 | `FLP` | Data should be encoded as a Floating-Length Pack |
+| `Deprecated` | Denotes that a particular tag should not be used in new designs |
+| `SpecialValue = "0xabcd1234, This is (so) special"` | Denotes a special value for a particular MISB tag. This annotation can be specified more than once (double-check that) |
 
 Caveats
 -------
