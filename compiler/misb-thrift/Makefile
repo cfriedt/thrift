@@ -55,7 +55,10 @@ ifeq (clang,$(TOOLCHAIN))
 CXXFLAGS += -stdlib=libc++
 endif
 
-THRIFT_CXX_LIB = $(shell pkg-config --libs thrift)
+THRIFT_CXX_LIBS = $(shell pkg-config --libs thrift)
+
+GTEST_CFLAGS = $(shell pkg-config --cflags gtest gtest_main)
+GTEST_LIBS = $(shell pkg-config --libs gtest gtest_main)
 
 CLIB := lib$(TAG).a
 CXXLIB := lib$(TAG)xx.a
@@ -76,6 +79,7 @@ PYSRC :=
 CXXEXE :=
 PYEXE :=
 CEXE :=
+TEST :=
 
 OBJ :=
 
@@ -84,7 +88,11 @@ CLEANFILES :=
 
 CSRC += $(shell find * -name '*.c' | grep -v "$(GENCDIR)")
 CXXSRC += $(shell find * -name '*.cpp' | grep -v "$(GENCXXDIR)")
+CXXSRC := $(filter-out %-test.cpp,$(CXXSRC))
 PYSRC += $(shell find * -name '*.py' | grep -v "$(GENPYDIR)")
+TEST += $(shell find * -name '*-test.cpp')
+
+TESTEXE := $(TEST:.cpp=)
 
 # $1 := base of the thrift filename
 # $2 := $1 with first letter capitalized
@@ -125,7 +133,7 @@ $(foreach _t, $(TSRC:.thrift=), \
 #	$(eval $(call sources-thrift-to-c,$(_t),$(_T))) \
 #
 
-EXE += $(CXXEXE) $(CEXE) $(PYEXE)
+EXE += $(CXXEXE) $(CEXE) $(PYEXE) $(TESTEXE)
 
 all: $(LIB) $(EXE)
 
@@ -215,11 +223,15 @@ $(CXXLIB): $(CXXOBJ)
 
 %-cxx-server: %-cxx-server.cpp $(CXXLIB)
 	@echo "[CXXLD] $@"
-	$(QUIET)$(CXX) $(CPPFLAGS) -I$(GENCXXDIR) $(CXXFLAGS) $(LDFLAGS) $< -o $@ $(CXXLIB) $(THRIFT_CXX_LIB)
+	$(QUIET)$(CXX) $(CPPFLAGS) -I$(GENCXXDIR) $(CXXFLAGS) $(LDFLAGS) $< -o $@ $(CXXLIB) $(THRIFT_CXX_LIBS)
+
+%-test: %-test.cpp $(CXXLIB)
+	@echo "[CXXLD] $@"
+	$(QUIET)$(CXX) $(CPPFLAGS) -I$(GENCXXDIR) $(CXXFLAGS) $(GTEST_CXXFLAGS) $(LDFLAGS) $< -o $@ $(CXXLIB) $(THRIFT_CXX_LIBS) $(GTEST_LIBS)
 
 %-cxx-client: %-cxx-client.cpp $(CXXLIB)
 	@echo "[CXXLD] $@"
-	$(QUIET)$(CXX) $(CPPFLAGS) -I$(GENCXXDIR) $(CXXFLAGS) $(LDFLAGS) $< -o $@ $(CXXLIB) $(THRIFT_CXX_LIB)
+	$(QUIET)$(CXX) $(CPPFLAGS) -I$(GENCXXDIR) $(CXXFLAGS) $(LDFLAGS) $< -o $@ $(CXXLIB) $(THRIFT_CXX_LIBS)
 
 %-c-server: %-c-server.c $(CLIB)
 	@echo "[LD] $@"
@@ -248,5 +260,7 @@ clean:
 	$(QUIET)rm -Rf $(GENDIR) $(BUILT_SOURCES) $(CLEANFILES)
 	$(QUIET)chmod -x *.py
 
-check:
-	true
+check: $(TESTEXE)
+	for i in $$^; do \
+		./$$i || break; \
+	done

@@ -34,11 +34,11 @@ int main(int argc, char **argv) {
     (void) argc;
     (void) argv;
   int port = 9090;
-  ::std::shared_ptr<St060115Handler> handler(new St060115Handler());
-  ::std::shared_ptr<TProcessor> processor(new St060115Processor(handler));
-  ::std::shared_ptr<TServerTransport> serverTransport(new TServerSocket(port));
-  ::std::shared_ptr<TTransportFactory> transportFactory(new TBufferedTransportFactory());
-  ::std::shared_ptr<TProtocolFactory> protocolFactory(new TBinaryProtocolFactory());
+  shared_ptr<St060115Handler> handler(new St060115Handler());
+  shared_ptr<TProcessor> processor(new St060115Processor(handler));
+  shared_ptr<TServerTransport> serverTransport(new TServerSocket(port));
+  shared_ptr<TTransportFactory> transportFactory(new TBufferedTransportFactory());
+  shared_ptr<TProtocolFactory> protocolFactory(new TBinaryProtocolFactory());
 
   TSimpleServer server(processor, serverTransport, transportFactory, protocolFactory);
   server.serve();

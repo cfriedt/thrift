@@ -159,6 +159,8 @@ include_protocol_HEADERS = \
                          src/thrift/protocol/TBinaryProtocol.tcc \
                          src/thrift/protocol/TCompactProtocol.h \
                          src/thrift/protocol/TCompactProtocol.tcc \
+                         src/thrift/protocol/TMISBProtocol.h \
+                         src/thrift/protocol/TMISBProtocol.tcc \
                          src/thrift/protocol/TDebugProtocol.h \
                          src/thrift/protocol/THeaderProtocol.h \
                          src/thrift/protocol/TBase64Utils.h \
