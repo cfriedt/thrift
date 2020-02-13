@@ -70,10 +70,7 @@ public:
     gen_no_skeleton_ = false;
 
     for( iter = parsed_options.begin(); iter != parsed_options.end(); ++iter) {
-      if ( false ) {
-      } else if ( iter->first.compare("misb") == 0 ) {
-        gen_misb_style_ = true;
-      } else if( iter->first.compare("pure_enums") == 0) {
+      if( iter->first.compare("pure_enums") == 0) {
         gen_pure_enums_ = true;
       } else if( iter->first.compare("include_prefix") == 0) {
         use_include_prefix_ = true;
@@ -337,11 +334,6 @@ private:
    * True if we should generate "Continuation OBject"-style classes as well.
    */
   bool gen_cob_style_;
-
-  /**
-   * True if we should generate MISB-compliant encodings. See README.MISB.md.
-   */
-  bool gen_misb_style_;
 
   /**
    * True if we should omit calls to completion__() in CobClient class.
@@ -4561,7 +4553,6 @@ string t_cpp_generator::get_include_prefix(const t_program& program) const {
 THRIFT_REGISTER_GENERATOR(
     cpp,
     "C++",
-    "    misb:            Encode data according to the Motion Imagery Standards Board specs.\n"
     "    cob_style:       Generate \"Continuation OBject\"-style classes.\n"
     "    no_client_completion:\n"
     "                     Omit calls to completion__() in CobClient class.\n"
