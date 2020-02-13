@@ -1,8 +1,8 @@
 .PHONY: all clean check
 
 TAG = hello
-TOOLCHAIN=clang
-QUIET=
+TOOLCHAIN=gcc
+QUIET=@
 DEBUG=1
 
 GENCDIR = gen-c
@@ -46,15 +46,20 @@ endif
 CXXFLAGS += $(CFLAGS)
 CFLAGS += -std=c11
 CXXFLAGS += -std=c++14
+
+ifeq (gcc,$(TOOLCHAIN))
 CXXFLAGS += -D_GLIBCXX_USE_CXX11_ABI=1
+endif
 
 ifeq (clang,$(TOOLCHAIN))
 CXXFLAGS += -stdlib=libc++
 endif
 
+THRIFT_CXX_LIB = $(shell pkg-config --libs thrift)
+
 CLIB := lib$(TAG).a
 CXXLIB := lib$(TAG)xx.a
-LIB = $(CLIB) $(CXXLIB) $(GENPYDIR)
+LIB = $(CLIB) $(CXXLIB)
 EXE :=
 
 CPPFLAGS += -I.
@@ -69,6 +74,10 @@ CXXSRC :=
 HDR :=
 PYSRC :=
 CXXEXE :=
+PYEXE :=
+CEXE :=
+
+OBJ :=
 
 BUILT_SOURCES :=
 CLEANFILES :=
@@ -107,6 +116,8 @@ $(foreach _t, $(TSRC:.thrift=), \
 	$(eval CXXEXE += $(_T)-cxx-client) \
 	$(eval CXXEXE += $(_T)-cxx-server) \
 	$(eval $(call sources-thrift-to-py,$(_t),$(_T))) \
+	$(eval PYEXE += $(_T)-py-client) \
+	$(eval PYEXE += $(_T)-py-server) \
 )
 
 #	$(eval CEXE += $(_T)-c-client) \
@@ -114,8 +125,7 @@ $(foreach _t, $(TSRC:.thrift=), \
 #	$(eval $(call sources-thrift-to-c,$(_t),$(_T))) \
 #
 
-EXE += $(CEXE) $(CXXEXE)
-#EXE += $(CXXEXE)
+EXE += $(CXXEXE) $(CEXE) $(PYEXE)
 
 all: $(LIB) $(EXE)
 
@@ -169,14 +179,14 @@ $(GENPYDIR)/$(1)/ttypes.py: $(GENPYDIR)/$(1)/constants.py
 	@touch $$@
 $(GENPYDIR)/$(1)/$(2).py: $(GENPYDIR)/$(1)/ttypes.py
 	@touch $$@
-$(GENPYDIR)/$(1)/__init__.py: $(GENPYDIR)/$(1)/$(2).py
+$(GENPYDIR)/$(1)/$(2)-remote: $(GENPYDIR)/$(1)/ttypes.py
 	@touch $$@
-$(GENPYDIR)/__init__.py: $(GENPYDIR)/$(1)/__init__.py
-	@touch $$@
-$(GENPYDIR)/$(1)/$(2)-remote: $(GENPYDIR)/__init__.py
-	@touch $$@
-$(GENPYDIR): $(GENPYDIR)/$(1)/$(2)-remote
-	@touch $$@
+$(2)-py-server: $(2)-py-server.py $(GENPYDIR)/$(1)/$(2).py
+	@echo "[PY] $$@"
+	$(QUIET)ln -sf $$< $$@
+$(2)-py-client: $(2)-py-client.py $(GENPYDIR)/$(1)/$(2).py
+	@echo "[PY] $$@"
+	$(QUIET)ln -sf $$< $$@
 endef
 
 $(foreach _t, $(TSRC:.thrift=), \
@@ -188,10 +198,12 @@ $(foreach _t, $(TSRC:.thrift=), \
 
 CXXSRC := $(filter-out $(addsuffix .cpp,$(CXXEXE)),$(CXXSRC))
 CXXOBJ = $(CXXSRC:.cpp=.o)
+OBJ += $(CXXOBJ)
 
 CSRC := $(filter-out $(addsuffix .c,$(CEXE)),$(CSRC))
 #COBJ := $(CSRC:.c=.o) $(GENCDIR)/ThriftTest.o $(GENCDIR)/ThriftTest_types.o $(GENCDIR)/ThriftTest_constants.o
 COBJ := $(CSRC:.c=.o)
+OBJ += $(COBJ)
 
 $(CLIB): $(COBJ)
 	@echo "[AR] $@"
@@ -201,6 +213,14 @@ $(CXXLIB): $(CXXOBJ)
 	@echo "[AR] $@"
 	$(QUIET)$(AR) $(ARFLAGS) $@ $^
 
+%-cxx-server: %-cxx-server.cpp $(CXXLIB)
+	@echo "[CXXLD] $@"
+	$(QUIET)$(CXX) $(CPPFLAGS) -I$(GENCXXDIR) $(CXXFLAGS) $(LDFLAGS) $< -o $@ $(CXXLIB) $(THRIFT_CXX_LIB)
+
+%-cxx-client: %-cxx-client.cpp $(CXXLIB)
+	@echo "[CXXLD] $@"
+	$(QUIET)$(CXX) $(CPPFLAGS) -I$(GENCXXDIR) $(CXXFLAGS) $(LDFLAGS) $< -o $@ $(CXXLIB) $(THRIFT_CXX_LIB)
+
 %-c-server: %-c-server.c $(CLIB)
 	@echo "[LD] $@"
 	$(QUIET)$(CC) $(CPPFLAGS) -I$(GENCDIR) $(CFLAGS) $(LDFLAGS) $< -o $@ $(CLIB)
@@ -208,14 +228,6 @@ $(CXXLIB): $(CXXOBJ)
 %-c-client: %-c-client.c $(CLIB)
 	@echo "[LD] $@"
 	$(QUIET)$(CC) $(CPPFLAGS) -I$(GENCDIR) $(CFLAGS) $(LDFLAGS) $< -o $@ $(CLIB)
-
-%-cxx-server: %-cxx-server.cpp $(CXXLIB)
-	@echo "[CXXLD] $@"
-	$(QUIET)$(CXX) $(CPPFLAGS) -I$(GENCXXDIR) $(CXXFLAGS) $(LDFLAGS) $< -o $@ $(CXXLIB)
-
-%-cxx-client: %-cxx-client.cpp $(CXXLIB)
-	@echo "[CXXLD] $@"
-	$(QUIET)$(CXX) $(CPPFLAGS) -I$(GENCXXDIR) $(CXXFLAGS) $(LDFLAGS) $< -o $@ $(CXXLIB)
 
 %.o: %.cpp $(HDR)
 	@echo "[CXX] $@"
@@ -226,7 +238,15 @@ $(CXXLIB): $(CXXOBJ)
 	$(QUIET)$(CC) $(CPPFLAGS) -I$(GENCDIR) $(CFLAGS) -c $< -o $@
 
 clean:
-	rm -Rf $(LIB) $(EXE) $(CXXOBJ) $(GENDIR) $(BUILT_SOURCES) $(CLEANFILES) $(shell find * -name '*.o')
+	@echo "[RM] LIB"
+	$(QUIET)rm -Rf $(LIB)
+	@echo "[RM] EXE"
+	$(QUIET)rm -Rf $(EXE)
+	@echo "[RM] OBJ"
+	$(QUIET)rm -Rf $(OBJ)
+	@echo "[RM] GEN"
+	$(QUIET)rm -Rf $(GENDIR) $(BUILT_SOURCES) $(CLEANFILES)
+	$(QUIET)chmod -x *.py
 
 check:
 	true

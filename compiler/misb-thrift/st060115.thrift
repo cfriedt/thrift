@@ -10,10 +10,7 @@ enum GenericFlagData {
 }
 
 struct SecurityLocalSet {
-} (
-	BerOidKey
-	BerLength
-)
+}
 
 enum SensorFieldOfViewName {
 	ULTRANARROW
@@ -24,22 +21,12 @@ enum SensorFieldOfViewName {
 	NARROW_MEDIUM
 	ULTRANARROW_2X
 	ULTRANARROW_4X
-} (
-	MaxLength = "1"
-)
+}
 
 struct RvtLocalSet {
-} (
-	BerOidKey
-	BerLength
-)
-
+}
 struct VmtiLocalSet {
-} (
-	BerOidKey
-	BerLength
-)
-
+}
 enum OperationalMode {
 	OTHER
 	OPERATIONAL
@@ -58,41 +45,17 @@ struct ImageHorizontalPixelPack {
 )
 
 struct SarMotionImageryLocalSet {
-} (
-	BerOidKey
-	BerLength
-)
-
+}
 struct RangeImageLocalSet {
-} (
-	BerOidKey
-	BerLength
-)
-
+}
 struct GeoRegistrationLocalSet {
-} (
-	BerOidKey
-	BerLength
-)
-
+}
 struct CompositeImagingLocalSet {
-} (
-	BerOidKey
-	BerLength
-)
-
+}
 struct SegmentLocalSet {
-} (
-	BerOidKey
-	BerLength
-)
-
+}
 struct AmendLocalSet {
-} (
-	BerOidKey
-	BerLength
-)
-
+}
 struct SdccFlp {
 } (
 	OmitKey
@@ -180,7 +143,7 @@ struct WaypointList {
 	OmitKey
 )
 
-struct St060115Message {
+struct UasDataLinkLocalSet {
 	
 	1: required i16 checksum (
 		Unsigned
@@ -363,7 +326,6 @@ struct St060115Message {
 		IMAPB = "0, 4095, 2"
 	)
 	47: optional GenericFlagData genericFlagData (
-		Unsigned
 		MaxLength = "1"
 	),	
 	48: optional SecurityLocalSet securityLocalSet
@@ -661,11 +623,7 @@ struct St060115Message {
 	139: optional binary activePayloads
 	140: optional WeaponStores weaponStores
 	141: optional WaypointList waypointList
-} (
-	BerOidKey
-	BerLength
-)
-
+}
 service St060115 {
-	oneway void update( 1: St060115Message message )
+	oneway void update( 1: UasDataLinkLocalSet message )
 }

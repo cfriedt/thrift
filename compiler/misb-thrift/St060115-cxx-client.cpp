@@ -35,7 +35,7 @@ int main(int argc, char **argv) {
 
     try {
 
-        St060115Message msg;
+        UasDataLinkLocalSet msg;
         // precisionTimeStamp is a required field
         msg.__set_precisionTimeStamp( -1 );
         msg.__set_alternatePlatformName( "Hello, from Thrift!" );
@@ -50,7 +50,7 @@ int main(int argc, char **argv) {
     try {
 
         transport->open();
-        St060115Message msg;
+        UasDataLinkLocalSet msg;
         // oh, that's right! The checksum is a required field too
         msg.__set_checksum( -1 );
         msg.__set_precisionTimeStamp( -1 );

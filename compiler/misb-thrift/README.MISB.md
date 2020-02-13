@@ -12,23 +12,25 @@ are present to denote special consideration. If an annotation is redundant, it s
 removed. E.g. annotating an `int8_t` value with `MaxValue = "127"` is redundant. Similarly,
 annotating an `int8_t` with `MaxLength = "1"` is also redundant.  
 
-| Annotation | Description |
-|------------|-------------|
-| `MaxValue = "N"` | Denotes the maximum value of a value |
-| `MaxLength = "N"` | Denotes the maximum length (in bytes) of a value |
-| `FixedLength = "N"` | Denotes the exact length (in bytes) of a value |
-| `IMAPA = "X, Y, Z"` | Denotes the parameters used to encode a `double` argument as an integer (See [ST 1201.4](https://gwg.nga.mil/misb/docs/standards/ST1201.4.pdf)) |
-| `IMAPB = "X, Y, Z"` | Denotes the parameters used to encode a `double` argument as an integer (See [ST 1201.4](https://gwg.nga.mil/misb/docs/standards/ST1201.4.pdf)) |
-| `Offset = "N"` | Denotes the offset for encoding `double` argument as an integer (See [ST 1201.4](https://gwg.nga.mil/misb/docs/standards/ST1201.4.pdf)) |
-| `ScaledUp = "N"` | Denotes that an integer value should be multiplied by `N` before encoding |
-| `ScaledDown = "N"` | Denotes that an integer value should be divided by `N` before encoding |
-| `SinglePrecision` | Hints to the code generator that it may use `float` instead of `double` for IEEE-754 representation |
-| `Unsigned` | Hints to the code generator that it may use an appropriate unsigned type instead of the usual signed type |
-| `DLP` | Data should be encoded as a Defined-Length Pack |
-| `VLP` | Data should be encoded as a Variable-Length Pack |
-| `FLP` | Data should be encoded as a Floating-Length Pack |
-| `Deprecated` | Denotes that a particular tag should not be used in new designs |
-| `SpecialValue = "0xabcd1234, This is (so) special"` | Denotes a special value for a particular MISB tag. This annotation can be specified more than once (double-check that) |
+Annotation | Description
+--- | ---
+`MaxValue = "N"` | Denotes the maximum value of a value
+`MaxLength = "N"` | Denotes the maximum length (in bytes) of a value
+`FixedLength = "N"` | Denotes the exact length (in bytes) of a value
+`FixedKey = "N"` | Denotes a fixed key for a particular `struct`
+`IMAPA = "X, Y, Z"` | Denotes the parameters used to encode a `double` argument as an integer (See [ST 1201.4](https://gwg.nga.mil/misb/docs/standards/ST1201.4.pdf))
+`IMAPB = "X, Y, Z"` | Denotes the parameters used to encode a `double` argument as an integer (See [ST 1201.4](https://gwg.nga.mil/misb/docs/standards/ST1201.4.pdf))
+`Offset = "N"` | Denotes the offset for encoding `double` argument as an integer (See [ST 1201.4](https://gwg.nga.mil/misb/docs/standards/ST1201.4.pdf))
+`Q = "M.N"` | Denotes the parameters used to encode a `double` argument in Q M.N format (See [Q (number format)](https://en.wikipedia.org/wiki/Q_(number_format)))
+`ScaledUp = "N"` | Denotes that an integer value should be multiplied by `N` before encoding
+`ScaledDown = "N"` | Denotes that an integer value should be divided by `N` before encoding
+`SinglePrecision` | Hints to the code generator that it may use `float` instead of `double` for IEEE-754 representation
+`Unsigned` | Hints to the code generator that it may use an appropriate unsigned type instead of the usual signed type
+`DLP` | Data should be encoded as a Defined-Length Pack
+`VLP` | Data should be encoded as a Variable-Length Pack
+`FLP` | Data should be encoded as a Floating-Length Pack
+`Deprecated` | Denotes that a particular tag should not be used in new designs
+`SpecialValue = "0xabcd1234, This is (so) special"` | Denotes a special value for a particular MISB tag. Ultimately, we would like multiple instances of this annotation to accumulate into a set (e.g. to make an enum)
 
 Caveats
 -------
@@ -49,13 +51,13 @@ will be used as examples.
     - the service *MUST* be limited to 1 RPC method
     - the method name *SHALL NOT* not be encoded in the Thrift message
     - the method *MUST* be oneway and have return type void
-    - the method *MUST* have one parameter which is a top-level Local Set `struct`
+    - the method *MUST* have one parameter which is a top-level Local Set `struct`. E.g. for 0601.15, the UAS Datalink Local Set is represented as `struct UasDataLinkLocalSet`.
     - the method *MUST NOT* throw a Thrift exception
 - Thrift version info *SHALL NOT* be encoded in the Thrift message
 - For a particular standard, the entire set of tags are considered part of one struct
     - required tags *MUST* use the `required` keyword
     - non-required tags *MUST* use the `optional` keyword
-    - E.g. [ST 0601.15](https://gwg.nga.mil/misb/docs/standards/ST0601.15.pdf), there is one top-level Local Set `struct`, St060115Message, with 3 required fields
+    - E.g. [ST 0601.15](https://gwg.nga.mil/misb/docs/standards/ST0601.15.pdf), there is one top-level Local Set `struct UasDataLinkLocalSet`, with 3 required fields
         - Checksum (tag 1)
         - Precision Time Stamp (tag 2)
         - UAS Datalink Local Set Version Number (tag 65)
@@ -88,7 +90,7 @@ A Thrift `struct` *SHALL* be used to represent
 Use of Container Types
 ----------------------
 
-Aside from the `struct` keyword, Thrift also supports the parameterized `list<T>, `set<T>`, and `map<K,V>` types.
+Aside from the `struct` keyword, Thrift also supports the parameterized `list<T>`, `set<T>`, and `map<K,V>` types.
 
 A `list<T>` *SHALL* be encoded as a `DLP` if all of its (possibly nested) members are fixed-size values or have lengths that are inherent in the value itself (e.g. a BER or BER-OID encoded value).
 
