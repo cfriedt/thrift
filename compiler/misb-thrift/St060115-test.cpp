@@ -136,7 +136,8 @@ protected:
 
         // the transport is shared between client & server
         memory = vector<uint8_t>( TMemoryBuffer::defaultSize, 0 );
-        transport = make_shared<TMemoryBuffer>(&memory.front(), memory.size(), TMemoryBuffer::MemoryPolicy::TAKE_OWNERSHIP);
+        cout << "memory.front() is at address " << (void *)(&memory.front()) << endl;
+        transport = shared_ptr<TTransport>( new TMemoryBuffer(&memory.front(), memory.size(), TMemoryBuffer::MemoryPolicy::TAKE_OWNERSHIP) );
 
         // first set up the server
         handler = make_shared<St060115Handler>( processedCv, processedMu, processed );
@@ -246,13 +247,13 @@ ostream & operator<<( ostream & os, const vector<T> & v ) {
 }
 
 TEST_F( St060115Test, testMemoryWrite ) {
-        expected_message.__set_precisionTimeStamp( expected_precisionTimeStamp );
-        expected_message.__set_checksum( expected_checksum );
-        expected_message.__set_uasDatalinkLsVersionNumber( expected_uasDatalinkLsVersionNumber );
+    expected_message.__set_precisionTimeStamp( expected_precisionTimeStamp );
+    expected_message.__set_checksum( expected_checksum );
+    expected_message.__set_uasDatalinkLsVersionNumber( expected_uasDatalinkLsVersionNumber );
 
-        client->update( expected_message );
+    client->update( expected_message );
 
-	cout << memory << endl;
+    cout << memory << endl;
 }
 
 #if 0
