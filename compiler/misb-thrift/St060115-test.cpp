@@ -16,6 +16,9 @@
 
 #include "St060115.h"
 
+#undef DEBUG
+#include "debug.h"
+
 using namespace ::std;
 
 using namespace ::apache::thrift;
@@ -27,9 +30,10 @@ using namespace  ::org::misb;
 
 class TServerSharedTransport : public ::apache::thrift::server::TServerTransport {
 public:
-  TServerSharedTransport() : cv( defaultCv ), mu( defaultM ), ready( defaultR ) {}
+  TServerSharedTransport() : shouldExit( false ), cv( defaultCv ), mu( defaultM ), ready( defaultR ) {}
   TServerSharedTransport( shared_ptr<TTransport> t, mutex &m, condition_variable &c, bool &r )
   :
+      shouldExit( false ),
       cv( c ),
       mu( m ),
       ready( r ),
@@ -38,28 +42,30 @@ public:
   }
   ~TServerSharedTransport() = default;
   virtual void close() override {
-    cout << "close() called" << endl;
+    D() << "close() called" << endl;
   }
 
   virtual void listen() override {
-    cout << "listen() called" << endl;
+    D() << "listen() called" << endl;
   }
 
   virtual void interrupt() {
-    cout << "interrupt() called" << endl;
+    D() << "interrupt() called" << endl;
+    shouldExit = true;
   }
 
   virtual void interruptChildren() {
-    cout << "interruptChildren() called" << endl;
+    D() << "interruptChildren() called" << endl;
   }
 
   virtual THRIFT_SOCKET getSocketFD() {
-    cout << "getSocketFD() called" << endl;
+    D() << "getSocketFD() called" << endl;
     return -1;
   }
 
 protected:
 
+  bool shouldExit;
   condition_variable &cv;
   mutex &mu;
   bool &ready;
@@ -71,9 +77,13 @@ protected:
 
   virtual std::shared_ptr<TTransport> acceptImpl() override {
       unique_lock<mutex> lock( mu );
-      cout << "waiting for ready.." << endl;
+      D() << "waiting for ready.." << endl;
       cv.wait( lock, [&](){ return this->ready; } );
-      cout << "ready!" << endl;
+      if ( shouldExit ) {
+          D() << "returning nullptr" << endl;
+          return nullptr;
+      }
+      D() << "ready!" << endl;
       // clear the ready flag so that the server blocks properly
       ready = false;
       lock.unlock();
@@ -136,7 +146,7 @@ protected:
 
         // the transport is shared between client & server
         memory = vector<uint8_t>( TMemoryBuffer::defaultSize, 0 );
-        cout << "memory.front() is at address " << (void *)(&memory.front()) << endl;
+        D() << "memory.front() is at address " << (void *)(&memory.front()) << endl;
         transport = make_shared<TMemoryBuffer>(&memory.front(), memory.size(), TMemoryBuffer::MemoryPolicy::TAKE_OWNERSHIP);
 
         // first set up the server
@@ -147,13 +157,9 @@ protected:
         protocolFactory = make_shared<TMISBProtocolFactory>();
         server = make_shared<TSimpleServer>(processor, serverTransport, transportFactory, protocolFactory);
         serverThread = thread([&]() {
-            cout << "server starting.." << endl;
-            try {
-                server->serve();
-            } catch( ... ) {
-                cout << "caught an exception" << endl;
-            }
-            cout << "server stopping.." << endl;
+            D() << "about to call server.serve()" << endl;
+            server->serve();
+            D() << "returned from server.serve()" << endl;
         });
 
         // then set up the client
@@ -162,9 +168,19 @@ protected:
     }
 
     void TearDown() override {
-        cout << "stopping server.." << endl;
+        D() << "about to call server.stop()" << endl;
         server->stop();
-        cout << "server stopped" << endl;
+        readyMu.lock();
+        ready = true;
+        readyCv.notify_one();
+        readyMu.unlock();
+        D() << "returned from server.stop()" << endl;
+
+        if ( serverThread.joinable() ) {
+            D() << "about to call serverThread.join()" << endl;
+            serverThread.join();
+            D() << "returned from serverThread.join()" << endl;
+        }
     }
 
     void common() {
@@ -253,18 +269,17 @@ TEST_F( St060115Test, testMemoryWrite ) {
 
     client->update( expected_message );
 
-    cout << memory << endl;
+    EXPECT_NE( 0, memory[ 0 ] );
 }
 
-#if 0
+/*
+ * Each of the integration tests below can be used to verify
+ *
+ * 1) message is binary-compatible with MISB
+ * 2) generated encoder works as expected
+ * 3) generated decoder works as expected
+ */
+
 TEST_F( St060115Test, precisionTimeStamp_checksum_version ) {
     common();
 }
-#endif
-
-#if 0
-int main(int argc, char **argv) {
-  ::testing::InitGoogleTest(&argc, argv);
-  return RUN_ALL_TESTS();
-}
-#endif
