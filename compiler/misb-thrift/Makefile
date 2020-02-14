@@ -225,9 +225,9 @@ $(CXXLIB): $(CXXOBJ)
 	@echo "[CXXLD] $@"
 	$(QUIET)$(CXX) $(CPPFLAGS) -I$(GENCXXDIR) $(CXXFLAGS) $(LDFLAGS) $< -o $@ $(CXXLIB) $(THRIFT_CXX_LIBS)
 
-%-test: %-test.cpp $(CXXLIB)
+%-test: %-test.cpp $(CXXLIB) $(CLIB)
 	@echo "[CXXLD] $@"
-	$(QUIET)$(CXX) $(CPPFLAGS) -I$(GENCXXDIR) $(CXXFLAGS) $(GTEST_CXXFLAGS) $(LDFLAGS) $< -o $@ $(CXXLIB) $(THRIFT_CXX_LIBS) $(GTEST_LIBS)
+	$(QUIET)$(CXX) $(CPPFLAGS) -I$(GENCXXDIR) $(CXXFLAGS) $(GTEST_CXXFLAGS) $(LDFLAGS) $< -o $@ $(CLIB) $(CXXLIB) $(THRIFT_CXX_LIBS) $(GTEST_LIBS)
 
 %-cxx-client: %-cxx-client.cpp $(CXXLIB)
 	@echo "[CXXLD] $@"

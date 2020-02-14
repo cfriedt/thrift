@@ -1,9 +1,11 @@
+#include <cstdint>
 #include <condition_variable>
 #include <iomanip>
 #include <iostream>
 #include <memory>
 #include <mutex>
 #include <thread>
+#include <unordered_map>
 
 #include <gtest/gtest.h>
 
@@ -14,10 +16,15 @@
 #include <thrift/transport/TServerSocket.h>
 #include <thrift/transport/TBufferTransports.h>
 
+// the thrift-generated protocol header
 #include "St060115.h"
 
+// just some header files for testing
+#include "ber.h"
+#include "beroid.h"
 #undef DEBUG
 #include "debug.h"
+#include "St060115Tag.h"
 
 using namespace ::std;
 
@@ -80,8 +87,8 @@ protected:
       D() << "waiting for ready.." << endl;
       cv.wait( lock, [&](){ return this->ready; } );
       if ( shouldExit ) {
-          D() << "returning nullptr" << endl;
-          return nullptr;
+          D() << "should exit" << endl;
+          throw TTransportException( TTransportException::TTransportExceptionType::INTERRUPTED );
       }
       D() << "ready!" << endl;
       // clear the ready flag so that the server blocks properly
@@ -196,6 +203,11 @@ protected:
         processedCv.wait( processedLock, [&](){ return processed; } );
         actual_message = handler->msg;
 
+        // XXX: would be ideal if isset items were still populated for required fields
+        //ASSERT_TRUE( actual_message.__isset.checksum );
+        //ASSERT_TRUE( actual_message.__isset.precisionTimeStamp );
+        //ASSERT_TRUE( actual_message.__isset.uasDatalinkLsVersionNumber );
+
         actual_checksum = actual_message.checksum;
         actual_precisionTimeStamp = actual_message.precisionTimeStamp;
         actual_uasDatalinkLsVersionNumber = actual_message.uasDatalinkLsVersionNumber;
@@ -203,6 +215,51 @@ protected:
         ASSERT_EQ( actual_checksum, expected_checksum );
         ASSERT_EQ( actual_precisionTimeStamp, expected_precisionTimeStamp );
         ASSERT_EQ( actual_uasDatalinkLsVersionNumber, expected_uasDatalinkLsVersionNumber );
+    }
+
+    void validateBytes( unsigned tag, unsigned len, const vector<uint8_t> expected_bytes ) {
+        vector<uint8_t> expected_v8;
+        vector<uint8_t> actual_v8;
+        int r;
+
+        size_t offs = 0;
+        size_t sz = 0;
+
+        // get the offset of the first byte of the specified tag
+        size_t tagOffs = tagOffset[ tag ];
+        size_t tagSz = tagSize[ tag ];
+
+        offs += tagOffs;
+        sz += tagSz;
+
+        // validate the BER-OID encoded key
+        size_t beroidSize = ::berOidUintEncodeLength( tag );
+        ASSERT_NE( beroidSize, size_t(-1) );
+        expected_v8 = vector<uint8_t>( beroidSize );
+        r = ::berOidUintEncode( tag, & expected_v8.front(), expected_v8.size() );
+        ASSERT_NE( r, -1 );
+        actual_v8 = vector<uint8_t>( & memory[ offs ], & memory[ offs ] + min( beroidSize, sz ) );
+        EXPECT_EQ( actual_v8, expected_v8 );
+
+        offs += beroidSize;
+        sz -= min( sz, beroidSize );
+
+        // validate the BER encoded length
+        size_t berSize = ::berUintEncodeLength( len );
+        ASSERT_NE( berSize, size_t(-1) );
+        expected_v8 = vector<uint8_t>( berSize );
+        r = ::berUintEncode( len, & expected_v8.front(), expected_v8.size() );
+        ASSERT_NE( r, -1 );
+        actual_v8 = vector<uint8_t>( & memory[ offs ], & memory[ offs ] + min( berSize, sz ) );
+        EXPECT_EQ( actual_v8, expected_v8 );
+
+        offs += berSize;
+        sz -= min( sz, berSize );
+
+        // validate the remaining bytes
+        actual_v8 = vector<uint8_t>( & memory[ offs ], & memory[ offs ] + min( sz, (size_t)len ) );
+
+        EXPECT_EQ( actual_v8, expected_bytes );
     }
 
     static const uint16_t expected_checksum;
@@ -240,6 +297,9 @@ protected:
 
     shared_ptr<TProtocol> protocol;
     shared_ptr<St060115Client> client;
+
+    unordered_map<unsigned,size_t> tagOffset;
+    unordered_map<unsigned,size_t> tagSize;
 };
 const uint16_t St060115Test::expected_checksum = 0xabcd;
 const uint64_t St060115Test::expected_precisionTimeStamp = 0x0011223344556677;
@@ -280,6 +340,143 @@ TEST_F( St060115Test, testMemoryWrite ) {
  * 3) generated decoder works as expected
  */
 
-TEST_F( St060115Test, precisionTimeStamp_checksum_version ) {
+/**
+ * Simply test the 3 required items within the UAS Datalink Local Set are sent,
+ * are in the correct order, and have the correct binary encoding.
+ */
+TEST_F( St060115Test, requiredTags ) {
+    // if we return from this function, then the decoder is verified to work for
+    // the three named fields. Note: we are not verifying the checksum is calculated
+    // correctly, just that the value in the tag is correctly serialized / deserialized.
     common();
+
+    const uint64_t ts = expected_precisionTimeStamp;
+    const uint8_t v = expected_uasDatalinkLsVersionNumber;
+    const uint16_t cs = expected_checksum;
+
+#define U8(x) (uint8_t((x) & 0xff))
+    // Now, we check to ensure that the fields are correctly encoded on the wire
+    // These are 1 byte keys because they are <= 127, so we can short-hand it
+    // because this is not production code and a rather contrived test, but
+    // otherwise, we should properly get the BER-OID key, and BER lengths
+    vector<uint8_t> expected_v8 = {
+        // precisionTimeStamp MUST come first!
+        2, 8, U8(ts >> ( 7 * 8 )), U8(ts >> ( 6 * 8 )), U8(ts >> ( 5 * 8 )), U8(ts >> ( 4 * 8 )), U8(ts >> ( 3 * 8 )), U8(ts >> ( 2 * 8 )), U8(ts >> ( 1 * 8 )), U8(ts >> ( 0 * 8 )),
+
+        // version is the only other tag being transmitted
+        65, 1, v >> ( 0 * 8 ),
+
+        // checksum MUST come last!
+        1, 2, U8(cs >> ( 1 * 8 )), U8(cs >> ( 0 * 8 )),
+    };
+#undef U8
+
+    vector<uint8_t> actual_v8( memory.begin(), memory.begin() + expected_v8.size() );
+
+    EXPECT_EQ( actual_v8, expected_v8 );
+}
+
+/**
+ * Test that we can encode / decode a string tag and that it is
+ * binary-compatible with MISB
+ */
+TEST_F( St060115Test, string ) {
+    string expected_string( "Testing, Testing, 123" );
+
+    expected_message.__set_platformDesignation( expected_string );
+    ASSERT_TRUE( expected_message.__isset.platformDesignation );
+
+    common();
+
+    EXPECT_TRUE( actual_message.__isset.platformDesignation );
+    string actual_string = actual_message.platformDesignation;
+
+    EXPECT_EQ( actual_string, expected_string );
+
+    validateBytes( St060115Tag::PLATFORM_DESIGNATION, expected_string.size(), vector<uint8_t>( (uint8_t *) & expected_string.front(), (uint8_t *) & expected_string.back() ) );
+}
+
+/**
+ * Test that we can encode / decode a bool tag and that it is
+ * binary-compatible with MISB
+ */
+TEST_F( St060115Test, bool ) {
+    bool expected_bool = true;
+
+    expected_message.__set_icingDetected( expected_bool );
+    ASSERT_TRUE( expected_message.__isset.icingDetected );
+
+    common();
+
+    EXPECT_TRUE( actual_message.__isset.icingDetected );
+    bool actual_bool = actual_message.icingDetected;
+
+    EXPECT_EQ( actual_bool, expected_bool );
+
+    validateBytes( St060115Tag::ICING_DETECTED, 1, vector<uint8_t>( 1, expected_bool ) );
+}
+
+/**
+ * Test that we can encode / decode an i8 tag and that it is
+ * binary-compatible with MISB
+ */
+TEST_F( St060115Test, i8 ) {
+    int8_t expected_int8 = -25;
+
+    expected_message.__set_outsideAirTemperature( expected_int8 );
+    ASSERT_TRUE( expected_message.__isset.outsideAirTemperature );
+
+    common();
+
+    EXPECT_TRUE( actual_message.__isset.outsideAirTemperature );
+    int8_t actual_int8 = actual_message.outsideAirTemperature;
+
+    EXPECT_EQ( actual_int8, expected_int8 );
+
+    validateBytes( St060115Tag::ICING_DETECTED, 1, vector<uint8_t>( 1, expected_int8 ) );
+}
+
+// FIXME: currently, the "Unsigned" annotation does nothing for integer values
+// XXX: unsure if there are any signed 16-bit tags that we can test with
+
+/**
+ * Test that we can encode / decode an i16 tag and that it is
+ * binary-compatible with MISB
+ */
+TEST_F( St060115Test, i16 ) {
+
+    int16_t expected_int16 = 0xaabb;
+
+    expected_message.__set_weaponLoad( expected_int16 );
+    ASSERT_TRUE( expected_message.__isset.weaponLoad );
+
+    common();
+
+    EXPECT_TRUE( actual_message.__isset.weaponLoad );
+    int16_t actual_int16 = actual_message.weaponLoad;
+
+    EXPECT_EQ( actual_int16, expected_int16 );
+
+    validateBytes( St060115Tag::WEAPON_LOAD, 1, vector<uint8_t>( & expected_int16 ) );
+}
+
+/**
+ * Test that we can encode / decode an i32 tag and that it is
+ * binary-compatible with MISB
+ */
+TEST_F( St060115Test, i32 ) {
+
+    int32_t expected_int32 = 0xaabbccdd;
+
+    expected_message.__set_leapSeconds( expected_int32 );
+    ASSERT_TRUE( expected_message.__isset.leapSeconds );
+
+    common();
+
+    EXPECT_TRUE( actual_message.__isset.leapSeconds );
+    int32_t actual_int32 = actual_message.leapSeconds;
+
+    EXPECT_EQ( actual_int32, expected_int32 );
+
+    validateBytes( St060115Tag::WEAPON_LOAD, 1, vector<uint8_t>( 1, expected_int32 ) );
 }
