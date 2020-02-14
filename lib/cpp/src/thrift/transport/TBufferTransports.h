@@ -532,7 +532,7 @@ public:
     switch (policy) {
     case OBSERVE:
     case TAKE_OWNERSHIP:
-      initCommon(buf, sz, policy == TAKE_OWNERSHIP, sz);
+      initCommon(buf, sz, policy == TAKE_OWNERSHIP, 0);
       break;
     case COPY:
       initCommon(nullptr, sz, true, 0);
