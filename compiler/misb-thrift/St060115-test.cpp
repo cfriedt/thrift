@@ -137,7 +137,7 @@ protected:
         // the transport is shared between client & server
         memory = vector<uint8_t>( TMemoryBuffer::defaultSize, 0 );
         cout << "memory.front() is at address " << (void *)(&memory.front()) << endl;
-        transport = shared_ptr<TTransport>( new TMemoryBuffer(&memory.front(), memory.size(), TMemoryBuffer::MemoryPolicy::TAKE_OWNERSHIP) );
+        transport = make_shared<TMemoryBuffer>(&memory.front(), memory.size(), TMemoryBuffer::MemoryPolicy::TAKE_OWNERSHIP);
 
         // first set up the server
         handler = make_shared<St060115Handler>( processedCv, processedMu, processed );
