@@ -1,4 +1,6 @@
 #include <condition_variable>
+#include <iomanip>
+#include <iostream>
 #include <memory>
 #include <mutex>
 #include <thread>
@@ -35,7 +37,26 @@ public:
   {
   }
   ~TServerSharedTransport() = default;
-  virtual void close() override {}
+  virtual void close() override {
+    cout << "close() called" << endl;
+  }
+
+  virtual void listen() override {
+    cout << "listen() called" << endl;
+  }
+
+  virtual void interrupt() {
+    cout << "interrupt() called" << endl;
+  }
+
+  virtual void interruptChildren() {
+    cout << "interruptChildren() called" << endl;
+  }
+
+  virtual THRIFT_SOCKET getSocketFD() {
+    cout << "getSocketFD() called" << endl;
+    return -1;
+  }
 
 protected:
 
@@ -53,6 +74,8 @@ protected:
       cout << "waiting for ready.." << endl;
       cv.wait( lock, [&](){ return this->ready; } );
       cout << "ready!" << endl;
+      // clear the ready flag so that the server blocks properly
+      ready = false;
       lock.unlock();
       return trans;
   }
@@ -112,8 +135,8 @@ protected:
         processed = false;
 
         // the transport is shared between client & server
-        memory = vector<uint8_t>( TMemoryBuffer::defaultSize );
-        transport = make_shared<TMemoryBuffer>(&memory.front(), memory.size());
+        memory = vector<uint8_t>( TMemoryBuffer::defaultSize, 0 );
+        transport = make_shared<TMemoryBuffer>(&memory.front(), memory.size(), TMemoryBuffer::MemoryPolicy::TAKE_OWNERSHIP);
 
         // first set up the server
         handler = make_shared<St060115Handler>( processedCv, processedMu, processed );
@@ -124,7 +147,11 @@ protected:
         server = make_shared<TSimpleServer>(processor, serverTransport, transportFactory, protocolFactory);
         serverThread = thread([&]() {
             cout << "server starting.." << endl;
-            server->serve();
+            try {
+                server->serve();
+            } catch( ... ) {
+                cout << "caught an exception" << endl;
+            }
             cout << "server stopping.." << endl;
         });
 
@@ -201,6 +228,42 @@ const uint16_t St060115Test::expected_checksum = 0xabcd;
 const uint64_t St060115Test::expected_precisionTimeStamp = 0x0011223344556677;
 const uint8_t St060115Test::expected_uasDatalinkLsVersionNumber = 15;
 
+template <typename T>
+string to_string( const vector<T> & v ) {
+	stringstream ss;
+	ss << "{ ";
+	for( auto & vv: v ) {
+		ss << hex << setw( 8*sizeof(T)/4 ) << setfill('0') << uintmax_t( vv ) << " ";
+	}
+	ss << "}";
+	return ss.str();
+}
+
+template <typename T>
+ostream & operator<<( ostream & os, const vector<T> & v ) {
+	os << to_string( v );
+	return os;
+}
+
+TEST_F( St060115Test, testMemoryWrite ) {
+        expected_message.__set_precisionTimeStamp( expected_precisionTimeStamp );
+        expected_message.__set_checksum( expected_checksum );
+        expected_message.__set_uasDatalinkLsVersionNumber( expected_uasDatalinkLsVersionNumber );
+
+        client->update( expected_message );
+
+	cout << memory << endl;
+}
+
+#if 0
 TEST_F( St060115Test, precisionTimeStamp_checksum_version ) {
     common();
 }
+#endif
+
+#if 0
+int main(int argc, char **argv) {
+  ::testing::InitGoogleTest(&argc, argv);
+  return RUN_ALL_TESTS();
+}
+#endif
