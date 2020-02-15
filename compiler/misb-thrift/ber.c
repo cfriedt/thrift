@@ -15,9 +15,10 @@ int berUintEncode(const uintmax_t x, void *buffer, const size_t bufferSize) {
         }
     }
 
+    uint8_t *buf = (uint8_t *) buffer;
     if ( x < BER_SINGLE_BYTE_MODULUS ) {
         if ( write ) {
-            *((uint8_t *)buffer) = x;
+            buf[ 0 ] = x;
         }
         return 1;
     }
@@ -32,11 +33,10 @@ int berUintEncode(const uintmax_t x, void *buffer, const size_t bufferSize) {
             return -1;
         }
 
-        uint8_t *buf = (uint8_t *) buffer;
         uint8_t offs = 0;
         buf[ offs++ ] = BER_LONG_FORM_MASK | bytes;
-        for( uint8_t b = bytes; b; --b ) {
-            buf[ offs++ ] = (uint8_t)( x >> ( b * 8 ) );
+        for( int i = bytes - 1; i >= 0; --i ) {
+            buf[ offs++ ] = (uint8_t)( x >> ( i * 8 ) );
         }
     }
 
@@ -48,10 +48,36 @@ int berUintEncodeLength(uintmax_t x) {
 }
 
 int berUintDecode(const void *buffer, const size_t bufferSize, uintmax_t *x) {
-    (void) buffer;
-    (void) bufferSize;
-    (void) x;
-    return -1;
+
+    if ( NULL == buffer || 0 == bufferSize ) {
+        return -1;
+    }
+
+    bool write = (NULL != x);
+
+    uint8_t *buf = (uint8_t *)buffer;
+    if ( !(buf[ 0 ] & BER_LONG_FORM_MASK) ) {
+        if ( write ) {
+            *x = buf[ 0 ];
+        }
+        return 1;
+    }
+
+    uint8_t bytes = (buf[ 0 ] & (~BER_LONG_FORM_MASK));
+    if ( bytes > sizeof(uintmax_t) ) {
+        // unrepresentable in ISO C
+        return -1;
+    }
+
+    if ( write ) {
+        *x = 0;
+        for( uint8_t b = 1; b <= bytes; ++b ) {
+            *x <<= 8;
+            *x |= buf[ b ];
+        }
+    }
+
+    return bytes + 1;
 }
 
 int berUintDecodeLength(const void *buffer, const size_t bufferSize) {
