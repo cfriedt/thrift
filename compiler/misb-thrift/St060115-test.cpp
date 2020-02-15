@@ -322,6 +322,25 @@ ostream & operator<<( ostream & os, const vector<T> & v ) {
 	return os;
 }
 
+// puts the contents of t into a vector in big-endian format
+template <typename T>
+vector<uint8_t> to_vector( const T & t ) {
+    vector<uint8_t> r;
+    for( int i = int(sizeof(T)) - 1; i >= 0; --i ) {
+        r.push_back( uint8_t(t >> 8 * i) );
+    }
+    return r;
+}
+
+template <>
+vector<uint8_t> to_vector( const string & t ) {
+    vector<uint8_t> r;
+    for ( auto & c: t ) {
+        r.push_back( uint8_t( c ) );
+    }
+    return r;
+}
+
 TEST_F( St060115Test, testMemoryWrite ) {
     expected_message.__set_precisionTimeStamp( expected_precisionTimeStamp );
     expected_message.__set_checksum( expected_checksum );
@@ -393,7 +412,7 @@ TEST_F( St060115Test, string ) {
 
     EXPECT_EQ( actual_string, expected_string );
 
-    validateBytes( St060115Tag::PLATFORM_DESIGNATION, expected_string.size(), vector<uint8_t>( (uint8_t *) & expected_string.front(), (uint8_t *) & expected_string.back() ) );
+    validateBytes( St060115Tag::PLATFORM_DESIGNATION, expected_string.size(), to_vector( expected_string ) );
 }
 
 /**
@@ -413,7 +432,7 @@ TEST_F( St060115Test, bool ) {
 
     EXPECT_EQ( actual_bool, expected_bool );
 
-    validateBytes( St060115Tag::ICING_DETECTED, 1, vector<uint8_t>( 1, expected_bool ) );
+    validateBytes( St060115Tag::ICING_DETECTED, 1, to_vector( expected_bool ) );
 }
 
 /**
@@ -433,7 +452,7 @@ TEST_F( St060115Test, i8 ) {
 
     EXPECT_EQ( actual_int8, expected_int8 );
 
-    validateBytes( St060115Tag::ICING_DETECTED, 1, vector<uint8_t>( 1, expected_int8 ) );
+    validateBytes( St060115Tag::ICING_DETECTED, 1, to_vector( expected_int8 ) );
 }
 
 // FIXME: currently, the "Unsigned" annotation does nothing for integer values
@@ -457,7 +476,7 @@ TEST_F( St060115Test, i16 ) {
 
     EXPECT_EQ( actual_int16, expected_int16 );
 
-    validateBytes( St060115Tag::WEAPON_LOAD, 1, vector<uint8_t>( & expected_int16 ) );
+    validateBytes( St060115Tag::WEAPON_LOAD, 1, to_vector( expected_int16 ) );
 }
 
 /**
@@ -478,5 +497,47 @@ TEST_F( St060115Test, i32 ) {
 
     EXPECT_EQ( actual_int32, expected_int32 );
 
-    validateBytes( St060115Tag::WEAPON_LOAD, 1, vector<uint8_t>( 1, expected_int32 ) );
+    validateBytes( St060115Tag::LEAP_SECONDS, 1, to_vector( expected_int32 ) );
+}
+
+/**
+ * Test that we can encode / decode an i64 tag and that it is
+ * binary-compatible with MISB
+ */
+TEST_F( St060115Test, i64 ) {
+
+    int64_t expected_int64 = 0x0011223344556677;
+
+    expected_message.__set_correctionOffset( expected_int64 );
+    ASSERT_TRUE( expected_message.__isset.correctionOffset );
+
+    common();
+
+    EXPECT_TRUE( actual_message.__isset.correctionOffset );
+    int64_t actual_int64 = actual_message.correctionOffset;
+
+    EXPECT_EQ( actual_int64, expected_int64 );
+
+    validateBytes( St060115Tag::CORRECTION_OFFSET, 1, to_vector( expected_int64 ) );
+}
+
+/**
+ * Test that we can encode / decode an enum tag and that it is
+ * binary-compatible with MISB
+ */
+TEST_F( St060115Test, enum ) {
+
+    OperationalMode::type expected_operationalMode = OperationalMode::OPERATIONAL;
+
+    expected_message.__set_operationalMode( expected_operationalMode );
+    ASSERT_TRUE( expected_message.__isset.operationalMode );
+
+    common();
+
+    EXPECT_TRUE( actual_message.__isset.operationalMode );
+    OperationalMode::type actual_operationalMode = actual_message.operationalMode;
+
+    EXPECT_EQ( actual_operationalMode, expected_operationalMode );
+
+    validateBytes( St060115Tag::OPERATIONAL_MODE, 1, to_vector( expected_operationalMode ) );
 }
