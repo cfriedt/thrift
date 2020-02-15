@@ -3,7 +3,6 @@
 #include "ber.h"
 
 using namespace ::std;
-
 TEST( berUintEncodeLength, encode_0 ) {
     uintmax_t x = 0ULL;
     int expected_int = 1;

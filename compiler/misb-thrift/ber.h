@@ -7,6 +7,9 @@
 
 __BEGIN_DECLS
 
+#define BER_SINGLE_BYTE_MODULUS 0x80
+#define BER_LONG_FORM_MASK 0x80
+
 int berUintEncode(const uintmax_t x, void *buffer, const size_t bufferSize);
 int berUintEncodeLength(uintmax_t x);
 int berUintDecode(const void *buffer, const size_t bufferSize, uintmax_t *x);
