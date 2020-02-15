@@ -261,6 +261,6 @@ clean:
 	$(QUIET)chmod -x *.py
 
 check: $(TESTEXE)
-	for i in $$^; do \
-		./$$i || break; \
+	for i in $^; do \
+		./$$i; \
 	done
