@@ -1,4 +1,5 @@
 #include <cstdint>
+#include <cstdlib>
 #include <condition_variable>
 #include <iomanip>
 #include <iostream>
@@ -140,6 +141,7 @@ public:
 };
 
 
+constexpr size_t TMemoryBufferDefaultSize = 1024;
 class St060115Test : public ::testing::Test {
 
 public:
@@ -151,10 +153,11 @@ protected:
         ready = false;
         processed = false;
 
-        // the transport is shared between client & server
-        memory = vector<uint8_t>( TMemoryBuffer::defaultSize, 0 );
-        D() << "memory.front() is at address " << (void *)(&memory.front()) << endl;
-        transport = make_shared<TMemoryBuffer>(&memory.front(), memory.size(), TMemoryBuffer::MemoryPolicy::TAKE_OWNERSHIP);
+        // the transport is shared between client & server, but is owned and freed by Thrift
+	// TMemoryBuffer::defaultSize has no actual storage
+        memory = (uint8_t *)calloc( 1, TMemoryBufferDefaultSize );
+        D() << "memory is at address " << (void *)memory << endl;
+        transport = make_shared<TMemoryBuffer>(memory, TMemoryBufferDefaultSize, TMemoryBuffer::MemoryPolicy::TAKE_OWNERSHIP);
 
         // first set up the server
         handler = make_shared<St060115Handler>( processedCv, processedMu, processed );
@@ -284,7 +287,7 @@ protected:
     mutex processedMu;
     bool processed;
 
-    vector<uint8_t> memory;
+    uint8_t *memory;
     shared_ptr<TTransport> transport;
 
     shared_ptr<St060115Handler> handler;
@@ -390,7 +393,7 @@ TEST_F( St060115Test, requiredTags ) {
     };
 #undef U8
 
-    vector<uint8_t> actual_v8( memory.begin(), memory.begin() + expected_v8.size() );
+    vector<uint8_t> actual_v8( memory, memory + expected_v8.size() );
 
     EXPECT_EQ( actual_v8, expected_v8 );
 }
