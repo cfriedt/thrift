@@ -32,6 +32,7 @@ template <class Transport_, class ByteOrder_>
 uint32_t TMISBProtocolT<Transport_, ByteOrder_>::writeMessageBegin(const std::string& name,
                                                                      const TMessageType messageType,
                                                                      const int32_t seqid) {
+#if 0
   if (this->strict_write_) {
     int32_t version = (VERSION_1) | ((int32_t)messageType);
     uint32_t wsize = 0;
@@ -46,6 +47,9 @@ uint32_t TMISBProtocolT<Transport_, ByteOrder_>::writeMessageBegin(const std::st
     wsize += writeI32(seqid);
     return wsize;
   }
+#else
+    return 0;
+#endif
 }
 
 template <class Transport_, class ByteOrder_>
@@ -200,6 +204,7 @@ template <class Transport_, class ByteOrder_>
 uint32_t TMISBProtocolT<Transport_, ByteOrder_>::readMessageBegin(std::string& name,
                                                                     TMessageType& messageType,
                                                                     int32_t& seqid) {
+#if 0
   uint32_t result = 0;
   int32_t sz;
   result += readI32(sz);
@@ -227,6 +232,11 @@ uint32_t TMISBProtocolT<Transport_, ByteOrder_>::readMessageBegin(std::string& n
     }
   }
   return result;
+#else
+  messageType = T_ONEWAY;
+  seqid = 0;
+  return 0;
+#endif
 }
 
 template <class Transport_, class ByteOrder_>
