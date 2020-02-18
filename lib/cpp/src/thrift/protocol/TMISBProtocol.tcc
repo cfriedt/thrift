@@ -294,6 +294,10 @@ uint32_t TMISBProtocolT<Transport_, ByteOrder_>::readFieldBegin(std::string& nam
   result += readI16(fieldId);
   return result;
 #else
+  if ( ! this->trans_->peek() ) {
+	  fieldType = T_STOP;
+	  return 0;
+  }
   size_t beroidLen;
   uintmax_t beroidFieldId = 0;
   uint8_t buf[ BEROID_MAX_BYTES ];

@@ -121,12 +121,14 @@ endef
 $(foreach _t, $(TSRC:.thrift=), \
 	$(eval _T=$(shell echo $(_t) | sed -e 's/^\([a-z]\)/\U\1/')) \
 	$(eval $(call sources-thrift-to-cpp,$(_t),$(_T))) \
-	$(eval CXXEXE += $(_T)-cxx-client) \
-	$(eval CXXEXE += $(_T)-cxx-server) \
 	$(eval $(call sources-thrift-to-py,$(_t),$(_T))) \
 	$(eval PYEXE += $(_T)-py-client) \
 	$(eval PYEXE += $(_T)-py-server) \
 )
+
+#	$(eval CXXEXE += $(_T)-cxx-client) \
+#	$(eval CXXEXE += $(_T)-cxx-server) \
+#
 
 #	$(eval CEXE += $(_T)-c-client) \
 #	$(eval CEXE += $(_T)-c-server) \
@@ -227,7 +229,7 @@ $(CXXLIB): $(CXXOBJ)
 
 %-test: %-test.cpp $(CXXLIB) $(CLIB)
 	@echo "[CXXLD] $@"
-	$(QUIET)$(CXX) $(CPPFLAGS) -I$(GENCXXDIR) $(CXXFLAGS) $(GTEST_CXXFLAGS) $(LDFLAGS) $< -o $@ $(CLIB) $(CXXLIB) $(THRIFT_CXX_LIBS) $(GTEST_LIBS)
+	$(QUIET)$(CXX) $(CPPFLAGS) -I$(GENCXXDIR) $(CXXFLAGS) $(GTEST_CXXFLAGS) $(LDFLAGS) $< -o $@ -Wl,--whole-archive $(CLIB) $(CXXLIB) -Wl,--no-whole-archive $(THRIFT_CXX_LIBS) $(GTEST_LIBS)
 
 %-cxx-client: %-cxx-client.cpp $(CXXLIB)
 	@echo "[CXXLD] $@"
