@@ -24,7 +24,7 @@
 #include "St060115.h"
 
 // just some header files for testing
-//#undef DEBUG
+#undef DEBUG
 #include "debug.h"
 
 using namespace ::std;

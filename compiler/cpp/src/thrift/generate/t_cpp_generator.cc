@@ -1650,33 +1650,33 @@ void t_cpp_generator::generate_exception_what_method_decl(std::ostream& out,
 }
 
 namespace struct_ostream_operator_generator {
-void generate_required_field_value(std::ostream& out, const t_field* field) {
+static void generate_required_field_value(std::ostream& out, const t_field* field) {
   out << " << to_string(" << field->get_name() << ")";
 }
 
-void generate_optional_field_value(std::ostream& out, const t_field* field) {
+static void generate_optional_field_value(std::ostream& out, const t_field* field) {
   out << "; (__isset." << field->get_name() << " ? (out";
   generate_required_field_value(out, field);
   out << ") : (out << \"<null>\"))";
 }
 
-void generate_field_value(std::ostream& out, const t_field* field) {
+static void generate_field_value(std::ostream& out, const t_field* field) {
   if (field->get_req() == t_field::T_OPTIONAL)
     generate_optional_field_value(out, field);
   else
     generate_required_field_value(out, field);
 }
 
-void generate_field_name(std::ostream& out, const t_field* field) {
+static void generate_field_name(std::ostream& out, const t_field* field) {
   out << "\"" << field->get_name() << "=\"";
 }
 
-void generate_field(std::ostream& out, const t_field* field) {
+static void generate_field(std::ostream& out, const t_field* field) {
   generate_field_name(out, field);
   generate_field_value(out, field);
 }
 
-void generate_fields(std::ostream& out,
+static void generate_fields(std::ostream& out,
                      const vector<t_field*>& fields,
                      const std::string& indent) {
   const vector<t_field*>::const_iterator beg = fields.begin();

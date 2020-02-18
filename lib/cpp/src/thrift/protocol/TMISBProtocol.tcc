@@ -305,7 +305,6 @@ uint32_t TMISBProtocolT<Transport_, ByteOrder_>::readFieldBegin(std::string& nam
     int8_t byte;
     beroidLen += readByte(byte);
     buf[ beroidLen - 1 ] = byte;
-    std::cout << "buf[ " << (beroidLen - 1) << " ]: " << (int)buf[ beroidLen - 1 ] << std::endl;
     if ( !(BEROID_MORE_BYTES_MASK & byte) ) {
       break;
     }
@@ -315,9 +314,7 @@ uint32_t TMISBProtocolT<Transport_, ByteOrder_>::readFieldBegin(std::string& nam
   }
   ::berOidUintDecode(buf, beroidLen, &beroidFieldId);
   fieldId = int16_t(beroidFieldId);
-  std::cout << "looking up TType for fieldId " << fieldId << std::endl;
   fieldType = fieldIdToTType(fieldId);
-  std::cout << "TType is " << fieldType << std::endl;
   return beroidLen;
 #endif
 }

@@ -164,7 +164,7 @@ all: $(LIB) $(EXE)
 define transform-thrift-to-cpp =
 $(GENCXXDIR)/$(1)_constants.h: $(1).thrift
 	@echo "[THRIFT][CXX] $$<"
-	$(QUIET)thrift --gen cpp $$<
+	$(QUIET)thrift --gen misb $$<
 $(GENCXXDIR)/$(1)_constants.cpp: $(GENCXXDIR)/$(1)_constants.h
 	@touch $$@
 $(GENCXXDIR)/$(1)_types.h: $(GENCXXDIR)/$(1)_constants.cpp
