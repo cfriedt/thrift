@@ -22,6 +22,7 @@
 
 #include <thrift/protocol/TProtocol.h>
 #include <thrift/protocol/TVirtualProtocol.h>
+#include "St060115Tag.h"
 
 #include <memory>
 #include <unordered_map>
@@ -57,7 +58,9 @@ public:
       string_limit_(0),
       container_limit_(0),
       strict_read_(false),
-      strict_write_(true) {}
+      strict_write_(true) {
+	  initializeFieldIdToTTypeMap();
+  }
 
   TMISBProtocolT(std::shared_ptr<Transport_> trans,
                    int32_t string_limit,
@@ -69,7 +72,9 @@ public:
       string_limit_(string_limit),
       container_limit_(container_limit),
       strict_read_(strict_read),
-      strict_write_(strict_write) {}
+      strict_write_(strict_write) {
+	  initializeFieldIdToTTypeMap();
+  }
 
   void setStringSizeLimit(int32_t string_limit) { string_limit_ = string_limit; }
 
@@ -179,6 +184,11 @@ public:
 protected:
   template <typename StrType>
   uint32_t readStringBody(StrType& str, int32_t sz);
+  void initializeFieldIdToTTypeMap() {
+	  fieldIdToTTypeMap[ ::org::misb::St060115Tag::CHECKSUM ] = TType::T_I16;
+	  fieldIdToTTypeMap[ ::org::misb::St060115Tag::TIMESTAMP ] = TType::T_I64;
+	  fieldIdToTTypeMap[ ::org::misb::St060115Tag::UAS_DATALINK_LS_VERSION_NUMBER ] = TType::T_I08;
+  }
 
   Transport_* trans_;
 

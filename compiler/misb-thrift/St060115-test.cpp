@@ -26,7 +26,7 @@
 // just some header files for testing
 #undef DEBUG
 #include "debug.h"
-#include "St060115Tag.h"
+#include "../../lib/cpp/src/thrift/protocol/St060115Tag.h"
 
 using namespace ::std;
 

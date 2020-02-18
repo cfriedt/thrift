@@ -85,7 +85,14 @@ uint32_t TMISBProtocolT<Transport_, ByteOrder_>::writeFieldBegin(const char* nam
   (void)fieldType;
   uint8_t buf[BEROID_MAX_BYTES];
   int len = ::berOidUintEncode(static_cast<uintmax_t>(fieldId), buf, sizeof(buf));
-  return writeBinary(std::string(buf, buf + len));
+  if ( -1 == len ) {
+    throw TProtocolException(TProtocolException::INVALID_DATA);  
+  }
+  // XXX: cannot use writeBinary() because it prepends an i32 length atm 
+  for(int i = 0; i < len; ++i) {
+	writeByte(buf[i]);  
+  }
+  return len;
 #endif
 }
 
