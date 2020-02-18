@@ -1887,6 +1887,10 @@ void t_misb_generator::generate_service_helpers(t_service* tservice) {
   vector<t_function*>::iterator f_iter;
   std::ostream& out = (gen_templates_ ? f_service_tcc_ : f_service_);
 
+  if ( 1 != functions.size() ) {
+	  throw "MISB GENERATOR ONLY ALLOWS 1 SERVICE FUNCTION";
+  }
+
   for (f_iter = functions.begin(); f_iter != functions.end(); ++f_iter) {
     t_struct* ts = (*f_iter)->get_arglist();
     string name_orig = ts->get_name();
@@ -2090,19 +2094,21 @@ void t_misb_generator::generate_function_call(ostream& out,
                                              string target,
                                              string iface,
                                              string arg_prefix) {
+  (void) target;
+
   bool first = true;
   t_type* ret_type = get_true_type(tfunction->get_returntype());
-  out << indent();
-  if (!tfunction->is_oneway() && !ret_type->is_void()) {
-    if (is_complex_type(ret_type)) {
-      first = false;
-      out << iface << "->" << tfunction->get_name() << "(" << target;
-    } else {
-      out << target << " = " << iface << "->" << tfunction->get_name() << "(";
-    }
-  } else {
-    out << iface << "->" << tfunction->get_name() << "(";
+
+  if (!ret_type->is_void()) {
+	  throw "MISB SERVICE FUNCTION RETURN TYPE MUST BE VOID";
   }
+
+  if (!tfunction->is_oneway()) {
+	  throw "MISB SERVICE FUNCTION TYPE MUST BE ONEWAY";
+  }
+
+  out << indent();
+  out << iface << "->" << tfunction->get_name() << "(";
   const std::vector<t_field*>& fields = tfunction->get_arglist()->get_members();
   vector<t_field*>::const_iterator f_iter;
   for (f_iter = fields.begin(); f_iter != fields.end(); ++f_iter) {
