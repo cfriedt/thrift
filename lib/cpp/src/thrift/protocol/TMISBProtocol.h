@@ -24,6 +24,7 @@
 #include <thrift/protocol/TVirtualProtocol.h>
 
 #include <memory>
+#include <unordered_map>
 
 namespace apache {
 namespace thrift {
@@ -40,6 +41,15 @@ public:
   static const int32_t VERSION_MASK = ((int32_t)0xffff0000);
   static const int32_t VERSION_1 = ((int32_t)0x80010000);
   // VERSION_2 (0x80020000) was taken by TDenseProtocol (which has since been removed)
+
+  std::unordered_map<int16_t,TType> fieldIdToTTypeMap;
+  TType fieldIdToTType( int16_t fieldId ) {
+    auto it = fieldIdToTTypeMap.find( fieldId );
+    if ( fieldIdToTTypeMap.end() == it ) {
+      throw TProtocolException(TProtocolException::INVALID_DATA);
+    }
+    return it->second;
+  }
 
   TMISBProtocolT(std::shared_ptr<Transport_> trans)
     : TVirtualProtocol<TMISBProtocolT<Transport_, ByteOrder_> >(trans),
@@ -245,6 +255,6 @@ typedef TMISBProtocolFactoryT<TTransport, TNetworkLittleEndian> TLEMISBProtocolF
 }
 } // apache::thrift::protocol
 
-#include <thrift/protocol/TMISBProtocol.tcc>
+#include "TMISBProtocol.tcc"
 
 #endif // #ifndef _THRIFT_PROTOCOL_TMISBPROTOCOL_H_

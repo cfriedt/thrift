@@ -66,6 +66,8 @@ __BEGIN_DECLS
 /// The number of bytes required to encode BEROID_MAX
 #define BEROID_MAX_BYTES 10
 
+#define BEROID_MORE_BYTES_MASK (1 << BEROID_MODULO_SHIFT)
+
 /**
  * Encode an unsigned integer using ASN.1 Basic Encoding Rules for Object ID's
  * (BER-OID).

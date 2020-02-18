@@ -10,7 +10,10 @@
 
 #include <gtest/gtest.h>
 
-#include <thrift/protocol/TMISBProtocol.h>
+#include "ber.h"
+#include "beroid.h"
+
+#include "../../lib/cpp/src/thrift/protocol/TMISBProtocol.h"
 #include <thrift/server/TSimpleServer.h>
 #include <thrift/transport/TSocket.h>
 #include <thrift/transport/TTransportUtils.h>
@@ -21,8 +24,6 @@
 #include "St060115.h"
 
 // just some header files for testing
-#include "ber.h"
-#include "beroid.h"
 #undef DEBUG
 #include "debug.h"
 #include "St060115Tag.h"
@@ -198,7 +199,9 @@ protected:
         expected_message.__set_checksum( expected_checksum );
         expected_message.__set_uasDatalinkLsVersionNumber( expected_uasDatalinkLsVersionNumber );
 
+	cout << "calling update" << endl;
         client->update( expected_message );
+	cout << "returned from update" << endl;
         ready = true;
         readyCv.notify_one();
 

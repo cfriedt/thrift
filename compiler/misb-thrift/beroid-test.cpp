@@ -585,6 +585,21 @@ TEST( berOidUintDecodeHappyPath, Test_0601_11_example ) {
     EXPECT_EQ( actual_uintmax, expected_uintmax );
 }
 
+TEST( berOidUintDecodeHappyPath, Test_1 ) {
+
+    const vector<uint8_t> buffer({0x01});
+    const size_t bufferSize = 1;
+
+    uintmax_t expected_uintmax = 0x01ULL;
+    uintmax_t actual_uintmax = -1;
+
+    int expected_int = bufferSize;
+    int actual_int = ::berOidUintDecode( & buffer.front(), bufferSize, & actual_uintmax );
+
+    ASSERT_EQ( actual_int, expected_int );
+    EXPECT_EQ( actual_uintmax, expected_uintmax );
+}
+
 TEST( berOidUintDecodeHappyPath, Test_7fabcdef_buff_1_do_not_read_past_buffSize ) {
 
     const vector<uint8_t> buffer({0x7f,0xab,0xcd,0xef});

@@ -48,6 +48,9 @@ uint32_t TMISBProtocolT<Transport_, ByteOrder_>::writeMessageBegin(const std::st
     return wsize;
   }
 #else
+    (void) name;
+    (void) messageType;
+    (void) seqid;
     return 0;
 #endif
 }
@@ -73,10 +76,17 @@ uint32_t TMISBProtocolT<Transport_, ByteOrder_>::writeFieldBegin(const char* nam
                                                                    const TType fieldType,
                                                                    const int16_t fieldId) {
   (void)name;
+#if 0
   uint32_t wsize = 0;
   wsize += writeByte((int8_t)fieldType);
   wsize += writeI16(fieldId);
   return wsize;
+#else
+  (void)fieldType;
+  uint8_t buf[BEROID_MAX_BYTES];
+  int len = ::berOidUintEncode(static_cast<uintmax_t>(fieldId), buf, sizeof(buf));
+  return writeBinary(std::string(buf, buf + len));
+#endif
 }
 
 template <class Transport_, class ByteOrder_>
@@ -86,7 +96,11 @@ uint32_t TMISBProtocolT<Transport_, ByteOrder_>::writeFieldEnd() {
 
 template <class Transport_, class ByteOrder_>
 uint32_t TMISBProtocolT<Transport_, ByteOrder_>::writeFieldStop() {
+#if 0
   return writeByte((int8_t)T_STOP);
+#else
+  return 0;
+#endif
 }
 
 template <class Transport_, class ByteOrder_>
@@ -233,6 +247,7 @@ uint32_t TMISBProtocolT<Transport_, ByteOrder_>::readMessageBegin(std::string& n
   }
   return result;
 #else
+  (void) name;
   messageType = T_ONEWAY;
   seqid = 0;
   return 0;
@@ -260,6 +275,7 @@ uint32_t TMISBProtocolT<Transport_, ByteOrder_>::readFieldBegin(std::string& nam
                                                                   TType& fieldType,
                                                                   int16_t& fieldId) {
   (void)name;
+#if 0
   uint32_t result = 0;
   int8_t type;
   result += readByte(type);
@@ -270,6 +286,29 @@ uint32_t TMISBProtocolT<Transport_, ByteOrder_>::readFieldBegin(std::string& nam
   }
   result += readI16(fieldId);
   return result;
+#else
+  size_t beroidLen;
+  uintmax_t beroidFieldId = 0;
+  uint8_t buf[ BEROID_MAX_BYTES ];
+  for(beroidLen = 0; beroidLen < sizeof(buf); ) {
+    int8_t byte;
+    beroidLen += readByte(byte);
+    buf[ beroidLen - 1 ] = byte;
+    std::cout << "buf[ " << (beroidLen - 1) << " ]: " << (int)buf[ beroidLen - 1 ] << std::endl;
+    if ( !(BEROID_MORE_BYTES_MASK & byte) ) {
+      break;
+    }
+    if ( beroidLen == BEROID_MAX_BYTES ) {
+      throw TProtocolException(TProtocolException::INVALID_DATA);
+    }
+  }
+  ::berOidUintDecode(buf, beroidLen, &beroidFieldId);
+  fieldId = int16_t(beroidFieldId);
+  std::cout << "looking up TType for fieldId " << fieldId << std::endl;
+  fieldType = fieldIdToTType(fieldId);
+  std::cout << "TType is " << fieldType << std::endl;
+  return beroidLen;
+#endif
 }
 
 template <class Transport_, class ByteOrder_>
