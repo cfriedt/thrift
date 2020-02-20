@@ -24,7 +24,7 @@
 #include "St060115.h"
 
 // just some header files for testing
-#undef DEBUG
+//#undef DEBUG
 #include "debug.h"
 
 using namespace ::std;
@@ -154,7 +154,7 @@ protected:
         processed = false;
 
         // the transport is shared between client & server, but is owned and freed by Thrift
-	// TMemoryBuffer::defaultSize has no actual storage
+        // TMemoryBuffer::defaultSize has no actual storage
         memory = (uint8_t *)calloc( 1, TMemoryBufferDefaultSize );
         D() << "memory is at address " << (void *)memory << endl;
         transport = make_shared<TMemoryBuffer>(memory, TMemoryBufferDefaultSize, TMemoryBuffer::MemoryPolicy::TAKE_OWNERSHIP);

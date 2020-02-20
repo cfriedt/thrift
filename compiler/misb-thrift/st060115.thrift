@@ -144,10 +144,7 @@ struct WaypointList {
 )
 
 struct UasDataLinkLocalSet {
-	
-	1: required i16 checksum (
-		Unsigned
-	)
+	// precisionTimeStamp must appear first
 	2: required i64 precisionTimeStamp (
 		Unsigned
 	)
@@ -623,6 +620,10 @@ struct UasDataLinkLocalSet {
 	139: optional binary activePayloads
 	140: optional WeaponStores weaponStores
 	141: optional WaypointList waypointList
+	// checksum must appear last
+	1: required i16 checksum (
+		Unsigned
+	)
 }
 service St060115 {
 	oneway void update( 1: UasDataLinkLocalSet message )
