@@ -89,10 +89,8 @@ int berOidUintEncode(const uintmax_t x, void *buffer, const size_t bufferSize)
     // reverse to big-endian
     // O(C/8) => O(1), C is the register bit-width
     if (write) {
-#if __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
         // output should be in network byte order
         reverseN(buffer, bytesRequired);
-#endif
     }
 
     return bytesRequired;
