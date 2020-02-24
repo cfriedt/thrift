@@ -4535,7 +4535,8 @@ string t_misb_generator::type_to_enum(t_type* type) {
       return "::apache::thrift::protocol::T_DOUBLE";
     }
   } else if (type->is_enum()) {
-    return "::apache::thrift::protocol::T_I32";
+    // XXX: @CJF: We are only supporting 8-bit enumerations for MISB atm
+    return "::apache::thrift::protocol::T_I08";
   } else if (type->is_struct()) {
     return "::apache::thrift::protocol::T_STRUCT";
   } else if (type->is_xception()) {
