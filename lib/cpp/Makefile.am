@@ -64,10 +64,13 @@ libthrift_la_SOURCES = src/thrift/TApplicationException.cpp \
                        src/thrift/concurrency/ThreadManager.cpp \
                        src/thrift/concurrency/TimerManager.cpp \
                        src/thrift/processor/PeekProcessor.cpp \
+                       src/thrift/protocol/ber.c \
+                       src/thrift/protocol/beroid.c \
                        src/thrift/protocol/TDebugProtocol.cpp \
                        src/thrift/protocol/TJSONProtocol.cpp \
                        src/thrift/protocol/TBase64Utils.cpp \
                        src/thrift/protocol/TMultiplexedProtocol.cpp \
+                       src/thrift/protocol/TMISBProtocol.cpp \
                        src/thrift/protocol/TProtocol.cpp \
                        src/thrift/transport/TTransportException.cpp \
                        src/thrift/transport/TFDTransport.cpp \
@@ -155,6 +158,9 @@ include_concurrency_HEADERS = \
 
 include_protocoldir = $(include_thriftdir)/protocol
 include_protocol_HEADERS = \
+                         src/thrift/protocol/ber.h \
+                         src/thrift/protocol/beroid.h \
+                         src/thrift/protocol/St060115Tag.h \
                          src/thrift/protocol/TBinaryProtocol.h \
                          src/thrift/protocol/TBinaryProtocol.tcc \
                          src/thrift/protocol/TCompactProtocol.h \

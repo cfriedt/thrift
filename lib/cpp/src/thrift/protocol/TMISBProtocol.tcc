@@ -20,6 +20,8 @@
 #ifndef _THRIFT_PROTOCOL_TMISBPROTOCOL_TCC_
 #define _THRIFT_PROTOCOL_TMISBPROTOCOL_TCC_ 1
 
+#include <thrift/protocol/ber.h>
+#include <thrift/protocol/beroid.h>
 #include <thrift/protocol/TMISBProtocol.h>
 
 #include <limits>
@@ -27,7 +29,7 @@
 namespace apache {
 namespace thrift {
 namespace protocol {
-
+    
 template <class Transport_, class ByteOrder_>
 uint32_t TMISBProtocolT<Transport_, ByteOrder_>::writeMessageBegin(const std::string& name,
                                                                      const TMessageType messageType,

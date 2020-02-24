@@ -10,15 +10,14 @@
 
 #include <gtest/gtest.h>
 
-#include "ber.h"
-#include "beroid.h"
-
+#include "../../lib/cpp/src/thrift/protocol/ber.h"
+#include "../../lib/cpp/src/thrift/protocol/beroid.h"
 #include "../../lib/cpp/src/thrift/protocol/TMISBProtocol.h"
-#include <thrift/server/TSimpleServer.h>
-#include <thrift/transport/TSocket.h>
-#include <thrift/transport/TTransportUtils.h>
-#include <thrift/transport/TServerSocket.h>
-#include <thrift/transport/TBufferTransports.h>
+#include "../../lib/cpp/src/thrift/server/TSimpleServer.h"
+#include "../../lib/cpp/src/thrift/transport/TSocket.h"
+#include "../../lib/cpp/src/thrift/transport/TTransportUtils.h"
+#include "../../lib/cpp/src/thrift/transport/TServerSocket.h"
+#include "../../lib/cpp/src/thrift/transport/TBufferTransports.h"
 
 // the thrift-generated protocol header
 #include "St060115.h"

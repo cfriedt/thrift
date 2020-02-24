@@ -3,10 +3,26 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#include "array-size.h"
-
 #include "beroid.h"
-#include "reverseN.h"
+
+#ifndef ARRAY_SIZE
+#define ARRAY_SIZE(x) (sizeof(x)/sizeof((x)[0]))
+#endif
+
+void reverseN(const void *p, const size_t N)
+{
+    if (NULL == p || 0 == N) {
+        return;
+    }
+
+    uint8_t *a, *b, c;
+
+    for (a = (uint8_t *) p, b = a + N - 1; a < b; a++, b--) {
+        c  = *b;
+        *b = *a;
+        *a = c;
+    }
+}
 
 // Overall O(3*C/8) => O(1)
 int berOidUintEncode(const uintmax_t x, void *buffer, const size_t bufferSize)

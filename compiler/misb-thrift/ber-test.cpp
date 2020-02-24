@@ -1,6 +1,6 @@
 #include <gtest/gtest.h>
 
-#include "ber.h"
+#include "../../lib/cpp/src/thrift/protocol/ber.h"
 
 using namespace ::std;
 

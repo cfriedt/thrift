@@ -460,6 +460,8 @@ void t_misb_generator::init_generator() {
   f_types_impl_ << "#include <ostream>" << endl << endl;
   f_types_impl_ << "#include <thrift/TToString.h>" << endl << endl;
 
+  f_types_impl_ << "#include <thrift/protocol/TMISBProtocol.h>" << endl << endl;
+
   // Open namespace
   ns_open_ = namespace_open(program_->get_namespace("cpp"));
   ns_close_ = namespace_close(program_->get_namespace("cpp"));
@@ -1359,6 +1361,10 @@ void t_misb_generator::generate_struct_reader(ostream& out, t_struct* tstruct, b
       << indent() << "std::string fname;" << endl
       << indent() << "::apache::thrift::protocol::TType ftype;" << endl
       << indent() << "int16_t fid;" << endl
+      << indent() << "#pragma GCC diagnostic push" << endl
+      << indent() << "#pragma GCC diagnostic ignored \"-Wunused-variable\"" << endl
+      << indent() << "uintmax_t ber;" << endl
+      << indent() << "#pragma GCC diagnostic pop" << endl
       << endl
       << indent() << "xfer += iprot->readStructBegin(fname);" << endl
       << endl
@@ -1397,6 +1403,7 @@ void t_misb_generator::generate_struct_reader(ostream& out, t_struct* tstruct, b
       indent_up();
       indent(out) << "if (ftype == " << type_to_enum((*f_iter)->get_type()) << ") {" << endl;
       indent_up();
+      indent(out) << "xfer += ::apache::thrift::protocol::readBer( iprot, ber );" << endl;
 
       const char* isset_prefix = ((*f_iter)->get_req() != t_field::T_REQUIRED) ? "this->__isset."
                                                                                : "isset_";
@@ -1464,7 +1471,7 @@ void t_misb_generator::generate_struct_reader(ostream& out, t_struct* tstruct, b
  */
 void t_misb_generator::generate_struct_writer(ostream& out, t_struct* tstruct, bool pointers) {
   string name = tstruct->get_name();
-  const vector<t_field*>& fields = tstruct->get_sorted_members();
+  const vector<t_field*>& fields = tstruct->get_members();
   vector<t_field*>::const_iterator f_iter;
 
   if (gen_templates_) {
@@ -1505,6 +1512,7 @@ void t_misb_generator::generate_struct_writer(ostream& out, t_struct* tstruct, b
     out << indent() << "xfer += oprot->writeFieldBegin("
         << "\"" << (*f_iter)->get_name() << "\", " << type_to_enum((*f_iter)->get_type()) << ", "
         << (*f_iter)->get_key() << ");" << endl;
+    out << indent() << "xfer += writeBer(oprot, sizeof(this->" << (*f_iter)->get_name() << "));" << endl;
     }
     // Write field contents
     if (pointers && !(*f_iter)->get_type()->is_xception()) {

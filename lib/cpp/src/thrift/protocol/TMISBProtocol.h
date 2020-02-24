@@ -20,9 +20,9 @@
 #ifndef _THRIFT_PROTOCOL_TMISBPROTOCOL_H_
 #define _THRIFT_PROTOCOL_TMISBPROTOCOL_H_ 1
 
+#include <thrift/protocol/St060115Tag.h>
 #include <thrift/protocol/TProtocol.h>
 #include <thrift/protocol/TVirtualProtocol.h>
-#include "St060115Tag.h"
 
 #include <memory>
 #include <unordered_map>
@@ -30,6 +30,9 @@
 namespace apache {
 namespace thrift {
 namespace protocol {
+
+size_t readBer(::apache::thrift::protocol::TProtocol* iprot, uintmax_t & r);
+size_t writeBer(::apache::thrift::protocol::TProtocol* oprot, const uintmax_t & len);
 
 /**
  * The default binary protocol for thrift. Writes all data in a very basic

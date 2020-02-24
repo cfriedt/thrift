@@ -7,9 +7,8 @@ using namespace std;
 #include <limits.h>
 #include <stdint.h>
 
-#include "array-size.h"
-#include "reverseN.h"
-#include "beroid.h"
+#include "../../lib/cpp/src/thrift/protocol/reverseN.h"
+#include "../../lib/cpp/src/thrift/protocol/beroid.h"
 
 TEST( Sanity, Test_vector_compare_checks_length ) {
     vector<uint8_t> v1({0, 1, 2});
