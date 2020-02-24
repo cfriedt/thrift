@@ -399,7 +399,6 @@ TEST_F( St060115Test, requiredTags ) {
     EXPECT_EQ( actual_v8, expected_v8 );
 }
 
-#if 0
 /**
  * Test that we can encode / decode a string tag and that it is
  * binary-compatible with MISB
@@ -417,9 +416,8 @@ TEST_F( St060115Test, string ) {
 
     EXPECT_EQ( actual_string, expected_string );
 
-    validateBytes( St060115Tag::PLATFORM_DESIGNATION, expected_string.size(), to_vector( expected_string ) );
+    //validateBytes( St060115Tag::PLATFORM_DESIGNATION, expected_string.size(), to_vector( expected_string ) );
 }
-#endif
 
 /**
  * Test that we can encode / decode a bool tag and that it is
