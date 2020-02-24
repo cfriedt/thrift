@@ -1323,6 +1323,7 @@ void t_misb_generator::generate_struct_definition(ostream& out,
  * @param tstruct The struct
  */
 void t_misb_generator::generate_struct_reader(ostream& out, t_struct* tstruct, bool pointers) {
+
   if (gen_templates_) {
     out << indent() << "template <class Protocol_>" << endl << indent() << "uint32_t "
         << tstruct->get_name() << "::read(Protocol_* iprot) {" << endl;
@@ -1334,6 +1335,22 @@ void t_misb_generator::generate_struct_reader(ostream& out, t_struct* tstruct, b
 
   const vector<t_field*>& fields = tstruct->get_members();
   vector<t_field*>::const_iterator f_iter;
+
+  // XXX: @CJF: this is a dirty hack.
+  if ("St060115_update_args" == tstruct->get_name()) {
+
+    f_iter = fields.begin();
+
+    out << endl
+        << indent() << "::apache::thrift::protocol::TInputRecursionTracker tracker(*iprot);" << endl
+        << endl;
+
+    indent(out) << "return this->message.read(iprot);" << endl;
+
+    indent_down();
+    indent(out) << "}" << endl << endl;
+    return;
+  }
 
   // Declare stack tmp variables
   out << endl
@@ -1462,10 +1479,17 @@ void t_misb_generator::generate_struct_writer(ostream& out, t_struct* tstruct, b
   out << indent() << "uint32_t xfer = 0;" << endl;
 
   indent(out) << "::apache::thrift::protocol::TOutputRecursionTracker tracker(*oprot);" << endl;
-  indent(out) << "xfer += oprot->writeStructBegin(\"" << name << "\");" << endl;
 
+  // XXX: @CJF: this is a dirty hack.
+  if (!("St060115_update_args" == tstruct->get_name() || "St060115_update_pargs" == tstruct->get_name())) {
+  indent(out) << "xfer += oprot->writeStructBegin(\"" << name << "\");" << endl;
+  }
+
+  bool check_if_set;
   for (f_iter = fields.begin(); f_iter != fields.end(); ++f_iter) {
-    bool check_if_set = (*f_iter)->get_req() == t_field::T_OPTIONAL
+    // XXX: @CJF: this is a dirty hack.
+    if (!("St060115_update_args" == tstruct->get_name() || "St060115_update_pargs" == tstruct->get_name())) {
+    check_if_set = (*f_iter)->get_req() == t_field::T_OPTIONAL
                         || (*f_iter)->get_type()->is_xception();
     if (check_if_set) {
       out << endl << indent() << "if (this->__isset." << (*f_iter)->get_name() << ") {" << endl;
@@ -1473,31 +1497,46 @@ void t_misb_generator::generate_struct_writer(ostream& out, t_struct* tstruct, b
     } else {
       out << endl;
     }
+    }
 
+    // XXX: @CJF: this is a dirty hack.
+    if (!("St060115_update_args" == tstruct->get_name() || "St060115_update_pargs" == tstruct->get_name())) {
     // Write field header
     out << indent() << "xfer += oprot->writeFieldBegin("
         << "\"" << (*f_iter)->get_name() << "\", " << type_to_enum((*f_iter)->get_type()) << ", "
         << (*f_iter)->get_key() << ");" << endl;
+    }
     // Write field contents
     if (pointers && !(*f_iter)->get_type()->is_xception()) {
       generate_serialize_field(out, *f_iter, "(*(this->", "))");
     } else {
       generate_serialize_field(out, *f_iter, "this->");
     }
+    // XXX: @CJF: this is a dirty hack.
+    if (!("St060115_update_args" == tstruct->get_name() || "St060115_update_pargs" == tstruct->get_name())) {
     // Write field closer
     indent(out) << "xfer += oprot->writeFieldEnd();" << endl;
+    }
+    // XXX: @CJF: this is a dirty hack.
+    if (!("St060115_update_args" == tstruct->get_name() || "St060115_update_pargs" == tstruct->get_name())) {
     if (check_if_set) {
       indent_down();
       indent(out) << '}';
+    }
     }
   }
 
   out << endl;
 
+  // XXX: @CJF: this is a dirty hack.
+  if (!("St060115_update_args" == tstruct->get_name() || "St060115_update_pargs" == tstruct->get_name())) {
   // Write the struct map
   out << indent() << "xfer += oprot->writeFieldStop();" << endl << indent()
       << "xfer += oprot->writeStructEnd();" << endl << indent()
       << "return xfer;" << endl;
+  } else {
+    out << indent() << "return xfer;" << endl;
+  }
 
   indent_down();
   indent(out) << "}" << endl << endl;
@@ -3158,50 +3197,14 @@ void MISBProcessorGenerator::generate_dispatch_call(bool template_protocol) {
          << "const std::string& fname, int32_t seqid" << call_context_ << ") {" << endl;
   indent_up();
 
-  // HOT: member function pointer map
-  f_out_ << indent() << typename_str_ << "ProcessMap::iterator pfn;" << endl << indent()
-         << "pfn = processMap_.find(fname);" << endl << indent()
-         << "if (pfn == processMap_.end()) {" << endl;
-  if (extends_.empty()) {
-    f_out_ << indent() << "  iprot->skip(::apache::thrift::protocol::T_STRUCT);" << endl << indent()
-           << "  iprot->readMessageEnd();" << endl << indent()
-           << "  iprot->getTransport()->readEnd();" << endl << indent()
-           << "  ::apache::thrift::TApplicationException "
-              "x(::apache::thrift::TApplicationException::UNKNOWN_METHOD, \"Invalid method name: "
-              "'\"+fname+\"'\");" << endl << indent()
-           << "  oprot->writeMessageBegin(fname, ::apache::thrift::protocol::T_EXCEPTION, seqid);"
-           << endl << indent() << "  x.write(oprot);" << endl << indent()
-           << "  oprot->writeMessageEnd();" << endl << indent()
-           << "  oprot->getTransport()->writeEnd();" << endl << indent()
-           << "  oprot->getTransport()->flush();" << endl << indent()
-           << (style_ == "Cob" ? "  return cob(true);" : "  return true;") << endl;
-  } else {
-    f_out_ << indent() << "  return " << extends_ << "::dispatchCall("
-           << (style_ == "Cob" ? "cob, " : "") << "iprot, oprot, fname, seqid" << call_context_arg_
-           << ");" << endl;
-  }
-  f_out_ << indent() << "}" << endl;
-  if (template_protocol) {
-    f_out_ << indent() << "(this->*(pfn->second.specialized))";
-  } else {
-    if (generator_->gen_templates_only_) {
-      // TODO: This is a null pointer, so nothing good will come from calling
-      // it.  Throw an exception instead.
-      f_out_ << indent() << "(this->*(pfn->second.generic))";
-    } else if (generator_->gen_templates_) {
-      f_out_ << indent() << "(this->*(pfn->second.generic))";
-    } else {
-      f_out_ << indent() << "(this->*(pfn->second))";
-    }
-  }
+  // XXX: @CJF: this is a dirty hack
+  f_out_ << indent() << "(void) fname;" << endl;
+  f_out_ << indent() << "(void) seqid;" << endl;
+  f_out_ << indent() << "ProcessMap::iterator pfn;" << endl;
+  f_out_ << indent() << "pfn = processMap_.find(\"update\");" << endl;
+  f_out_ << indent() << "(this->*(pfn->second))";
   f_out_ << "(" << cob_arg_ << "seqid, iprot, oprot" << call_context_arg_ << ");" << endl;
-
-  // TODO(dreiss): return pfn ret?
-  if (style_ == "Cob") {
-    f_out_ << indent() << "return;" << endl;
-  } else {
-    f_out_ << indent() << "return true;" << endl;
-  }
+  f_out_ << indent() << "return true;" << endl;
 
   indent_down();
   f_out_ << "}" << endl << endl;
