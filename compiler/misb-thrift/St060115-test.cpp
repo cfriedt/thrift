@@ -22,9 +22,13 @@
 // the thrift-generated protocol header
 #include "St060115.h"
 
+#include "imap.h"
+
 // just some header files for testing
 #undef DEBUG
 #include "debug.h"
+
+#define U8(x) (uint8_t((x) & 0xff))
 
 using namespace ::std;
 
@@ -34,6 +38,42 @@ using namespace ::apache::thrift::server;
 using namespace ::apache::thrift::transport;
 
 using namespace  ::org::misb;
+
+template <typename T>
+string to_string( const vector<T> & v ) {
+    stringstream ss;
+    ss << "{ ";
+    for( auto & vv: v ) {
+        ss << hex << setw( 8*sizeof(T)/4 ) << setfill('0') << uintmax_t( vv ) << " ";
+    }
+    ss << "}";
+    return ss.str();
+}
+
+template <typename T>
+ostream & operator<<( ostream & os, const vector<T> & v ) {
+    os << to_string( v );
+    return os;
+}
+
+// puts the contents of t into a vector in big-endian format
+template <typename T>
+vector<uint8_t> to_vector( const T & t ) {
+    vector<uint8_t> r;
+    for( int i = int(sizeof(T)) - 1; i >= 0; --i ) {
+        r.push_back( uint8_t(t >> 8 * i) );
+    }
+    return r;
+}
+
+template <>
+vector<uint8_t> to_vector( const string & t ) {
+    vector<uint8_t> r;
+    for ( auto & c: t ) {
+        r.push_back( uint8_t( c ) );
+    }
+    return r;
+}
 
 class TServerSharedTransport : public ::apache::thrift::server::TServerTransport {
 public:
@@ -192,6 +232,46 @@ protected:
         }
     }
 
+    void tagify() {
+
+
+
+        for( size_t remaining = TMemoryBufferDefaultSize, offset = 0, consumed = 0; remaining > 0; offset += consumed, remaining -= consumed ) {
+
+            size_t beroidLen;
+            uintmax_t beroid;
+            size_t berLen;
+            uintmax_t ber;
+
+            int r;
+
+            consumed = 0;
+
+            r = ::berOidUintDecode( & memory[ offset ], remaining, & beroid );
+            if ( -1 == r || 0 == beroid ) {
+                break;
+            }
+            beroidLen = (size_t)r;
+            consumed += beroidLen;
+
+            r = ::berUintDecode( & memory[ offset + beroidLen ], remaining - beroidLen, & ber );
+            if ( -1 == r || 0 == ber ) {
+                break;
+            }
+            berLen = (size_t)r;
+            consumed += berLen;
+
+            consumed += ber;
+
+            vector<uint8_t> tagData = vector<uint8_t>( & memory[ offset + beroidLen + berLen ], & memory[ offset + beroidLen + berLen ] + ber );
+
+            cout << "key: " << beroid << " length: " << ber << " value: " << tagData << endl;
+
+            tagOffset[ beroid ] = offset;
+            tagSize[ beroid ] = ber;
+        }
+    }
+
     void common() {
         expected_message.__set_precisionTimeStamp( expected_precisionTimeStamp );
         expected_message.__set_checksum( expected_checksum );
@@ -219,6 +299,8 @@ protected:
         ASSERT_EQ( actual_checksum, expected_checksum );
         ASSERT_EQ( actual_precisionTimeStamp, expected_precisionTimeStamp );
         ASSERT_EQ( actual_uasDatalinkLsVersionNumber, expected_uasDatalinkLsVersionNumber );
+
+        tagify();
     }
 
     void validateBytes( unsigned tag, unsigned len, const vector<uint8_t> expected_bytes ) {
@@ -309,42 +391,8 @@ const uint16_t St060115Test::expected_checksum = 0xabcd;
 const uint64_t St060115Test::expected_precisionTimeStamp = 0x0011223344556677;
 const uint8_t St060115Test::expected_uasDatalinkLsVersionNumber = 15;
 
-template <typename T>
-string to_string( const vector<T> & v ) {
-	stringstream ss;
-	ss << "{ ";
-	for( auto & vv: v ) {
-		ss << hex << setw( 8*sizeof(T)/4 ) << setfill('0') << uintmax_t( vv ) << " ";
-	}
-	ss << "}";
-	return ss.str();
-}
 
-template <typename T>
-ostream & operator<<( ostream & os, const vector<T> & v ) {
-	os << to_string( v );
-	return os;
-}
-
-// puts the contents of t into a vector in big-endian format
-template <typename T>
-vector<uint8_t> to_vector( const T & t ) {
-    vector<uint8_t> r;
-    for( int i = int(sizeof(T)) - 1; i >= 0; --i ) {
-        r.push_back( uint8_t(t >> 8 * i) );
-    }
-    return r;
-}
-
-template <>
-vector<uint8_t> to_vector( const string & t ) {
-    vector<uint8_t> r;
-    for ( auto & c: t ) {
-        r.push_back( uint8_t( c ) );
-    }
-    return r;
-}
-
+#if 0
 TEST_F( St060115Test, testMemoryWrite ) {
     expected_message.__set_precisionTimeStamp( expected_precisionTimeStamp );
     expected_message.__set_checksum( expected_checksum );
@@ -377,7 +425,6 @@ TEST_F( St060115Test, requiredTags ) {
     const uint8_t v = expected_uasDatalinkLsVersionNumber;
     const uint16_t cs = expected_checksum;
 
-#define U8(x) (uint8_t((x) & 0xff))
     // Now, we check to ensure that the fields are correctly encoded on the wire
     // These are 1 byte keys because they are <= 127, so we can short-hand it
     // because this is not production code and is a rather contrived test, but
@@ -392,7 +439,6 @@ TEST_F( St060115Test, requiredTags ) {
         // checksum MUST come last!
         1, 2, U8(cs >> ( 1 * 8 )), U8(cs >> ( 0 * 8 )),
     };
-#undef U8
 
     vector<uint8_t> actual_v8( memory, memory + expected_v8.size() );
 
@@ -544,4 +590,48 @@ TEST_F( St060115Test, enum ) {
     EXPECT_EQ( actual_operationalMode, expected_operationalMode );
 
     //validateBytes( St060115Tag::OPERATIONAL_MODE, 1, to_vector( expected_operationalMode ) );
+}
+#endif
+
+/**
+ * Test that the IMAPA annotation correctly triggers IMAPA encode & decode, and
+ * that the encoded / decoded values are correct using the platformCourseAngle()
+ * method.
+ *
+ * IMAPA(0,360,0.016625)
+ */
+TEST_F( St060115Test, IMAPA ) {
+
+    const double lowerBound = 0;
+    const double upperBound = 360;
+    const double precision = 0.016625;
+
+    const double expected_double = 42;
+    uintmax_t expected_uintmax = 0x0a80;
+
+    const size_t expected_size = 2;
+    size_t actual_size = ::imapAEncodeLength(lowerBound, upperBound, precision);
+    ASSERT_NE(int(actual_size), -1);
+    ASSERT_EQ(actual_size, expected_size);
+
+    actual_size = ::imapAEncode(lowerBound, upperBound, precision, expected_double, & expected_uintmax);
+    ASSERT_NE(int(actual_size), -1);
+    ASSERT_EQ(actual_size, expected_size);
+
+    expected_message.__set_platformCourseAngle( expected_double );
+    ASSERT_TRUE( expected_message.__isset.platformCourseAngle );
+
+    common();
+
+    EXPECT_TRUE( actual_message.__isset.platformCourseAngle );
+    double actual_double = actual_message.platformCourseAngle;
+
+    EXPECT_NEAR( actual_double, expected_double, precision );
+
+    const vector<uint8_t> expected_v8 {
+        U8(expected_uintmax >> 8),
+        U8(expected_uintmax >> 0),
+    };
+
+    validateBytes( St060115Tag::PLATFORM_COURSE_ANGLE, expected_size, expected_v8);
 }

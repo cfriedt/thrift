@@ -542,7 +542,6 @@ struct UasDataLinkLocalSet {
 	)
 	112: optional double platformCourseAngle (
 		IMAPA = "0, 360, 0.016625"
-		MaxLength = "8"
 	)
 	113: optional double altitudeAgl (
 		IMAPA = "-900, 40000, 0.007"
