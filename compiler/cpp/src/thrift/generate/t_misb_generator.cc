@@ -1480,11 +1480,17 @@ void t_misb_generator::generate_struct_reader(ostream& out, t_struct* tstruct, b
 
     // Generate deserialization code for known cases
     for (f_iter = fields.begin(); f_iter != fields.end(); ++f_iter) {
+
+      t_type *type = (*f_iter)->get_type();
+
       indent(out) << "case " << (*f_iter)->get_key() << ":" << endl;
       indent_up();
-      indent(out) << "if (ftype == " << type_to_enum((*f_iter)->get_type()) << ") {" << endl;
+      indent(out) << "if (ftype == " << type_to_enum(type) << ") {" << endl;
       indent_up();
-      indent(out) << "xfer += ::apache::thrift::protocol::readBer( iprot, ber );" << endl;
+      ((t_base_type*)type)->get_base();
+      if ( !( type->is_base_type() && t_base_type::TYPE_STRING == ((t_base_type*)type)->get_base() ) ) {
+          indent(out) << "xfer += ::apache::thrift::protocol::readBer( iprot, ber );" << endl;
+      }
 
       const char* isset_prefix = ((*f_iter)->get_req() != t_field::T_REQUIRED) ? "this->__isset."
                                                                                : "isset_";
@@ -1587,53 +1593,78 @@ void t_misb_generator::generate_struct_writer(ostream& out, t_struct* tstruct, b
     }
     }
 
+    t_type *type = (*f_iter)->get_type();
+
     // XXX: @CJF: this is a dirty hack.
     if (!("St060115_update_args" == tstruct->get_name() || "St060115_update_pargs" == tstruct->get_name())) {
     // Write field header
     out << indent() << "xfer += oprot->writeFieldBegin("
-        << "\"" << (*f_iter)->get_name() << "\", " << type_to_enum((*f_iter)->get_type()) << ", "
+        << "\"" << (*f_iter)->get_name() << "\", " << type_to_enum(type) << ", "
         << (*f_iter)->get_key() << ");" << endl;
 
-    bool imapa;
-    bool imapb;
-    double lowerBound;
-    string lowerBoundS;
-    double upperBound;
-    string upperBoundS;
-    double precision;
-    string precisionS;
-    size_t sizeInBytes;
-    string sizeInBytesS;
+    if (type->is_base_type() || type->is_enum()) {
+      t_base_type::t_base tbase = ((t_base_type*)type)->get_base();
+      switch (tbase) {
+      case t_base_type::TYPE_VOID:
+        throw "NO T_VOID CONSTRUCT";
+      case t_base_type::TYPE_STRING:
+          // readString() / writeString() perform their own ber decode / encode
+        break;
+      case t_base_type::TYPE_BOOL:
+      case t_base_type::TYPE_I8:
+      case t_base_type::TYPE_I16:
+      case t_base_type::TYPE_I32:
+      case t_base_type::TYPE_I64:
+          out << indent() << "xfer += writeBer(oprot, sizeof(this->" << (*f_iter)->get_name() << "));" << endl;
+          break;
 
-    imapa = getIMAPAParams( *f_iter, lowerBound, lowerBoundS, upperBound, upperBoundS, precision, precisionS );
-    imapb = getIMAPBParams( *f_iter, lowerBound, lowerBoundS, upperBound, upperBoundS, sizeInBytes, sizeInBytesS );
+      case t_base_type::TYPE_DOUBLE: {
 
-    if ( imapa && imapb ) {
-        throw "CANNOT SIMULTANEOUSLY USE IMAPA AND IMAPB: " + name;
+            bool imapa;
+            bool imapb;
+            double lowerBound;
+            string lowerBoundS;
+            double upperBound;
+            string upperBoundS;
+            double precision;
+            string precisionS;
+            size_t sizeInBytes;
+            string sizeInBytesS;
+
+            imapa = getIMAPAParams( *f_iter, lowerBound, lowerBoundS, upperBound, upperBoundS, precision, precisionS );
+            imapb = getIMAPBParams( *f_iter, lowerBound, lowerBoundS, upperBound, upperBoundS, sizeInBytes, sizeInBytesS );
+
+            if ( imapa && imapb ) {
+                throw "CANNOT SIMULTANEOUSLY USE IMAPA AND IMAPB: " + name;
+            }
+
+            if ( imapa ) {
+                sizeInBytes = ::imapAEncodeLength( lowerBound, upperBound, precision );
+                if ( -1 == int(sizeInBytes) ) {
+                    throw "INVALID IMAPA SPECIFICATION: " + name + ": (" + lowerBoundS + ", " + upperBoundS + ", " + precisionS + " )";
+                }
+                // we no longer require the IMAPA definition at this point
+                imapa = false;
+                imapb = true;
+            }
+
+            if ( imapb ) {
+
+                uintmax_t imapbValue;
+                // compile-time check. this should basically always work unless upperBound - lowerBound is less than the smallest
+                if ( -1 == ::imapBEncode( lowerBound, upperBound, sizeInBytes, ( lowerBound + upperBound ) / 2, & imapbValue ) ) {
+                    throw "INVALID IMAPB SPECIFICATION: " + name + ": (" + lowerBoundS + ", " + upperBoundS + ", " + sizeInBytesS + " )";
+                }
+
+                out << indent() << "xfer += writeBer(oprot, " << sizeInBytes << ");" << endl;
+            } else {
+                out << indent() << "xfer += writeBer(oprot, sizeof(this->" << (*f_iter)->get_name() << "));" << endl;
+            }
+
+          }break;
+      }
     }
 
-    if ( imapa ) {
-        sizeInBytes = ::imapAEncodeLength( lowerBound, upperBound, precision );
-        if ( -1 == int(sizeInBytes) ) {
-            throw "INVALID IMAPA SPECIFICATION: " + name + ": (" + lowerBoundS + ", " + upperBoundS + ", " + precisionS + " )";
-        }
-        // we no longer require the IMAPA definition at this point
-        imapa = false;
-        imapb = true;
-    }
-
-    if ( imapb ) {
-
-        uintmax_t imapbValue;
-        // compile-time check. this should basically always work unless upperBound - lowerBound is less than the smallest
-        if ( -1 == ::imapBEncode( lowerBound, upperBound, sizeInBytes, ( lowerBound + upperBound ) / 2, & imapbValue ) ) {
-            throw "INVALID IMAPB SPECIFICATION: " + name + ": (" + lowerBoundS + ", " + upperBoundS + ", " + sizeInBytesS + " )";
-        }
-
-        out << indent() << "xfer += writeBer(oprot, " << sizeInBytes << ");" << endl;
-    } else {
-        out << indent() << "xfer += writeBer(oprot, sizeof(this->" << (*f_iter)->get_name() << "));" << endl;
-    }
     }
     // Write field contents
     if (pointers && !(*f_iter)->get_type()->is_xception()) {

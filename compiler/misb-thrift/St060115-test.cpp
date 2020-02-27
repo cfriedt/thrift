@@ -447,8 +447,6 @@ TEST_F( St060115Test, string ) {
     expected_message.__set_platformDesignation( expected_string );
     ASSERT_TRUE( expected_message.__isset.platformDesignation );
 
-    // FIXME: string writing is broken. needs to not do ber encode / decode in separate step
-    // needs generated code fixup as well
     common();
 
     EXPECT_TRUE( actual_message.__isset.platformDesignation );
@@ -456,7 +454,6 @@ TEST_F( St060115Test, string ) {
 
     EXPECT_EQ( actual_string, expected_string );
 
-    // FIXME: string writing is broken
     validateBytes( St060115Tag::PLATFORM_DESIGNATION, to_vector( expected_string ) );
 }
 

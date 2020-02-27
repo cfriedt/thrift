@@ -205,10 +205,8 @@ uint32_t TMISBProtocolT<Transport_, ByteOrder_>::writeDouble(const double dub) {
 template <class Transport_, class ByteOrder_>
 template <typename StrType>
 uint32_t TMISBProtocolT<Transport_, ByteOrder_>::writeString(const StrType& str) {
-  if (str.size() > static_cast<size_t>((std::numeric_limits<int32_t>::max)()))
-    throw TProtocolException(TProtocolException::SIZE_LIMIT);
-  auto size = static_cast<uint32_t>(str.size());
-  uint32_t result = writeI32((int32_t)size);
+  uintmax_t size = str.size();
+  uint32_t result = writeBer(this, size);
   if (size > 0) {
     this->trans_->write((uint8_t*)str.data(), size);
   }
@@ -465,8 +463,8 @@ template <class Transport_, class ByteOrder_>
 template <typename StrType>
 uint32_t TMISBProtocolT<Transport_, ByteOrder_>::readString(StrType& str) {
   uint32_t result;
-  int32_t size;
-  result = readI32(size);
+  uintmax_t size;
+  result = readBer(this, size);
   return result + readStringBody(str, size);
 }
 
