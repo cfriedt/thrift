@@ -603,6 +603,7 @@ TEST_F( St060115Test, i64 ) {
  */
 TEST_F( St060115Test, enum ) {
 
+	ASSERT_EQ( true, false ) << "enum is currently broken";
     OperationalMode::type expected_operationalMode = OperationalMode::OPERATIONAL;
 
     expected_message.__set_operationalMode( expected_operationalMode );
@@ -666,4 +667,45 @@ TEST_F( St060115Test, IMAPA ) {
     ASSERT_EQ( expected_v8.size(), expected_size );
 
     validateBytes( St060115Tag::PLATFORM_COURSE_ANGLE, expected_v8);
+}
+
+/**
+ * Test that the IMAPB annotation correctly triggers IMAPB encode & decode, and
+ * that the encoded / decoded values are correct using the alternatePlatformLongitude()
+ * method.
+ *
+ * IMAPB(-180, 180, 4)
+ */
+TEST_F( St060115Test, IMAPB ) {
+
+    const double lowerBound = -180;
+    const double upperBound = 180;
+    const size_t expected_size = 4;
+
+    const double expected_double = 42;
+    uintmax_t expected_uintmax = 0x37800000;
+
+    size_t actual_size = ::imapBEncode(lowerBound, upperBound, expected_size, expected_double, & expected_uintmax);
+    ASSERT_NE(int(actual_size), -1);
+    ASSERT_EQ(actual_size, expected_size);
+
+    expected_message.__set_alternatePlatformLongitude( expected_double );
+    ASSERT_TRUE( expected_message.__isset.alternatePlatformLongitude );
+
+    common();
+
+    EXPECT_TRUE( actual_message.__isset.alternatePlatformLongitude );
+    double actual_double = actual_message.alternatePlatformLongitude;
+
+    EXPECT_NEAR( actual_double, expected_double, imapBEncodePrecision(lowerBound, upperBound, expected_size) );
+
+    const vector<uint8_t> expected_v8 {
+    	U8(expected_uintmax >> 24),
+    	U8(expected_uintmax >> 16),
+        U8(expected_uintmax >> 8),
+        U8(expected_uintmax >> 0),
+    };
+    ASSERT_EQ( expected_v8.size(), expected_size );
+
+    validateBytes( St060115Tag::ALTERNATE_PLATFORM_LONGITUDE, expected_v8);
 }

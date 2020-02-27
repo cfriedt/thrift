@@ -22,6 +22,7 @@
 
 #include <thrift/protocol/ber.h>
 #include <thrift/protocol/beroid.h>
+#include <thrift/protocol/imap.h>
 #include <thrift/protocol/TMISBProtocol.h>
 
 #include <limits>

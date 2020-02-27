@@ -23,6 +23,7 @@
 
 #include <cassert>
 
+#include <array>
 #include <fstream>
 #include <iomanip>
 #include <iostream>
@@ -35,14 +36,94 @@
 
 #include "thrift/platform.h"
 #include "thrift/generate/t_oop_generator.h"
+#include "thrift/protocol/imap.h"
 
+using std::array;
+using std::istringstream;
+using std::getline;
 using std::map;
 using std::ofstream;
 using std::ostream;
+using std::stod;
+using std::stoi;
 using std::string;
 using std::vector;
 
 static const string endl = "\n"; // avoid ostream << std::endl flushes
+
+static void trim( string & s ) {
+    for( ; !s.empty() && ::isspace( s.back() ); s.pop_back() );
+    for( ; !s.empty() && ::isspace( s.front() ); s.erase(0,1) );
+}
+
+static vector<string> split( const string & s, const int delimiter, const bool trim_whitespace = true ) {
+    vector<string> tokens;
+    istringstream iss( s );
+    string token;
+    while( getline( iss, token, char(delimiter) ) ) {
+        if ( trim_whitespace ) {
+            trim( token );
+        }
+        tokens.push_back( token );
+    }
+    return tokens;
+}
+
+static bool getIMAPAParams( t_field* tfield, double & lowerBound, string & lowerBoundS, double & upperBound, string & upperBoundS, double & precision, string & precisionS ) {
+
+    auto it = tfield->annotations_.find( "IMAPA" );
+
+    if ( tfield->annotations_.end() == it ) {
+        return false;
+    }
+
+    vector<string> params = split( it->second, ',' );
+
+    if ( 3 != params.size() ) {
+        throw "INVALID IMAPA ANNOTATION: " + tfield->get_name() + ": " + it->second;
+    }
+
+    try {
+        lowerBound = stod( params[ 0 ] );
+        lowerBoundS = params[ 0 ];
+        upperBound = stod( params[ 1 ] );
+        upperBoundS = params[ 1 ];
+        precision = stod( params[ 2 ] );
+        precisionS = params[ 2 ];
+    } catch( ... ) {
+        throw "INVALID IMAPA ANNOTATION: " + tfield->get_name() + ": " + it->second;
+    }
+
+    return true;
+}
+
+static bool getIMAPBParams( t_field* tfield, double & lowerBound, string & lowerBoundS, double & upperBound, string & upperBoundS, size_t & sizeInBytes, string & sizeInBytesS ) {
+
+    auto it = tfield->annotations_.find( "IMAPB" );
+
+    if ( tfield->annotations_.end() == it ) {
+        return false;
+    }
+
+    vector<string> params = split( it->second, ',' );
+
+    if ( 3 != params.size() ) {
+        throw "INVALID IMAPB ANNOTATION: " + tfield->get_name() + ": " + it->second;
+    }
+
+    try {
+        lowerBound = stod( params[ 0 ] );
+        lowerBoundS = params[ 0 ];
+        upperBound = stod( params[ 1 ] );
+        upperBoundS = params[ 1 ];
+        sizeInBytes = stoi( params[ 2 ] );
+        sizeInBytesS = params[ 2 ];
+    } catch( ... ) {
+        throw "INVALID IMAPB ANNOTATION: " + tfield->get_name() + ": " + it->second;
+    }
+
+    return true;
+}
 
 /**
  * C++ code generator. This is legitimacy incarnate.
@@ -661,7 +742,7 @@ void t_misb_generator::generate_enum_to_string_helper_function(std::ostream& out
       out << tenum->get_name() << "::type&";
     }
     out << " val) " ;
-	scope_up(out);
+    scope_up(out);
 
     out << indent() << "std::map<int, const char*>::const_iterator it = _"
              << tenum->get_name() << "_VALUES_TO_NAMES.find(val);" << endl;
@@ -1154,7 +1235,7 @@ void t_misb_generator::generate_struct_declaration(ostream& out,
 
   // Declare all fields
   for (m_iter = members.begin(); m_iter != members.end(); ++m_iter) {
-	generate_java_doc(out, *m_iter);
+    generate_java_doc(out, *m_iter);
     indent(out) << declare_field(*m_iter,
                                  false,
                                  (pointers && !(*m_iter)->get_type()->is_xception()),
@@ -1512,7 +1593,47 @@ void t_misb_generator::generate_struct_writer(ostream& out, t_struct* tstruct, b
     out << indent() << "xfer += oprot->writeFieldBegin("
         << "\"" << (*f_iter)->get_name() << "\", " << type_to_enum((*f_iter)->get_type()) << ", "
         << (*f_iter)->get_key() << ");" << endl;
-    out << indent() << "xfer += writeBer(oprot, sizeof(this->" << (*f_iter)->get_name() << "));" << endl;
+
+    bool imapa;
+    bool imapb;
+    double lowerBound;
+    string lowerBoundS;
+    double upperBound;
+    string upperBoundS;
+    double precision;
+    string precisionS;
+    size_t sizeInBytes;
+    string sizeInBytesS;
+
+    imapa = getIMAPAParams( *f_iter, lowerBound, lowerBoundS, upperBound, upperBoundS, precision, precisionS );
+    imapb = getIMAPBParams( *f_iter, lowerBound, lowerBoundS, upperBound, upperBoundS, sizeInBytes, sizeInBytesS );
+
+    if ( imapa && imapb ) {
+        throw "CANNOT SIMULTANEOUSLY USE IMAPA AND IMAPB: " + name;
+    }
+
+    if ( imapa ) {
+        sizeInBytes = ::imapAEncodeLength( lowerBound, upperBound, precision );
+        if ( -1 == int(sizeInBytes) ) {
+            throw "INVALID IMAPA SPECIFICATION: " + name + ": (" + lowerBoundS + ", " + upperBoundS + ", " + precisionS + " )";
+        }
+        // we no longer require the IMAPA definition at this point
+        imapa = false;
+        imapb = true;
+    }
+
+    if ( imapb ) {
+
+        uintmax_t imapbValue;
+        // compile-time check. this should basically always work unless upperBound - lowerBound is less than the smallest
+        if ( -1 == ::imapBEncode( lowerBound, upperBound, sizeInBytes, ( lowerBound + upperBound ) / 2, & imapbValue ) ) {
+            throw "INVALID IMAPB SPECIFICATION: " + name + ": (" + lowerBoundS + ", " + upperBoundS + ", " + sizeInBytesS + " )";
+        }
+
+        out << indent() << "xfer += writeBer(oprot, " << sizeInBytes << ");" << endl;
+    } else {
+        out << indent() << "xfer += writeBer(oprot, sizeof(this->" << (*f_iter)->get_name() << "));" << endl;
+    }
     }
     // Write field contents
     if (pointers && !(*f_iter)->get_type()->is_xception()) {
@@ -1935,7 +2056,7 @@ void t_misb_generator::generate_service_helpers(t_service* tservice) {
   std::ostream& out = (gen_templates_ ? f_service_tcc_ : f_service_);
 
   if ( 1 != functions.size() ) {
-	  throw "MISB GENERATOR ONLY ALLOWS 1 SERVICE FUNCTION";
+      throw "MISB GENERATOR ONLY ALLOWS 1 SERVICE FUNCTION";
   }
 
   for (f_iter = functions.begin(); f_iter != functions.end(); ++f_iter) {
@@ -2147,11 +2268,11 @@ void t_misb_generator::generate_function_call(ostream& out,
   t_type* ret_type = get_true_type(tfunction->get_returntype());
 
   if (!ret_type->is_void()) {
-	  throw "MISB SERVICE FUNCTION RETURN TYPE MUST BE VOID";
+      throw "MISB SERVICE FUNCTION RETURN TYPE MUST BE VOID";
   }
 
   if (!tfunction->is_oneway()) {
-	  throw "MISB SERVICE FUNCTION TYPE MUST BE ONEWAY";
+      throw "MISB SERVICE FUNCTION TYPE MUST BE ONEWAY";
   }
 
   out << indent();
@@ -2388,11 +2509,11 @@ void t_misb_generator::generate_service_client(t_service* tservice, string style
   indent_up();
   if (style != "Cob") {
     f_header_ << indent() << service_name_ << style << "Client" << short_suffix << "(" << prot_ptr
-		<< " prot";
-	if (style == "Concurrent") {
-		f_header_ << ", std::shared_ptr<::apache::thrift::async::TConcurrentClientSyncInfo> sync";
-	}
-	f_header_ << ") ";
+        << " prot";
+    if (style == "Concurrent") {
+        f_header_ << ", std::shared_ptr<::apache::thrift::async::TConcurrentClientSyncInfo> sync";
+    }
+    f_header_ << ") ";
 
     if (extends.empty()) {
       if (style == "Concurrent") {
@@ -2411,12 +2532,12 @@ void t_misb_generator::generate_service_client(t_service* tservice, string style
     }
 
     f_header_ << indent() << service_name_ << style << "Client" << short_suffix << "(" << prot_ptr
-		<< " iprot, " << prot_ptr << " oprot";
-	if (style == "Concurrent") {
-		f_header_ << ", std::shared_ptr<::apache::thrift::async::TConcurrentClientSyncInfo> sync";
-	}
-	f_header_ << ") ";
-	
+        << " iprot, " << prot_ptr << " oprot";
+    if (style == "Concurrent") {
+        f_header_ << ", std::shared_ptr<::apache::thrift::async::TConcurrentClientSyncInfo> sync";
+    }
+    f_header_ << ") ";
+
     if (extends.empty()) {
       if (style == "Concurrent") {
         f_header_ << ": sync_(sync)" << endl;
@@ -3839,7 +3960,6 @@ void t_misb_generator::generate_deserialize_field(ostream& out,
   } else if (type->is_container()) {
     generate_deserialize_container(out, type, name);
   } else if (type->is_base_type()) {
-    indent(out) << "xfer += iprot->";
     t_base_type::t_base tbase = ((t_base_type*)type)->get_base();
     switch (tbase) {
     case t_base_type::TYPE_VOID:
@@ -3847,29 +3967,76 @@ void t_misb_generator::generate_deserialize_field(ostream& out,
       break;
     case t_base_type::TYPE_STRING:
       if (type->is_binary()) {
-        out << "readBinary(" << name << ");";
+        indent(out) << "xfer += iprot->readBinary(" << name << ");";
       } else {
-        out << "readString(" << name << ");";
+        indent(out) << "xfer += iprot->readString(" << name << ");";
       }
       break;
     case t_base_type::TYPE_BOOL:
-      out << "readBool(" << name << ");";
+      indent(out) << "xfer += iprot->readBool(" << name << ");";
       break;
     case t_base_type::TYPE_I8:
-      out << "readByte(" << name << ");";
+      indent(out) << "xfer += iprot->readByte(" << name << ");";
       break;
     case t_base_type::TYPE_I16:
-      out << "readI16(" << name << ");";
+      indent(out) << "xfer += iprot->readI16(" << name << ");";
       break;
     case t_base_type::TYPE_I32:
-      out << "readI32(" << name << ");";
+      indent(out) << "xfer += iprot->readI32(" << name << ");";
       break;
     case t_base_type::TYPE_I64:
-      out << "readI64(" << name << ");";
+      indent(out) << "xfer += iprot->readI64(" << name << ");";
       break;
-    case t_base_type::TYPE_DOUBLE:
-      out << "readDouble(" << name << ");";
-      break;
+    case t_base_type::TYPE_DOUBLE: {
+
+        bool imapa;
+        bool imapb;
+        double lowerBound;
+        string lowerBoundS;
+        double upperBound;
+        string upperBoundS;
+        double precision;
+        string precisionS;
+        size_t sizeInBytes;
+        string sizeInBytesS;
+
+        imapa = getIMAPAParams( tfield, lowerBound, lowerBoundS, upperBound, upperBoundS, precision, precisionS );
+        imapb = getIMAPBParams( tfield, lowerBound, lowerBoundS, upperBound, upperBoundS, sizeInBytes, sizeInBytesS );
+
+        if ( imapa && imapb ) {
+            throw "CANNOT SIMULTANEOUSLY USE IMAPA AND IMAPB: " + name;
+        }
+
+        if ( imapa ) {
+            sizeInBytes = ::imapAEncodeLength( lowerBound, upperBound, precision );
+            if ( -1 == int(sizeInBytes) ) {
+                throw "INVALID IMAPA SPECIFICATION: " + name + ": (" + lowerBoundS + ", " + upperBoundS + ", " + precisionS + " )";
+            }
+            // we no longer require the IMAPA definition at this point
+            imapa = false;
+            imapb = true;
+        }
+
+        if ( imapb ) {
+
+            uintmax_t imapbValue;
+            // compile-time check. this should basically always work unless upperBound - lowerBound is less than the smallest
+            if ( -1 == ::imapBEncode( lowerBound, upperBound, sizeInBytes, ( lowerBound + upperBound ) / 2, & imapbValue ) ) {
+                throw "INVALID IMAPB SPECIFICATION: " + name + ": (" + lowerBoundS + ", " + upperBoundS + ", " + sizeInBytesS + " )";
+            }
+
+            indent(out) <<  "uintmax_t imapb = 0;" << endl;
+            indent(out) <<  "int8_t byte;" << endl;
+            // network byte order
+            for( int i = sizeInBytes; i > 0; --i ) {
+                indent(out) << "xfer += iprot->readByte( byte );" << endl;
+                indent(out) << "imapb |= uintmax_t(uint8_t(byte)) << " << ((i-1)*8) << ";" << endl;
+            }
+            indent(out) <<  "::imapBDecode(" << lowerBoundS << ", " << upperBoundS << ", " << sizeInBytes << ", imapb, & " << name << " );" << endl;
+        } else {
+            indent(out) << "xfer += iprot->readDouble(" << name << ");";
+        }
+      }break;
     default:
       throw "compiler error: no C++ reader for base type " + t_base_type::t_base_name(tbase) + name;
     }
@@ -4029,6 +4196,17 @@ void t_misb_generator::generate_serialize_field(ostream& out,
                                                t_field* tfield,
                                                string prefix,
                                                string suffix) {
+  bool imapa;
+  bool imapb;
+  double lowerBound;
+  string lowerBoundS;
+  double upperBound;
+  string upperBoundS;
+  double precision;
+  string precisionS;
+  size_t sizeInBytes;
+  string sizeInBytesS;
+
   t_type* type = get_true_type(tfield->get_type());
 
   string name = prefix + tfield->get_name() + suffix;
@@ -4043,9 +4221,6 @@ void t_misb_generator::generate_serialize_field(ostream& out,
   } else if (type->is_container()) {
     generate_serialize_container(out, type, name);
   } else if (type->is_base_type() || type->is_enum()) {
-
-    indent(out) << "xfer += oprot->";
-
     if (type->is_base_type()) {
       t_base_type::t_base tbase = ((t_base_type*)type)->get_base();
       switch (tbase) {
@@ -4054,35 +4229,71 @@ void t_misb_generator::generate_serialize_field(ostream& out,
         break;
       case t_base_type::TYPE_STRING:
         if (type->is_binary()) {
-          out << "writeBinary(" << name << ");";
+          indent(out) <<  "xfer += oprot->writeBinary(" << name << ");";
         } else {
-          out << "writeString(" << name << ");";
+          indent(out) <<  "xfer += oprot->writeString(" << name << ");";
         }
         break;
       case t_base_type::TYPE_BOOL:
-        out << "writeBool(" << name << ");";
+        indent(out) <<  "xfer += oprot->writeBool(" << name << ");";
         break;
       case t_base_type::TYPE_I8:
-        out << "writeByte(" << name << ");";
+        indent(out) <<  "xfer += oprot->writeByte(" << name << ");";
         break;
       case t_base_type::TYPE_I16:
-        out << "writeI16(" << name << ");";
+        indent(out) <<  "xfer += oprot->writeI16(" << name << ");";
         break;
       case t_base_type::TYPE_I32:
-        out << "writeI32(" << name << ");";
+        indent(out) <<  "xfer += oprot->writeI32(" << name << ");";
         break;
       case t_base_type::TYPE_I64:
-        out << "writeI64(" << name << ");";
+        indent(out) <<  "xfer += oprot->writeI64(" << name << ");";
         break;
       case t_base_type::TYPE_DOUBLE:
-        out << "writeDouble(" << name << ");";
+
+        imapa = getIMAPAParams( tfield, lowerBound, lowerBoundS, upperBound, upperBoundS, precision, precisionS );
+        imapb = getIMAPBParams( tfield, lowerBound, lowerBoundS, upperBound, upperBoundS, sizeInBytes, sizeInBytesS );
+
+        if ( imapa && imapb ) {
+            throw "CANNOT SIMULTANEOUSLY USE IMAPA AND IMAPB: " + name;
+        }
+
+        if ( imapa ) {
+            sizeInBytes = ::imapAEncodeLength( lowerBound, upperBound, precision );
+            if ( -1 == int(sizeInBytes) ) {
+                throw "INVALID IMAPA SPECIFICATION: " + name + ": (" + lowerBoundS + ", " + upperBoundS + ", " + precisionS + " )";
+            }
+            // we no longer require the IMAPA definition at this point
+            imapa = false;
+            imapb = true;
+        }
+
+        if ( imapb ) {
+
+            uintmax_t imapbValue;
+            // compile-time check. this should basically always work unless upperBound - lowerBound is less than the smallest
+            if ( -1 == ::imapBEncode( lowerBound, upperBound, sizeInBytes, ( lowerBound + upperBound ) / 2, & imapbValue ) ) {
+                throw "INVALID IMAPB SPECIFICATION: " + name + ": (" + lowerBoundS + ", " + upperBoundS + ", " + sizeInBytesS + " )";
+            }
+
+            indent(out) <<  "uintmax_t imapb;" << endl;
+            indent(out) <<  "::imapBEncode(" << lowerBoundS << ", " << upperBoundS << ", " << sizeInBytes << ", " << name << ", & imapb );" << endl;
+            // network byte order
+            for( int i = sizeInBytes; i > 0; --i ) {
+                indent(out) <<  "xfer += oprot->writeByte( uint8_t( imapb >> " << ((i - 1) * 8) << " ) );" << endl;
+            }
+        } else {
+            indent(out) <<  "xfer += oprot->writeDouble(" << name << ");";
+        }
+
         break;
+
       default:
         throw "compiler error: no C++ writer for base type " + t_base_type::t_base_name(tbase)
             + name;
       }
     } else if (type->is_enum()) {
-      out << "writeI32((int32_t)" << name << ");";
+        indent(out) <<  "xfer += oprot->writeI32((int32_t)" << name << ");";
     }
     out << endl;
   } else {
@@ -4571,4 +4782,4 @@ string t_misb_generator::get_include_prefix(const t_program& program) const {
 THRIFT_REGISTER_GENERATOR(
     misb,
     "C++ [MISB]",
-	"\n")
+    "\n")

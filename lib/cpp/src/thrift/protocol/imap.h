@@ -17,6 +17,11 @@ static inline int imapAEncodeLength( const double lowerBound, const double upper
     return imapAEncode( lowerBound, upperBound, precision, 0, NULL );
 }
 
+static inline double imapBEncodePrecision( const double lowerBound, const double upperBound, const size_t sizeInBytes ) {
+	const size_t bits = ( 8 * sizeInBytes ) - 5;
+    return (upperBound - lowerBound) / (1 << bits);
+}
+
 __END_DECLS
 
 #endif /* IMAP_H_ */

@@ -404,7 +404,7 @@ struct UasDataLinkLocalSet {
 	)
 	69: optional double alternatePlatformAltitude (
 		SinglePrecision
-		IMAPB = "-900 19000, 4"
+		IMAPB = "-900, 19000, 4"
 		Offset = "-900"
 	)
 	70: optional string alternatePlatformName (
@@ -421,12 +421,12 @@ struct UasDataLinkLocalSet {
 	74: optional VmtiLocalSet vmtiLocalSet
 	75: optional double sensorEllipsoidHeight (
 		SinglePrecision
-		IMAPB = "-900 19000, 2"
+		IMAPB = "-900, 19000, 2"
 		Offset = "-900"
 	)
 	76: optional double alternatePlatformEllipsoidHeight (
 		SinglePrecision
-		IMAPB = "-900 19000, 2"
+		IMAPB = "-900, 19000, 2"
 		Offset = "-900"
 	)
 	77: optional OperationalMode operationalMode (
