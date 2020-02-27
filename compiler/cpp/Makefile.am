@@ -34,6 +34,7 @@ thrift_OBJDIR = obj
 
 thrift_SOURCES = src/thrift/audit/t_audit.cpp \
                  src/thrift/audit/t_audit.h \
+                 ../../lib/cpp/src/thrift/protocol/imap.c \
                  src/thrift/common.cc \
                  src/thrift/common.h \
                  src/thrift/generate/t_generator.cc \

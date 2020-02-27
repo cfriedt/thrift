@@ -12,6 +12,7 @@
 
 #include "../../lib/cpp/src/thrift/protocol/ber.h"
 #include "../../lib/cpp/src/thrift/protocol/beroid.h"
+#include "../../lib/cpp/src/thrift/protocol/imap.h"
 #include "../../lib/cpp/src/thrift/protocol/TMISBProtocol.h"
 #include "../../lib/cpp/src/thrift/server/TSimpleServer.h"
 #include "../../lib/cpp/src/thrift/transport/TSocket.h"
@@ -21,8 +22,6 @@
 
 // the thrift-generated protocol header
 #include "St060115.h"
-
-#include "imap.h"
 
 // just some header files for testing
 #undef DEBUG

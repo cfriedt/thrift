@@ -1,6 +1,6 @@
 #include <gtest/gtest.h>
 
-#include "imap.h"
+#include "../../lib/cpp/src/thrift/protocol/imap.h"
 
 using namespace std;
 
