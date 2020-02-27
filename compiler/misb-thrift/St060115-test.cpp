@@ -268,7 +268,7 @@ protected:
             cout << "key: " << beroid << " length: " << ber << " value: " << tagData << endl;
 
             tagOffset[ beroid ] = offset;
-            tagSize[ beroid ] = ber;
+            tagSize[ beroid ] = beroidLen + berLen + ber;
         }
     }
 
@@ -303,49 +303,44 @@ protected:
         tagify();
     }
 
-    void validateBytes( unsigned tag, unsigned len, const vector<uint8_t> expected_bytes ) {
-        vector<uint8_t> expected_v8;
-        vector<uint8_t> actual_v8;
+    void validateBytes( unsigned tag, const vector<uint8_t> expected_v8 ) {
+
+        ASSERT_NE( tagOffset.end(), tagOffset.find( tag ) );
+        ASSERT_NE( tagSize.end(), tagSize.find( tag ) );
+
+        size_t offs = tagOffset[ tag ];
+        size_t sz = tagSize[ tag ];
+
+        ASSERT_LE( offs + sz, TMemoryBufferDefaultSize );
+
+        uintmax_t beroid;
+        uintmax_t ber;
+        size_t len;
         int r;
 
-        size_t offs = 0;
-        size_t sz = 0;
-
-        // get the offset of the first byte of the specified tag
-        size_t tagOffs = tagOffset[ tag ];
-        size_t tagSz = tagSize[ tag ];
-
-        offs += tagOffs;
-        sz += tagSz;
-
-        // validate the BER-OID encoded key
-        size_t beroidSize = ::berOidUintEncodeLength( tag );
-        ASSERT_NE( beroidSize, size_t(-1) );
-        expected_v8 = vector<uint8_t>( beroidSize );
-        r = ::berOidUintEncode( tag, & expected_v8.front(), expected_v8.size() );
+        r = ::berOidUintDecode( & memory[ offs ], sz, & beroid );
         ASSERT_NE( r, -1 );
-        actual_v8 = vector<uint8_t>( & memory[ offs ], & memory[ offs ] + min( beroidSize, sz ) );
-        EXPECT_EQ( actual_v8, expected_v8 );
+        ASSERT_EQ( uintmax_t(tag), beroid );
+        len = r;
 
-        offs += beroidSize;
-        sz -= min( sz, beroidSize );
+        offs += len;
+        sz -= len;
 
-        // validate the BER encoded length
-        size_t berSize = ::berUintEncodeLength( len );
-        ASSERT_NE( berSize, size_t(-1) );
-        expected_v8 = vector<uint8_t>( berSize );
-        r = ::berUintEncode( len, & expected_v8.front(), expected_v8.size() );
+        r = ::berUintDecode( & memory[ offs ], sz, & ber );
         ASSERT_NE( r, -1 );
-        actual_v8 = vector<uint8_t>( & memory[ offs ], & memory[ offs ] + min( berSize, sz ) );
-        EXPECT_EQ( actual_v8, expected_v8 );
+        ASSERT_EQ( uintmax_t(expected_v8.size()), ber );
+        len = r;
 
-        offs += berSize;
-        sz -= min( sz, berSize );
+        offs += len;
+        sz -= len;
 
         // validate the remaining bytes
-        actual_v8 = vector<uint8_t>( & memory[ offs ], & memory[ offs ] + min( sz, (size_t)len ) );
+        vector<uint8_t> actual_v8 = vector<uint8_t>( & memory[ offs ], & memory[ offs ] + sz );
+        EXPECT_EQ( actual_v8, expected_v8 );
 
-        EXPECT_EQ( actual_v8, expected_bytes );
+        sz -= expected_v8.size();
+
+        ASSERT_EQ( sz, 0 );
     }
 
     static const uint16_t expected_checksum;
@@ -391,8 +386,6 @@ const uint16_t St060115Test::expected_checksum = 0xabcd;
 const uint64_t St060115Test::expected_precisionTimeStamp = 0x0011223344556677;
 const uint8_t St060115Test::expected_uasDatalinkLsVersionNumber = 15;
 
-
-#if 0
 TEST_F( St060115Test, testMemoryWrite ) {
     expected_message.__set_precisionTimeStamp( expected_precisionTimeStamp );
     expected_message.__set_checksum( expected_checksum );
@@ -455,6 +448,8 @@ TEST_F( St060115Test, string ) {
     expected_message.__set_platformDesignation( expected_string );
     ASSERT_TRUE( expected_message.__isset.platformDesignation );
 
+    // FIXME: string writing is broken. needs to not do ber encode / decode in separate step
+    // needs generated code fixup as well
     common();
 
     EXPECT_TRUE( actual_message.__isset.platformDesignation );
@@ -462,7 +457,8 @@ TEST_F( St060115Test, string ) {
 
     EXPECT_EQ( actual_string, expected_string );
 
-    //validateBytes( St060115Tag::PLATFORM_DESIGNATION, expected_string.size(), to_vector( expected_string ) );
+    // FIXME: string writing is broken
+    validateBytes( St060115Tag::PLATFORM_DESIGNATION, to_vector( expected_string ) );
 }
 
 /**
@@ -482,7 +478,11 @@ TEST_F( St060115Test, bool ) {
 
     EXPECT_EQ( actual_bool, expected_bool );
 
-    //validateBytes( St060115Tag::ICING_DETECTED, 1, to_vector( expected_bool ) );
+    const vector<uint8_t> expected_v8 {
+		U8(expected_bool >> 0),
+    };
+
+    validateBytes( St060115Tag::ICING_DETECTED, expected_v8 );
 }
 
 /**
@@ -502,7 +502,11 @@ TEST_F( St060115Test, i8 ) {
 
     EXPECT_EQ( actual_int8, expected_int8 );
 
-    //validateBytes( St060115Tag::ICING_DETECTED, 1, to_vector( expected_int8 ) );
+    const vector<uint8_t> expected_v8 {
+		U8(expected_int8 >> 0),
+    };
+
+    validateBytes( St060115Tag::OUTSIDE_AIR_TEMPERATURE, expected_v8 );
 }
 
 // FIXME: currently, the "Unsigned" annotation does nothing for integer values
@@ -526,7 +530,12 @@ TEST_F( St060115Test, i16 ) {
 
     EXPECT_EQ( actual_int16, expected_int16 );
 
-    //validateBytes( St060115Tag::WEAPON_LOAD, 1, to_vector( expected_int16 ) );
+    const vector<uint8_t> expected_v8 {
+		U8(expected_int16 >> 8),
+		U8(expected_int16 >> 0),
+    };
+
+    validateBytes( St060115Tag::WEAPON_LOAD, expected_v8 );
 }
 
 /**
@@ -547,7 +556,14 @@ TEST_F( St060115Test, i32 ) {
 
     EXPECT_EQ( actual_int32, expected_int32 );
 
-//    validateBytes( St060115Tag::LEAP_SECONDS, 1, to_vector( expected_int32 ) );
+    const vector<uint8_t> expected_v8 {
+		U8(expected_int32 >> 24),
+		U8(expected_int32 >> 16),
+		U8(expected_int32 >> 8),
+		U8(expected_int32 >> 0),
+    };
+
+    validateBytes( St060115Tag::LEAP_SECONDS, expected_v8 );
 }
 
 /**
@@ -568,7 +584,18 @@ TEST_F( St060115Test, i64 ) {
 
     EXPECT_EQ( actual_int64, expected_int64 );
 
-//    validateBytes( St060115Tag::CORRECTION_OFFSET, 1, to_vector( expected_int64 ) );
+    const vector<uint8_t> expected_v8 {
+		U8(expected_int64 >> 56),
+		U8(expected_int64 >> 48),
+		U8(expected_int64 >> 40),
+		U8(expected_int64 >> 32),
+		U8(expected_int64 >> 24),
+		U8(expected_int64 >> 16),
+		U8(expected_int64 >> 8),
+		U8(expected_int64 >> 0),
+    };
+
+    validateBytes( St060115Tag::CORRECTION_OFFSET, expected_v8 );
 }
 
 /**
@@ -582,6 +609,7 @@ TEST_F( St060115Test, enum ) {
     expected_message.__set_operationalMode( expected_operationalMode );
     ASSERT_TRUE( expected_message.__isset.operationalMode );
 
+    // FIXME:  enum is broken. writes 4 bytes instead of 1
     common();
 
     EXPECT_TRUE( actual_message.__isset.operationalMode );
@@ -589,9 +617,13 @@ TEST_F( St060115Test, enum ) {
 
     EXPECT_EQ( actual_operationalMode, expected_operationalMode );
 
-    //validateBytes( St060115Tag::OPERATIONAL_MODE, 1, to_vector( expected_operationalMode ) );
+    const vector<uint8_t> expected_v8 {
+        U8(expected_operationalMode >> 0),
+    };
+
+    // FIXME:  enum is broken. writes 4 bytes instead of 1
+    validateBytes( St060115Tag::OPERATIONAL_MODE, expected_v8 );
 }
-#endif
 
 /**
  * Test that the IMAPA annotation correctly triggers IMAPA encode & decode, and
@@ -632,6 +664,7 @@ TEST_F( St060115Test, IMAPA ) {
         U8(expected_uintmax >> 8),
         U8(expected_uintmax >> 0),
     };
+    ASSERT_EQ( expected_v8.size(), expected_size );
 
-    validateBytes( St060115Tag::PLATFORM_COURSE_ANGLE, expected_size, expected_v8);
+    validateBytes( St060115Tag::PLATFORM_COURSE_ANGLE, expected_v8);
 }
