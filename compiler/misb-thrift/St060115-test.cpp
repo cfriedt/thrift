@@ -263,8 +263,7 @@ protected:
             consumed += ber;
 
             vector<uint8_t> tagData = vector<uint8_t>( & memory[ offset + beroidLen + berLen ], & memory[ offset + beroidLen + berLen ] + ber );
-
-            cout << "key: " << beroid << " length: " << ber << " value: " << tagData << endl;
+            D() << "key: " << beroid << " length: " << ber << " value: " << tagData << endl;
 
             tagOffset[ beroid ] = offset;
             tagSize[ beroid ] = beroidLen + berLen + ber;
@@ -600,13 +599,11 @@ TEST_F( St060115Test, i64 ) {
  */
 TEST_F( St060115Test, enum ) {
 
-	ASSERT_EQ( true, false ) << "enum is currently broken";
     OperationalMode::type expected_operationalMode = OperationalMode::OPERATIONAL;
 
     expected_message.__set_operationalMode( expected_operationalMode );
     ASSERT_TRUE( expected_message.__isset.operationalMode );
 
-    // FIXME:  enum is broken. writes 4 bytes instead of 1
     common();
 
     EXPECT_TRUE( actual_message.__isset.operationalMode );
@@ -618,7 +615,6 @@ TEST_F( St060115Test, enum ) {
         U8(expected_operationalMode >> 0),
     };
 
-    // FIXME:  enum is broken. writes 4 bytes instead of 1
     validateBytes( St060115Tag::OPERATIONAL_MODE, expected_v8 );
 }
 

@@ -1602,7 +1602,19 @@ void t_misb_generator::generate_struct_writer(ostream& out, t_struct* tstruct, b
         << "\"" << (*f_iter)->get_name() << "\", " << type_to_enum(type) << ", "
         << (*f_iter)->get_key() << ");" << endl;
 
-    if (type->is_base_type() || type->is_enum()) {
+    if ( false ) {
+    } else if (type->is_enum()) {
+        // XXX: @CJF: thrift only supports enums with up to 255 values
+        out << indent() << "xfer += writeBer(oprot, sizeof(int8_t));" << endl;
+    } else if (type->is_xception()) {
+      throw "UNSUPPORTED TYPE: " + name;
+    } else if (type->is_map()) {
+      throw "UNSUPPORTED TYPE: " + name;
+    } else if (type->is_set()) {
+      throw "UNSUPPORTED TYPE: " + name;
+    } else if (type->is_list()) {
+      throw "UNSUPPORTED TYPE: " + name;
+    } else if (type->is_base_type()) {
       t_base_type::t_base tbase = ((t_base_type*)type)->get_base();
       switch (tbase) {
       case t_base_type::TYPE_VOID:
@@ -4074,7 +4086,7 @@ void t_misb_generator::generate_deserialize_field(ostream& out,
     out << endl;
   } else if (type->is_enum()) {
     string t = tmp("ecast");
-    out << indent() << "int32_t " << t << ";" << endl << indent() << "xfer += iprot->readI32(" << t
+    out << indent() << "int8_t " << t << ";" << endl << indent() << "xfer += iprot->readByte(" << t
         << ");" << endl << indent() << name << " = (" << type_name(type) << ")" << t << ";" << endl;
   } else {
     printf("DO NOT KNOW HOW TO DESERIALIZE FIELD '%s' TYPE '%s'\n",
@@ -4251,7 +4263,9 @@ void t_misb_generator::generate_serialize_field(ostream& out,
     generate_serialize_struct(out, (t_struct*)type, name, is_reference(tfield));
   } else if (type->is_container()) {
     generate_serialize_container(out, type, name);
-  } else if (type->is_base_type() || type->is_enum()) {
+  } else if (type->is_enum()) {
+      indent(out) <<  "xfer += oprot->writeByte((int8_t)" << name << ");";
+  } else if (type->is_base_type()) {
     if (type->is_base_type()) {
       t_base_type::t_base tbase = ((t_base_type*)type)->get_base();
       switch (tbase) {
@@ -4323,10 +4337,8 @@ void t_misb_generator::generate_serialize_field(ostream& out,
         throw "compiler error: no C++ writer for base type " + t_base_type::t_base_name(tbase)
             + name;
       }
-    } else if (type->is_enum()) {
-        indent(out) <<  "xfer += oprot->writeI32((int32_t)" << name << ");";
-    }
     out << endl;
+    }
   } else {
     printf("DO NOT KNOW HOW TO SERIALIZE FIELD '%s' TYPE '%s'\n",
            name.c_str(),
