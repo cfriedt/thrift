@@ -36,7 +36,7 @@
 
 #include "thrift/platform.h"
 #include "thrift/generate/t_oop_generator.h"
-#include "thrift/protocol/imap.h"
+#include "../../../../../lib/cpp/src/thrift/protocol/imap.h"
 
 using std::array;
 using std::istringstream;
