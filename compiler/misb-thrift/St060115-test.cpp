@@ -761,3 +761,38 @@ TEST_F( St060115Test, IMAPB ) {
 
     validateBytes( St060115Tag::ALTERNATE_PLATFORM_LONGITUDE, expected_v8);
 }
+
+/**
+ * Test that nested local sets are properly encoded / decoded
+ */
+TEST_F( St060115Test, SecurityLocalSet ) {
+
+    SecurityLocalSet expected_securityLocalSet;
+
+    // set required fields
+    expected_securityLocalSet.__set_securityClassification( SecurityClassification::type::TOP_SECRET );
+    expected_securityLocalSet.__set_classifyingCountryAndReleasingInstructionsCountryCodingMethod( ClassifyingCountryAndReleasingInstructionsCountryCodingMethod::type::ISO_3166_TWO_LETTER );
+    expected_securityLocalSet.__set_classifyingCountry( "//CA" );
+    expected_securityLocalSet.__set_objectCountryCodingMethod( ObjectCountryCodingMethod::type::ISO_3166_TWO_LETTER );
+    expected_securityLocalSet.__set_objectCountryCodes( "CA" );
+    expected_securityLocalSet.__set_version( 12 );
+
+    expected_message.__set_securityLocalSet( expected_securityLocalSet );
+    ASSERT_TRUE( expected_message.__isset.securityLocalSet );
+
+    common();
+
+    EXPECT_TRUE( actual_message.__isset.securityLocalSet );
+    SecurityLocalSet actual_securityLocalSet = actual_message.securityLocalSet;
+
+    const vector<uint8_t> expected_v8 {
+        1,1,SecurityClassification::type::TOP_SECRET,
+        2,1,ClassifyingCountryAndReleasingInstructionsCountryCodingMethod::type::ISO_3166_TWO_LETTER,
+        3,4,'/','/','C','A',
+        12,1,ObjectCountryCodingMethod::type::ISO_3166_TWO_LETTER,
+        13,2,'C','A',
+        22,2,0,12,
+    };
+
+    validateBytes( St060115Tag::SECURITY_LOCAL_SET, expected_v8);
+}

@@ -4309,6 +4309,7 @@ void t_misb_generator::generate_serialize_field(ostream& out,
         break;
       case t_base_type::TYPE_STRING:
 
+        indent(out) <<  "{" << endl;
         indent(out) <<  "std::string x = " << name << ";" << endl;
 
         if ( size_t(-1) != maxLength ) {
@@ -4330,6 +4331,8 @@ void t_misb_generator::generate_serialize_field(ostream& out,
         } else {
           indent(out) <<  "xfer += oprot->writeString( x );";
         }
+
+        indent(out) <<  "}" << endl;
         break;
       case t_base_type::TYPE_BOOL:
         indent(out) <<  "xfer += oprot->writeBool(" << name << ");";

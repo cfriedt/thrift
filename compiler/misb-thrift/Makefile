@@ -112,19 +112,21 @@ endef
 
 # $1 := base of the thrift filename
 # $2 := $1 with first letter capitalized
-define sources-thrift-to-py =
-PYSRC += $(GENPYDIR)/$(1)/constants.py $(GENPYDIR)/$(1)/ttypes.py $(GENPYDIR)/$(2).py
-BUILT_SOURCES += $(GENPYDIR)/$(1)/constants.py $(GENPYDIR)/$(1)/ttypes.py $(GENPYDIR)/$(2).py
-CLEANFILES += $(GENPYDIR)/$(1)/$(2)-remote
-endef
+#define sources-thrift-to-py =
+#PYSRC += $(GENPYDIR)/$(1)/constants.py $(GENPYDIR)/$(1)/ttypes.py $(GENPYDIR)/$(2).py
+#BUILT_SOURCES += $(GENPYDIR)/$(1)/constants.py $(GENPYDIR)/$(1)/ttypes.py $(GENPYDIR)/$(2).py
+#CLEANFILES += $(GENPYDIR)/$(1)/$(2)-remote
+#endef
 
 $(foreach _t, $(TSRC:.thrift=), \
 	$(eval _T=$(shell echo $(_t) | sed -e 's/^\([a-z]\)/\U\1/')) \
 	$(eval $(call sources-thrift-to-cpp,$(_t),$(_T))) \
 	$(eval $(call sources-thrift-to-py,$(_t),$(_T))) \
-	$(eval PYEXE += $(_T)-py-client) \
-	$(eval PYEXE += $(_T)-py-server) \
 )
+
+#	$(eval PYEXE += $(_T)-py-client) \
+#	$(eval PYEXE += $(_T)-py-server) \
+#
 
 #	$(eval CXXEXE += $(_T)-cxx-client) \
 #	$(eval CXXEXE += $(_T)-cxx-server) \
@@ -181,23 +183,23 @@ endef
 
 # $1 := base of the thrift filename
 # $2 := $1 with first letter capitalized
-define transform-thrift-to-py =
-$(GENPYDIR)/$(1)/constants.py: $(1).thrift
-	@echo "[THRIFT][PY] $$<"
-	$(QUIET)thrift --gen py $$<
-$(GENPYDIR)/$(1)/ttypes.py: $(GENPYDIR)/$(1)/constants.py
-	@touch $$@
-$(GENPYDIR)/$(1)/$(2).py: $(GENPYDIR)/$(1)/ttypes.py
-	@touch $$@
-$(GENPYDIR)/$(1)/$(2)-remote: $(GENPYDIR)/$(1)/ttypes.py
-	@touch $$@
-$(2)-py-server: $(2)-py-server.py $(GENPYDIR)/$(1)/$(2).py
-	@echo "[PY] $$@"
-	$(QUIET)ln -sf $$< $$@
-$(2)-py-client: $(2)-py-client.py $(GENPYDIR)/$(1)/$(2).py
-	@echo "[PY] $$@"
-	$(QUIET)ln -sf $$< $$@
-endef
+#define transform-thrift-to-py =
+#$(GENPYDIR)/$(1)/constants.py: $(1).thrift
+#	@echo "[THRIFT][PY] $$<"
+#	$(QUIET)thrift --gen py $$<
+#$(GENPYDIR)/$(1)/ttypes.py: $(GENPYDIR)/$(1)/constants.py
+#	@touch $$@
+#$(GENPYDIR)/$(1)/$(2).py: $(GENPYDIR)/$(1)/ttypes.py
+#	@touch $$@
+#$(GENPYDIR)/$(1)/$(2)-remote: $(GENPYDIR)/$(1)/ttypes.py
+#	@touch $$@
+#$(2)-py-server: $(2)-py-server.py $(GENPYDIR)/$(1)/$(2).py
+#	@echo "[PY] $$@"
+#	$(QUIET)ln -sf $$< $$@
+#$(2)-py-client: $(2)-py-client.py $(GENPYDIR)/$(1)/$(2).py
+#	@echo "[PY] $$@"
+#	$(QUIET)ln -sf $$< $$@
+#endef
 
 $(foreach _t, $(TSRC:.thrift=), \
 	$(eval _T=$(shell echo $(_t) | sed -e 's/^\([a-z]\)/\U\1/')) \
