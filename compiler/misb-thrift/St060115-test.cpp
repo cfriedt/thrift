@@ -457,6 +457,65 @@ TEST_F( St060115Test, string ) {
 }
 
 /**
+ * Test that that the MaxLength annotation is respected for strings
+ */
+TEST_F( St060115Test, string_MaxLength_127 ) {
+    string expected_string( 127, 'x' );
+
+    expected_message.__set_platformDesignation( expected_string + expected_string );
+    ASSERT_TRUE( expected_message.__isset.platformDesignation );
+
+    common();
+
+    EXPECT_TRUE( actual_message.__isset.platformDesignation );
+    string actual_string = actual_message.platformDesignation;
+
+    EXPECT_EQ( actual_string, expected_string );
+}
+
+// This test fails (predictably)
+#if 0
+/**
+ * Test that that the FixedLength annotation is respected for strings
+ * Note, 0601.15 does not currently support any fixed-length strings that
+ * I'm aware of, so this test is only successful if you adjust st060115.thrift
+ */
+TEST_F( St060115Test, string_FixedLength_lt127 ) {
+    string x( "x" );
+    string expected_string = x + string( 126, '\0' );
+
+    expected_message.__set_platformDesignation( x );
+    ASSERT_TRUE( expected_message.__isset.platformDesignation );
+
+    common();
+
+    EXPECT_TRUE( actual_message.__isset.platformDesignation );
+    string actual_string = actual_message.platformDesignation;
+
+    EXPECT_EQ( actual_string, expected_string );
+}
+#endif
+
+/**
+ * Test that that the FixedLength annotation is respected for strings
+ * Note, 0601.15 does not currently support any fixed-length strings that
+ * I'm aware of, so this test is only successful if you adjust st060115.thrift
+ */
+TEST_F( St060115Test, string_FixedLength_gt127 ) {
+    string expected_string( 127, 'x' );
+
+    expected_message.__set_platformDesignation( expected_string + expected_string );
+    ASSERT_TRUE( expected_message.__isset.platformDesignation );
+
+    common();
+
+    EXPECT_TRUE( actual_message.__isset.platformDesignation );
+    string actual_string = actual_message.platformDesignation;
+
+    EXPECT_EQ( actual_string, expected_string );
+}
+
+/**
  * Test that we can encode / decode a bool tag and that it is
  * binary-compatible with MISB
  */

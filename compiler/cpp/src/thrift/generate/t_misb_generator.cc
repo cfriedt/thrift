@@ -46,6 +46,7 @@ using std::ofstream;
 using std::ostream;
 using std::stod;
 using std::stoi;
+using std::stol;
 using std::string;
 using std::vector;
 
@@ -123,6 +124,32 @@ static bool getIMAPBParams( t_field* tfield, double & lowerBound, string & lower
     }
 
     return true;
+}
+
+static size_t getSizeParam( t_field *tfield, const string & param ) {
+    size_t r = -1;
+    auto it = tfield->annotations_.find( param );
+    if ( tfield->annotations_.end() != it ) {
+        string & param = it->second;
+        try {
+            long x = stol( it->second );
+            if ( x < 0 ) {
+                throw "";
+            }
+            r = size_t( x );
+        } catch( ... ) {
+            throw "INVALID SIZE ANNOTATION: " + tfield->get_name() + ": " + param;
+        }
+    }
+    return r;
+}
+
+static size_t getMaxLengthParam( t_field *tfield ) {
+    return getSizeParam( tfield, "MaxLength" );
+}
+
+static size_t getFixedLengthParam( t_field *tfield ) {
+    return getSizeParam( tfield, "FixedLength" );
 }
 
 /**
@@ -4267,16 +4294,41 @@ void t_misb_generator::generate_serialize_field(ostream& out,
       indent(out) <<  "xfer += oprot->writeByte((int8_t)" << name << ");";
   } else if (type->is_base_type()) {
     if (type->is_base_type()) {
+
+      size_t maxLength = getMaxLengthParam( tfield );
+      size_t fixedLength = getFixedLengthParam( tfield );
+
+      if ( size_t(-1) != maxLength && size_t(-1) != fixedLength ) {
+          throw "CANNOT HAVE BOTH MAXLENGTH AND FIXEDLENGTH ANNOTATIONS: " + name;
+      }
+
       t_base_type::t_base tbase = ((t_base_type*)type)->get_base();
       switch (tbase) {
       case t_base_type::TYPE_VOID:
         throw "compiler error: cannot serialize void field in a struct: " + name;
         break;
       case t_base_type::TYPE_STRING:
+
+        indent(out) <<  "std::string x = " << name << ";" << endl;
+
+        if ( size_t(-1) != maxLength ) {
+            indent(out) <<  "if ( x.size() >= " << maxLength << " ) {" << endl;
+            indent(out) << indent() << "x = x.substr( 0, " << maxLength << " );" << endl;
+            indent(out) <<  "}" << endl;
+        }
+
+        if ( size_t(-1) != fixedLength ) {
+            indent(out) <<  "if ( x.size() > " << fixedLength << " ) {" << endl;
+            indent(out) << indent() << "x = x.substr( 0, " << fixedLength << " );" << endl;
+            indent(out) <<  "} else if ( x.size() < " << fixedLength << ") {" << endl;
+            indent(out) << indent() << "x += std::string( " << fixedLength << " - x.size(), '\\0' );" << endl;
+            indent(out) <<  "}" << endl;
+        }
+
         if (type->is_binary()) {
-          indent(out) <<  "xfer += oprot->writeBinary(" << name << ");";
+          indent(out) <<  "xfer += oprot->writeBinary( x );";
         } else {
-          indent(out) <<  "xfer += oprot->writeString(" << name << ");";
+          indent(out) <<  "xfer += oprot->writeString( x );";
         }
         break;
       case t_base_type::TYPE_BOOL:
