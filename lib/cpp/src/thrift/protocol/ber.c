@@ -23,7 +23,7 @@ int berUintEncode(const uintmax_t x, void *buffer, const size_t bufferSize) {
         return 1;
     }
 
-    uint8_t leading_zeros = __builtin_clzl(x);
+    uint8_t leading_zeros = __builtin_clzll(x);
     uint8_t bits = sizeof( uintmax_t ) * 8 - leading_zeros;
     // ceil( bits / bytes ) = (bits / 8) + ((bits % 8) != 0) = (bits + 7) / 8;
     uint8_t bytes = (bits + 7) / 8;
