@@ -1490,11 +1490,20 @@ void t_misb_generator::generate_struct_reader(ostream& out, t_struct* tstruct, b
       << indent() << "#pragma GCC diagnostic push" << endl
       << indent() << "#pragma GCC diagnostic ignored \"-Wunused-variable\"" << endl
       << indent() << "uintmax_t ber;" << endl
+      << indent() << "uintmax_t structBer;" << endl
       << indent() << "#pragma GCC diagnostic pop" << endl
       << endl
       << indent() << "xfer += iprot->readStructBegin(fname);" << endl
-      << endl
-      << indent() << "using ::apache::thrift::protocol::TProtocolException;" << endl
+      ;
+
+  // XXX: @CJF: this is a dirty hack.
+  if (!("UasDataLinkLocalSet" == tstruct->get_name() || "St060115_update_args" == tstruct->get_name() || "St060115_update_pargs" == tstruct->get_name() )) {
+      out << endl;
+      out << indent() << "xfer += ::apache::thrift::protocol::readBer(iprot, structBer);" << endl;
+      out << endl;
+  }
+
+  out << indent() << "using ::apache::thrift::protocol::TProtocolException;" << endl
       << endl;
 
   // Required variables aren't in __isset, so we need tmp vars to check them.
@@ -1508,15 +1517,26 @@ void t_misb_generator::generate_struct_reader(ostream& out, t_struct* tstruct, b
   indent(out) << "while (true)" << endl;
   scope_up(out);
 
+  // XXX: @CJF: this is a dirty hack.
+  if (!("UasDataLinkLocalSet" == tstruct->get_name() || "St060115_update_args" == tstruct->get_name() || "St060115_update_pargs" == tstruct->get_name() )) {
+      indent(out) << "if (xfer >= structBer) {" << endl;
+      out << indent() << indent() << "break;" << endl;
+      indent(out) << "}" << endl;
+  }
+
   // Read beginning field marker
   indent(out) << "xfer += iprot->readFieldBegin(fname, ftype, fid);" << endl;
-
-  // map the field ID to the type (it's not part of the protocol)
-  indent(out) << "ftype = fieldIdToTType.at(fid);" << endl;
 
   // Check for field STOP marker
   out << indent() << "if (ftype == ::apache::thrift::protocol::T_STOP) {" << endl << indent()
       << "  break;" << endl << indent() << "}" << endl;
+
+  // map the field ID to the type (it's not part of the protocol)
+  out << indent() << "try {" << endl;
+  out << indent() << indent() << "ftype = fieldIdToTType.at(fid);" << endl;
+  out << indent() << "} catch( ... ) {" << endl;
+  out << indent() << indent() << "break;" << endl;
+  out << indent() << "}" << endl;
 
   if (fields.empty()) {
     out << indent() << "xfer += iprot->skip(ftype);" << endl;
@@ -1536,7 +1556,7 @@ void t_misb_generator::generate_struct_reader(ostream& out, t_struct* tstruct, b
       indent(out) << "if (ftype == " << type_to_enum(type) << ") {" << endl;
       indent_up();
       ((t_base_type*)type)->get_base();
-      if ( !( type->is_base_type() && t_base_type::TYPE_STRING == ((t_base_type*)type)->get_base() ) ) {
+      if ( !( ( type->is_base_type() && t_base_type::TYPE_STRING == ((t_base_type*)type)->get_base() ) || type->is_struct() ) ) {
           indent(out) << "xfer += ::apache::thrift::protocol::readBer( iprot, ber );" << endl;
       }
 
@@ -1792,9 +1812,10 @@ void t_misb_generator::generate_struct_writer(ostream& out, t_struct* tstruct, b
 
   indent(out) << "::apache::thrift::protocol::TOutputRecursionTracker tracker(*oprot);" << endl;
 
+  indent(out) << "xfer += oprot->writeStructBegin(\"" << name << "\");" << endl;
+
   // XXX: @CJF: this is a dirty hack.
-  if (!("St060115_update_args" == tstruct->get_name() || "St060115_update_pargs" == tstruct->get_name())) {
-    indent(out) << "xfer += oprot->writeStructBegin(\"" << name << "\");" << endl;
+  if (!("UasDataLinkLocalSet" == tstruct->get_name() || "St060115_update_args" == tstruct->get_name() || "St060115_update_pargs" == tstruct->get_name() )) {
     indent(out) << "xfer += writeBer(oprot, writeLen());" << endl;
   }
 
