@@ -260,6 +260,7 @@ public:
   void generate_move_assignment_operator(std::ostream& out, t_struct* tstruct);
   void generate_assignment_helper(std::ostream& out, t_struct* tstruct, bool is_move);
   void generate_struct_reader(std::ostream& out, t_struct* tstruct, bool pointers = false);
+  void generate_struct_writeLen(std::ostream& out, t_struct* tstruct, bool pointers = false);
   void generate_struct_writer(std::ostream& out, t_struct* tstruct, bool pointers = false);
   void generate_struct_result_writer(std::ostream& out, t_struct* tstruct, bool pointers = false);
   void generate_struct_swap(std::ostream& out, t_struct* tstruct);
@@ -1578,6 +1579,176 @@ void t_misb_generator::generate_struct_reader(ostream& out, t_struct* tstruct, b
 }
 
 /**
+ * Generates the writeLen function.
+ *
+ * @param out Stream to write to
+ * @param tstruct The struct
+ */
+void t_misb_generator::generate_struct_writLen(ostream& out, t_struct* tstruct, bool pointers) {
+  string name = tstruct->get_name();
+  const vector<t_field*>& fields = tstruct->get_members();
+  vector<t_field*>::const_iterator f_iter;
+
+  if (gen_templates_) {
+    out << indent() << "template <class Protocol_>" << endl << indent() << "uint32_t "
+        << tstruct->get_name() << "::writeLen() const {" << endl;
+  } else {
+    indent(out) << "uint32_t " << tstruct->get_name()
+                << "::writeLen() const {" << endl;
+  }
+  indent_up();
+
+  out << indent() << "::apache::thrift::transport::TMISBProtocol _oprot(std::make_shared<::apache::thrift::transport::TNullTransport>());" << endl;
+  out << indent() << "::apache::thrift::protocol::TProtocol *oprot = static_cast<::apache::thrift::protocol::TProtocol*>(&_oprot)" << endl;
+
+  out << indent() << "uint32_t xfer = 0;" << endl;
+
+  indent(out) << "::apache::thrift::protocol::TOutputRecursionTracker tracker(*oprot);" << endl;
+
+  // XXX: @CJF: this is a dirty hack.
+  if (!("St060115_update_args" == tstruct->get_name() || "St060115_update_pargs" == tstruct->get_name())) {
+  indent(out) << "xfer += oprot->writeStructBegin(\"" << name << "\");" << endl;
+  }
+
+  bool check_if_set;
+  for (f_iter = fields.begin(); f_iter != fields.end(); ++f_iter) {
+    // XXX: @CJF: this is a dirty hack.
+    if (!("St060115_update_args" == tstruct->get_name() || "St060115_update_pargs" == tstruct->get_name())) {
+    check_if_set = (*f_iter)->get_req() == t_field::T_OPTIONAL
+                        || (*f_iter)->get_type()->is_xception();
+    if (check_if_set) {
+      out << endl << indent() << "if (this->__isset." << (*f_iter)->get_name() << ") {" << endl;
+      indent_up();
+    } else {
+      out << endl;
+    }
+    }
+
+    t_type *type = (*f_iter)->get_type();
+
+    // XXX: @CJF: this is a dirty hack.
+    if (!("St060115_update_args" == tstruct->get_name() || "St060115_update_pargs" == tstruct->get_name())) {
+    // Write field header
+    out << indent() << "xfer += oprot->writeFieldBegin("
+        << "\"" << (*f_iter)->get_name() << "\", " << type_to_enum(type) << ", "
+        << (*f_iter)->get_key() << ");" << endl;
+
+    if ( false ) {
+    } else if (type->is_enum()) {
+        // XXX: @CJF: thrift only supports enums with up to 255 values
+        out << indent() << "xfer += writeBer(oprot, sizeof(int8_t));" << endl;
+    } else if (type->is_xception()) {
+      throw "UNSUPPORTED TYPE: " + name;
+    } else if (type->is_map()) {
+      throw "UNSUPPORTED TYPE: " + name;
+    } else if (type->is_set()) {
+      throw "UNSUPPORTED TYPE: " + name;
+    } else if (type->is_list()) {
+      throw "UNSUPPORTED TYPE: " + name;
+    } else if (type->is_struct()) {
+        // MISB struct have their own writeLen() method that gets called in write()
+    } else if (type->is_base_type()) {
+      t_base_type::t_base tbase = ((t_base_type*)type)->get_base();
+      switch (tbase) {
+      case t_base_type::TYPE_VOID:
+        throw "NO T_VOID CONSTRUCT";
+      case t_base_type::TYPE_STRING:
+          // readString() / writeString() perform their own ber decode / encode
+        break;
+      case t_base_type::TYPE_BOOL:
+      case t_base_type::TYPE_I8:
+      case t_base_type::TYPE_I16:
+      case t_base_type::TYPE_I32:
+      case t_base_type::TYPE_I64:
+
+          out << indent() << "xfer += writeBer(oprot, sizeof(this->" << (*f_iter)->get_name() << "));" << endl;
+          break;
+
+      case t_base_type::TYPE_DOUBLE: {
+
+            bool imapa;
+            bool imapb;
+            double lowerBound;
+            string lowerBoundS;
+            double upperBound;
+            string upperBoundS;
+            double precision;
+            string precisionS;
+            size_t sizeInBytes;
+            string sizeInBytesS;
+
+            imapa = getIMAPAParams( *f_iter, lowerBound, lowerBoundS, upperBound, upperBoundS, precision, precisionS );
+            imapb = getIMAPBParams( *f_iter, lowerBound, lowerBoundS, upperBound, upperBoundS, sizeInBytes, sizeInBytesS );
+
+            if ( imapa && imapb ) {
+                throw "CANNOT SIMULTANEOUSLY USE IMAPA AND IMAPB: " + name;
+            }
+
+            if ( imapa ) {
+                sizeInBytes = ::imapAEncodeLength( lowerBound, upperBound, precision );
+                if ( -1 == int(sizeInBytes) ) {
+                    throw "INVALID IMAPA SPECIFICATION: " + name + ": (" + lowerBoundS + ", " + upperBoundS + ", " + precisionS + " )";
+                }
+                // we no longer require the IMAPA definition at this point
+                imapa = false;
+                imapb = true;
+            }
+
+            if ( imapb ) {
+
+                uintmax_t imapbValue;
+                // compile-time check. this should basically always work unless upperBound - lowerBound is less than the smallest
+                if ( -1 == ::imapBEncode( lowerBound, upperBound, sizeInBytes, ( lowerBound + upperBound ) / 2, & imapbValue ) ) {
+                    throw "INVALID IMAPB SPECIFICATION: " + name + ": (" + lowerBoundS + ", " + upperBoundS + ", " + sizeInBytesS + " )";
+                }
+
+                out << indent() << "xfer += writeBer(oprot, " << sizeInBytes << ");" << endl;
+            } else {
+                out << indent() << "xfer += writeBer(oprot, sizeof(this->" << (*f_iter)->get_name() << "));" << endl;
+            }
+
+          }break;
+      }
+    }
+
+    }
+    // Write field contents
+    if (pointers && !(*f_iter)->get_type()->is_xception()) {
+      generate_serialize_field(out, *f_iter, "(*(this->", "))");
+    } else {
+      generate_serialize_field(out, *f_iter, "this->");
+    }
+    // XXX: @CJF: this is a dirty hack.
+    if (!("St060115_update_args" == tstruct->get_name() || "St060115_update_pargs" == tstruct->get_name())) {
+    // Write field closer
+    indent(out) << "xfer += oprot->writeFieldEnd();" << endl;
+    }
+    // XXX: @CJF: this is a dirty hack.
+    if (!("St060115_update_args" == tstruct->get_name() || "St060115_update_pargs" == tstruct->get_name())) {
+    if (check_if_set) {
+      indent_down();
+      indent(out) << '}';
+    }
+    }
+  }
+
+  out << endl;
+
+  // XXX: @CJF: this is a dirty hack.
+  if (!("St060115_update_args" == tstruct->get_name() || "St060115_update_pargs" == tstruct->get_name())) {
+  // Write the struct map
+  out << indent() << "xfer += oprot->writeFieldStop();" << endl << indent()
+      << "xfer += oprot->writeStructEnd();" << endl << indent()
+      << "return xfer;" << endl;
+  } else {
+    out << indent() << "return xfer;" << endl;
+  }
+
+  indent_down();
+  indent(out) << "}" << endl << endl;
+}
+
+/**
  * Generates the write function.
  *
  * @param out Stream to write to
@@ -1603,7 +1774,8 @@ void t_misb_generator::generate_struct_writer(ostream& out, t_struct* tstruct, b
 
   // XXX: @CJF: this is a dirty hack.
   if (!("St060115_update_args" == tstruct->get_name() || "St060115_update_pargs" == tstruct->get_name())) {
-  indent(out) << "xfer += oprot->writeStructBegin(\"" << name << "\");" << endl;
+    indent(out) << "xfer += oprot->writeStructBegin(\"" << name << "\");" << endl;
+    indent(out) << "xfer += writeBer(oprot, writeLen());" << endl;
   }
 
   bool check_if_set;
