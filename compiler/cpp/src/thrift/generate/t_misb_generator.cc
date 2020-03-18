@@ -1641,6 +1641,8 @@ void t_misb_generator::generate_struct_writer(ostream& out, t_struct* tstruct, b
       throw "UNSUPPORTED TYPE: " + name;
     } else if (type->is_list()) {
       throw "UNSUPPORTED TYPE: " + name;
+    } else if (type->is_struct()) {
+        // MISB struct have their own writeLen() method that gets called in write()
     } else if (type->is_base_type()) {
       t_base_type::t_base tbase = ((t_base_type*)type)->get_base();
       switch (tbase) {
@@ -1654,6 +1656,7 @@ void t_misb_generator::generate_struct_writer(ostream& out, t_struct* tstruct, b
       case t_base_type::TYPE_I16:
       case t_base_type::TYPE_I32:
       case t_base_type::TYPE_I64:
+
           out << indent() << "xfer += writeBer(oprot, sizeof(this->" << (*f_iter)->get_name() << "));" << endl;
           break;
 
