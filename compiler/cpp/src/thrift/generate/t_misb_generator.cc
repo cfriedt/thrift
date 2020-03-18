@@ -533,6 +533,9 @@ void t_misb_generator::init_generator() {
   f_types_ << "#include <functional>" << endl;
   f_types_ << "#include <memory>" << endl;
 
+  // included unordered_map (required for fieldIdToTType)
+  f_types_ << "#include <unordered_map>" << endl;
+
   // Include other Thrift includes
   const vector<t_program*>& includes = program_->get_includes();
   for (auto include : includes) {
@@ -569,7 +572,8 @@ void t_misb_generator::init_generator() {
   f_types_impl_ << "#include <ostream>" << endl << endl;
   f_types_impl_ << "#include <thrift/TToString.h>" << endl << endl;
 
-  f_types_impl_ << "#include <thrift/protocol/TMISBProtocol.h>" << endl << endl;
+  f_types_impl_ << "#include <thrift/protocol/TMISBProtocol.h>" << endl;
+  f_types_impl_ << "#include <thrift/transport/TTransportUtils.h>" << endl << endl;
 
   // Open namespace
   ns_open_ = namespace_open(program_->get_namespace("cpp"));
@@ -989,6 +993,7 @@ void t_misb_generator::generate_cpp_struct(t_struct* tstruct, bool is_exception)
   std::ostream& out = (gen_templates_ ? f_types_tcc_ : f_types_impl_);
   generate_struct_reader(out, tstruct);
   generate_struct_writer(out, tstruct);
+  generate_struct_writeLen(out, tstruct);
   generate_struct_swap(f_types_impl_, tstruct);
   generate_copy_constructor(f_types_impl_, tstruct, is_exception);
   if (gen_moveable_) {
@@ -1270,6 +1275,9 @@ void t_misb_generator::generate_struct_declaration(ostream& out,
                                  !read) << endl;
   }
 
+  // Declare the field id <--> thrift type map
+  out << endl << indent() << "static const std::unordered_map<int16_t,::apache::thrift::protocol::TType> fieldIdToTType;" << endl;
+
   // Add the __isset data member if we need it, using the definition from above
   if (has_nonrequired_fields && (!pointers || read)) {
     out << endl << indent() << "_" << tstruct->get_name() << "__isset __isset;" << endl;
@@ -1345,6 +1353,7 @@ void t_misb_generator::generate_struct_declaration(ostream& out,
       out << indent() << "uint32_t write("
           << "::apache::thrift::protocol::TProtocol* oprot) const;" << endl;
     }
+    out << indent() << "uint32_t writeLen() const;" << endl;
   }
   out << endl;
 
@@ -1384,6 +1393,14 @@ void t_misb_generator::generate_struct_definition(ostream& out,
   // Get members
   vector<t_field*>::const_iterator m_iter;
   const vector<t_field*>& members = tstruct->get_members();
+
+  // Declare the field id <--> thrift type map
+  indent(out) << "const std::unordered_map<int16_t,::apache::thrift::protocol::TType> "
+          << tstruct->get_name() << "::fieldIdToTType {" << endl;
+  for (m_iter = members.begin(); m_iter != members.end(); ++m_iter) {
+    indent(out) << "{" << (*m_iter)->get_key() << "," << type_to_enum((*m_iter)->get_type())  << "}," << endl;
+  }
+  indent(out) << "};" << endl;
 
   // Destructor
   if (tstruct->annotations_.find("final") == tstruct->annotations_.end()) {
@@ -1494,6 +1511,9 @@ void t_misb_generator::generate_struct_reader(ostream& out, t_struct* tstruct, b
   // Read beginning field marker
   indent(out) << "xfer += iprot->readFieldBegin(fname, ftype, fid);" << endl;
 
+  // map the field ID to the type (it's not part of the protocol)
+  indent(out) << "ftype = fieldIdToTType.at(fid);" << endl;
+
   // Check for field STOP marker
   out << indent() << "if (ftype == ::apache::thrift::protocol::T_STOP) {" << endl << indent()
       << "  break;" << endl << indent() << "}" << endl;
@@ -1584,7 +1604,7 @@ void t_misb_generator::generate_struct_reader(ostream& out, t_struct* tstruct, b
  * @param out Stream to write to
  * @param tstruct The struct
  */
-void t_misb_generator::generate_struct_writLen(ostream& out, t_struct* tstruct, bool pointers) {
+void t_misb_generator::generate_struct_writeLen(ostream& out, t_struct* tstruct, bool pointers) {
   string name = tstruct->get_name();
   const vector<t_field*>& fields = tstruct->get_members();
   vector<t_field*>::const_iterator f_iter;
@@ -1598,8 +1618,8 @@ void t_misb_generator::generate_struct_writLen(ostream& out, t_struct* tstruct, 
   }
   indent_up();
 
-  out << indent() << "::apache::thrift::transport::TMISBProtocol _oprot(std::make_shared<::apache::thrift::transport::TNullTransport>());" << endl;
-  out << indent() << "::apache::thrift::protocol::TProtocol *oprot = static_cast<::apache::thrift::protocol::TProtocol*>(&_oprot)" << endl;
+  out << indent() << "::apache::thrift::protocol::TMISBProtocol _oprot(std::make_shared<::apache::thrift::transport::TNullTransport>());" << endl;
+  out << indent() << "::apache::thrift::protocol::TProtocol *oprot = static_cast<::apache::thrift::protocol::TProtocol*>(&_oprot);" << endl;
 
   out << indent() << "uint32_t xfer = 0;" << endl;
 
