@@ -175,9 +175,15 @@ enum SensorControlMode {
 }
 
 struct SensorFrameRatePack {
+	1: required i64 numerator (
+		BEROID
+	)
+	2: optional i64 denominator (
+		BEROID
+	)
 } (
-	OmitKey
-	OmitLength
+	DLP
+	MaxLength = "16"
 )
 
 struct WaveLengthList {

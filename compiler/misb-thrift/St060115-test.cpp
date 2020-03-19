@@ -233,8 +233,6 @@ protected:
 
     void tagify() {
 
-
-
         for( size_t remaining = TMemoryBufferDefaultSize, offset = 0, consumed = 0; remaining > 0; offset += consumed, remaining -= consumed ) {
 
             size_t beroidLen;
@@ -765,7 +763,7 @@ TEST_F( St060115Test, IMAPB ) {
 /**
  * Test that nested local sets are properly encoded / decoded
  */
-TEST_F( St060115Test, SecurityLocalSet ) {
+TEST_F( St060115Test, NestedStruct ) {
 
     SecurityLocalSet expected_securityLocalSet;
 
@@ -795,4 +793,58 @@ TEST_F( St060115Test, SecurityLocalSet ) {
     };
 
     validateBytes( St060115Tag::SECURITY_LOCAL_SET, expected_v8);
+}
+
+/**
+ * Test that DLP are properly encoded / decoded
+ */
+TEST_F( St060115Test, DLP ) {
+
+    SensorFrameRatePack expected_sensorFrameRatePack;
+
+    // Set mandatory fields
+    expected_sensorFrameRatePack.__set_numerator(30);
+    // This is kind of a tricky one, because the denominator is optional
+    // In this case, the limiting factor of the deserializer is going to be
+    // the reported length of the packet.
+
+    expected_message.__set_sensorFrameRatePack( expected_sensorFrameRatePack );
+    ASSERT_TRUE( expected_message.__isset.sensorFrameRatePack );
+
+    common();
+
+    EXPECT_TRUE( actual_message.__isset.sensorFrameRatePack );
+    SensorFrameRatePack actual_sensorFrameRatePack = actual_message.sensorFrameRatePack;
+
+    const vector<uint8_t> expected_v8 {
+        30,
+    };
+
+    validateBytes( St060115Tag::SENSOR_FRAME_RATE_PACK, expected_v8);
+}
+
+/**
+ * Test that DLP are properly encoded / decoded
+ */
+TEST_F( St060115Test, DLP2 ) {
+
+    SensorFrameRatePack expected_sensorFrameRatePack;
+
+    expected_sensorFrameRatePack.__set_numerator(30);
+    expected_sensorFrameRatePack.__set_denominator(1);
+
+    expected_message.__set_sensorFrameRatePack( expected_sensorFrameRatePack );
+    ASSERT_TRUE( expected_message.__isset.sensorFrameRatePack );
+
+    common();
+
+    EXPECT_TRUE( actual_message.__isset.sensorFrameRatePack );
+    SensorFrameRatePack actual_sensorFrameRatePack = actual_message.sensorFrameRatePack;
+
+    const vector<uint8_t> expected_v8 {
+        30,
+        1,
+    };
+
+    validateBytes( St060115Tag::SENSOR_FRAME_RATE_PACK, expected_v8);
 }

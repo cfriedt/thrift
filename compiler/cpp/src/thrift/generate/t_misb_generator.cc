@@ -70,6 +70,33 @@ static vector<string> split( const string & s, const int delimiter, const bool t
     return tokens;
 }
 
+static bool getBEROIDParams( const std::map<string,string> & annotations ) {
+    auto it = annotations.find( "BEROID" );
+    if ( annotations.end() == it ) {
+        return false;
+    } else {
+        return true;
+    }
+}
+
+static bool getDLPParams( const std::map<string,string> & annotations ) {
+    auto it = annotations.find( "DLP" );
+    if ( annotations.end() == it ) {
+        return false;
+    } else {
+        return true;
+    }
+}
+
+static bool getVLPParams( const std::map<string,string> & annotations ) {
+    auto it = annotations.find( "VLP" );
+    if ( annotations.end() == it ) {
+        return false;
+    } else {
+        return true;
+    }
+}
+
 static bool getIMAPAParams( t_field* tfield, double & lowerBound, string & lowerBoundS, double & upperBound, string & upperBoundS, double & precision, string & precisionS ) {
 
     auto it = tfield->annotations_.find( "IMAPA" );
@@ -572,6 +599,8 @@ void t_misb_generator::init_generator() {
   f_types_impl_ << "#include <ostream>" << endl << endl;
   f_types_impl_ << "#include <thrift/TToString.h>" << endl << endl;
 
+  f_types_impl_ << "#include <thrift/protocol/ber.h>" << endl;
+  f_types_impl_ << "#include <thrift/protocol/beroid.h>" << endl;
   f_types_impl_ << "#include <thrift/protocol/TMISBProtocol.h>" << endl;
   f_types_impl_ << "#include <thrift/transport/TTransportUtils.h>" << endl << endl;
 
@@ -1461,6 +1490,13 @@ void t_misb_generator::generate_struct_reader(ostream& out, t_struct* tstruct, b
   }
   indent_up();
 
+  bool dlp = getDLPParams(tstruct->annotations_);
+  bool vlp = getVLPParams(tstruct->annotations_);
+
+  if ( dlp && vlp ) {
+      throw "CANNOT SIMULTANEOUSLY USE DLP AND VLP: " + tstruct->get_name();
+  }
+
   const vector<t_field*>& fields = tstruct->get_members();
   vector<t_field*>::const_iterator f_iter;
 
@@ -1486,11 +1522,13 @@ void t_misb_generator::generate_struct_reader(ostream& out, t_struct* tstruct, b
       << indent() << "uint32_t xfer = 0;" << endl
       << indent() << "std::string fname;" << endl
       << indent() << "::apache::thrift::protocol::TType ftype;" << endl
-      << indent() << "int16_t fid;" << endl
+      << indent() << "int16_t fid = 1;" << endl
       << indent() << "#pragma GCC diagnostic push" << endl
       << indent() << "#pragma GCC diagnostic ignored \"-Wunused-variable\"" << endl
+      << indent() << "uintmax_t beroid;" << endl
       << indent() << "uintmax_t ber;" << endl
       << indent() << "uintmax_t structBer;" << endl
+      << indent() << "uintmax_t structBerLen;" << endl
       << indent() << "#pragma GCC diagnostic pop" << endl
       << endl
       << indent() << "xfer += iprot->readStructBegin(fname);" << endl
@@ -1499,7 +1537,8 @@ void t_misb_generator::generate_struct_reader(ostream& out, t_struct* tstruct, b
   // XXX: @CJF: this is a dirty hack.
   if (!("UasDataLinkLocalSet" == tstruct->get_name() || "St060115_update_args" == tstruct->get_name() || "St060115_update_pargs" == tstruct->get_name() )) {
       out << endl;
-      out << indent() << "xfer += ::apache::thrift::protocol::readBer(iprot, structBer);" << endl;
+      out << indent() << "structBerLen = ::apache::thrift::protocol::readBer(iprot, structBer);" << endl;
+      out << indent() << "xfer += structBerLen;" << endl;
       out << endl;
   }
 
@@ -1519,17 +1558,19 @@ void t_misb_generator::generate_struct_reader(ostream& out, t_struct* tstruct, b
 
   // XXX: @CJF: this is a dirty hack.
   if (!("UasDataLinkLocalSet" == tstruct->get_name() || "St060115_update_args" == tstruct->get_name() || "St060115_update_pargs" == tstruct->get_name() )) {
-      indent(out) << "if (xfer >= structBer) {" << endl;
+      indent(out) << "if (xfer - structBerLen >= structBer) {" << endl;
       out << indent() << indent() << "break;" << endl;
       indent(out) << "}" << endl;
   }
 
+  if ( ! dlp ) {
   // Read beginning field marker
   indent(out) << "xfer += iprot->readFieldBegin(fname, ftype, fid);" << endl;
 
   // Check for field STOP marker
   out << indent() << "if (ftype == ::apache::thrift::protocol::T_STOP) {" << endl << indent()
       << "  break;" << endl << indent() << "}" << endl;
+  }
 
   // map the field ID to the type (it's not part of the protocol)
   out << indent() << "try {" << endl;
@@ -1556,7 +1597,7 @@ void t_misb_generator::generate_struct_reader(ostream& out, t_struct* tstruct, b
       indent(out) << "if (ftype == " << type_to_enum(type) << ") {" << endl;
       indent_up();
       ((t_base_type*)type)->get_base();
-      if ( !( ( type->is_base_type() && t_base_type::TYPE_STRING == ((t_base_type*)type)->get_base() ) || type->is_struct() ) ) {
+      if ( !( ( type->is_base_type() && t_base_type::TYPE_STRING == ((t_base_type*)type)->get_base() ) || type->is_struct() || dlp ) ) {
           indent(out) << "xfer += ::apache::thrift::protocol::readBer( iprot, ber );" << endl;
       }
 
@@ -1598,6 +1639,10 @@ void t_misb_generator::generate_struct_reader(ostream& out, t_struct* tstruct, b
   // Read field end marker
   indent(out) << "xfer += iprot->readFieldEnd();" << endl;
 
+  if ( dlp ) {
+      indent(out) << "fid++;" << endl;
+  }
+
   scope_down(out);
 
   out << endl << indent() << "xfer += iprot->readStructEnd();" << endl;
@@ -1629,6 +1674,13 @@ void t_misb_generator::generate_struct_writeLen(ostream& out, t_struct* tstruct,
   const vector<t_field*>& fields = tstruct->get_members();
   vector<t_field*>::const_iterator f_iter;
 
+  bool dlp = getDLPParams( tstruct->annotations_ );
+  bool vlp = getVLPParams( tstruct->annotations_ );
+
+  if ( dlp && vlp ) {
+      throw "CANNOT SIMULTANEOUSLY USE DLP AND VLP: " + name;
+  }
+
   if (gen_templates_) {
     out << indent() << "template <class Protocol_>" << endl << indent() << "uint32_t "
         << tstruct->get_name() << "::writeLen() const {" << endl;
@@ -1652,6 +1704,9 @@ void t_misb_generator::generate_struct_writeLen(ostream& out, t_struct* tstruct,
 
   bool check_if_set = false;
   for (f_iter = fields.begin(); f_iter != fields.end(); ++f_iter) {
+
+    bool beroid = getBEROIDParams((*f_iter)->annotations_);
+
     // XXX: @CJF: this is a dirty hack.
     if (!("St060115_update_args" == tstruct->get_name() || "St060115_update_pargs" == tstruct->get_name())) {
     check_if_set = (*f_iter)->get_req() == t_field::T_OPTIONAL
@@ -1667,7 +1722,7 @@ void t_misb_generator::generate_struct_writeLen(ostream& out, t_struct* tstruct,
     t_type *type = (*f_iter)->get_type();
 
     // XXX: @CJF: this is a dirty hack.
-    if (!("St060115_update_args" == tstruct->get_name() || "St060115_update_pargs" == tstruct->get_name())) {
+    if (!("St060115_update_args" == tstruct->get_name() || "St060115_update_pargs" == tstruct->get_name() || dlp)) {
     // Write field header
     out << indent() << "xfer += oprot->writeFieldBegin("
         << "\"" << (*f_iter)->get_name() << "\", " << type_to_enum(type) << ", "
@@ -1700,8 +1755,11 @@ void t_misb_generator::generate_struct_writeLen(ostream& out, t_struct* tstruct,
       case t_base_type::TYPE_I16:
       case t_base_type::TYPE_I32:
       case t_base_type::TYPE_I64:
-
-          out << indent() << "xfer += writeBer(oprot, sizeof(this->" << (*f_iter)->get_name() << "));" << endl;
+          if ( beroid ) {
+              out << indent() << "xfer += writeBer(oprot, sizeof(this->" << (*f_iter)->get_name() << "));" << endl;
+          } else {
+              out << indent() << "xfer += writeBer(oprot, sizeof(this->" << (*f_iter)->get_name() << "));" << endl;
+          }
           break;
 
       case t_base_type::TYPE_DOUBLE: {
@@ -1752,6 +1810,7 @@ void t_misb_generator::generate_struct_writeLen(ostream& out, t_struct* tstruct,
     }
 
     }
+
     // Write field contents
     if (pointers && !(*f_iter)->get_type()->is_xception()) {
       generate_serialize_field(out, *f_iter, "(*(this->", "))");
@@ -1799,6 +1858,13 @@ void t_misb_generator::generate_struct_writer(ostream& out, t_struct* tstruct, b
   const vector<t_field*>& fields = tstruct->get_members();
   vector<t_field*>::const_iterator f_iter;
 
+  bool dlp = getDLPParams( tstruct->annotations_ );
+  bool vlp = getVLPParams( tstruct->annotations_ );
+
+  if ( dlp && vlp ) {
+      throw "CANNOT SIMULTANEOUSLY USE DLP AND VLP: " + name;
+  }
+
   if (gen_templates_) {
     out << indent() << "template <class Protocol_>" << endl << indent() << "uint32_t "
         << tstruct->get_name() << "::write(Protocol_* oprot) const {" << endl;
@@ -1835,8 +1901,10 @@ void t_misb_generator::generate_struct_writer(ostream& out, t_struct* tstruct, b
 
     t_type *type = (*f_iter)->get_type();
 
+    bool beroid = getBEROIDParams((*f_iter)->annotations_);
+
     // XXX: @CJF: this is a dirty hack.
-    if (!("St060115_update_args" == tstruct->get_name() || "St060115_update_pargs" == tstruct->get_name())) {
+    if (!("St060115_update_args" == tstruct->get_name() || "St060115_update_pargs" == tstruct->get_name() || dlp )) {
     // Write field header
     out << indent() << "xfer += oprot->writeFieldBegin("
         << "\"" << (*f_iter)->get_name() << "\", " << type_to_enum(type) << ", "
@@ -1869,8 +1937,11 @@ void t_misb_generator::generate_struct_writer(ostream& out, t_struct* tstruct, b
       case t_base_type::TYPE_I16:
       case t_base_type::TYPE_I32:
       case t_base_type::TYPE_I64:
-
-          out << indent() << "xfer += writeBer(oprot, sizeof(this->" << (*f_iter)->get_name() << "));" << endl;
+          if ( beroid ) {
+            out << indent() << "xfer += writeBer(oprot, ::berOidUintEncodeLength(" << (*f_iter)->get_name() << "));" << endl;
+          } else {
+            out << indent() << "xfer += writeBer(oprot, sizeof(this->" << (*f_iter)->get_name() << "));" << endl;
+          }
           break;
 
       case t_base_type::TYPE_DOUBLE: {
@@ -1921,6 +1992,7 @@ void t_misb_generator::generate_struct_writer(ostream& out, t_struct* tstruct, b
     }
 
     }
+
     // Write field contents
     if (pointers && !(*f_iter)->get_type()->is_xception()) {
       generate_serialize_field(out, *f_iter, "(*(this->", "))");
@@ -4239,6 +4311,8 @@ void t_misb_generator::generate_deserialize_field(ostream& out,
     throw "CANNOT GENERATE DESERIALIZE CODE FOR void TYPE: " + prefix + tfield->get_name();
   }
 
+  bool beroid = getBEROIDParams(tfield->annotations_);
+
   string name = prefix + tfield->get_name() + suffix;
 
   if (type->is_struct() || type->is_xception()) {
@@ -4262,16 +4336,40 @@ void t_misb_generator::generate_deserialize_field(ostream& out,
       indent(out) << "xfer += iprot->readBool(" << name << ");";
       break;
     case t_base_type::TYPE_I8:
-      indent(out) << "xfer += iprot->readByte(" << name << ");";
+      if ( beroid ) {
+        indent(out) << "uintmax_t beroidv;" << endl;
+        indent(out) << "xfer += readBeroid(iprot, beroidv);" << endl;
+        indent(out) << name << " = beroidv;" << endl;
+      } else {
+        indent(out) << "xfer += iprot->readByte(" << name << ");";
+      }
       break;
     case t_base_type::TYPE_I16:
-      indent(out) << "xfer += iprot->readI16(" << name << ");";
+      if ( beroid ) {
+        indent(out) << "uintmax_t beroidv;" << endl;
+        indent(out) << "xfer += readBeroid(iprot, beroidv);" << endl;
+        indent(out) << name << " = beroidv;" << endl;
+      } else {
+        indent(out) << "xfer += iprot->readI16(" << name << ");";
+      }
       break;
     case t_base_type::TYPE_I32:
-      indent(out) << "xfer += iprot->readI32(" << name << ");";
+      if ( beroid ) {
+        indent(out) << "uintmax_t beroidv;" << endl;
+        indent(out) << "xfer += readBeroid(iprot, beroidv);" << endl;
+        indent(out) << name << " = beroidv;" << endl;
+      } else {
+        indent(out) << "xfer += iprot->readI32(" << name << ");";
+      }
       break;
     case t_base_type::TYPE_I64:
-      indent(out) << "xfer += iprot->readI64(" << name << ");";
+      if ( beroid ) {
+        indent(out) << "uintmax_t beroidv;" << endl;
+        indent(out) << "xfer += readBeroid(iprot, beroidv);" << endl;
+        indent(out) << name << " = beroidv;" << endl;
+      } else {
+        indent(out) << "xfer += iprot->readI64(" << name << ");";
+      }
       break;
     case t_base_type::TYPE_DOUBLE: {
 
@@ -4497,6 +4595,8 @@ void t_misb_generator::generate_serialize_field(ostream& out,
 
   string name = prefix + tfield->get_name() + suffix;
 
+  bool beroid = getBEROIDParams(tfield->annotations_);
+
   // Do nothing for void types
   if (type->is_void()) {
     throw "CANNOT GENERATE SERIALIZE CODE FOR void TYPE: " + name;
@@ -4554,16 +4654,32 @@ void t_misb_generator::generate_serialize_field(ostream& out,
         indent(out) <<  "xfer += oprot->writeBool(" << name << ");";
         break;
       case t_base_type::TYPE_I8:
-        indent(out) <<  "xfer += oprot->writeByte(" << name << ");";
+        if ( beroid ) {
+          indent(out) <<  "xfer += writeBeroid(oprot," << name << ");";
+        } else {
+          indent(out) <<  "xfer += oprot->writeByte(" << name << ");";
+        }
         break;
       case t_base_type::TYPE_I16:
-        indent(out) <<  "xfer += oprot->writeI16(" << name << ");";
+        if ( beroid ) {
+          indent(out) <<  "xfer += writeBeroid(oprot," << name << ");";
+        } else {
+          indent(out) <<  "xfer += oprot->writeI16(" << name << ");";
+        }
         break;
       case t_base_type::TYPE_I32:
-        indent(out) <<  "xfer += oprot->writeI32(" << name << ");";
+        if ( beroid ) {
+          indent(out) <<  "xfer += writeBeroid(oprot," << name << ");";
+        } else {
+          indent(out) <<  "xfer += oprot->writeI32(" << name << ");";
+        }
         break;
       case t_base_type::TYPE_I64:
-        indent(out) <<  "xfer += oprot->writeI64(" << name << ");";
+        if ( beroid ) {
+          indent(out) <<  "xfer += writeBeroid(oprot," << name << ");";
+        } else {
+          indent(out) <<  "xfer += oprot->writeI64(" << name << ");";
+        }
         break;
       case t_base_type::TYPE_DOUBLE:
 

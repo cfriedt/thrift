@@ -1,9 +1,39 @@
 #include "ber.h"
+#include "beroid.h"
 #include "TMISBProtocol.h"
 
 namespace apache {
 namespace thrift {
 namespace protocol {
+
+size_t readBeroid(::apache::thrift::protocol::TProtocol* iprot, uintmax_t & r) {
+
+    uint8_t beroid[ BEROID_MAX_BYTES ];
+    int8_t byte;
+    uint8_t nBytes;
+    bool moreBytes;
+
+    for( nBytes = 0, moreBytes = true; moreBytes && nBytes < sizeof(beroid); ++nBytes, moreBytes = !!(BEROID_BYTE_MAX & byte) ) {
+        iprot->readByte(byte);
+        beroid[ nBytes ] = uint8_t(byte);
+    }
+
+    ::berOidUintDecode( beroid, nBytes, & r );
+
+    return nBytes;
+}
+
+size_t writeBeroid(::apache::thrift::protocol::TProtocol* oprot, const uintmax_t & x) {
+
+    uint8_t beroid[ BEROID_MAX_BYTES ];
+
+    int nBytes = ::berOidUintEncode( x, beroid, sizeof(beroid) );
+    for( int i = 0; i < nBytes; ++i ) {
+        oprot->writeByte( beroid[ i ] );
+    }
+
+    return size_t( nBytes );
+}
 
 size_t readBer(::apache::thrift::protocol::TProtocol* iprot, uintmax_t & r) {
     size_t nbytes;
@@ -34,10 +64,10 @@ size_t readBer(::apache::thrift::protocol::TProtocol* iprot, uintmax_t & r) {
     return nbytes;
 }
 
-size_t writeBer(::apache::thrift::protocol::TProtocol* oprot, const uintmax_t & len) {
+size_t writeBer(::apache::thrift::protocol::TProtocol* oprot, const uintmax_t & x) {
     uint8_t ber[ BER_MAX_BYTES ];
 
-    size_t berLen = ::berUintEncode(len, ber, sizeof(ber));
+    size_t berLen = ::berUintEncode(x, ber, sizeof(ber));
     for(size_t i = 0; i < berLen; ++i) {
         oprot->writeByte(ber[i]);
     }
