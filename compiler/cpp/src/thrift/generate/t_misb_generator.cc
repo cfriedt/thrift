@@ -1650,7 +1650,7 @@ void t_misb_generator::generate_struct_writeLen(ostream& out, t_struct* tstruct,
   indent(out) << "xfer += oprot->writeStructBegin(\"" << name << "\");" << endl;
   }
 
-  bool check_if_set;
+  bool check_if_set = false;
   for (f_iter = fields.begin(); f_iter != fields.end(); ++f_iter) {
     // XXX: @CJF: this is a dirty hack.
     if (!("St060115_update_args" == tstruct->get_name() || "St060115_update_pargs" == tstruct->get_name())) {
@@ -1819,7 +1819,7 @@ void t_misb_generator::generate_struct_writer(ostream& out, t_struct* tstruct, b
     indent(out) << "xfer += writeBer(oprot, writeLen());" << endl;
   }
 
-  bool check_if_set;
+  bool check_if_set = false;
   for (f_iter = fields.begin(); f_iter != fields.end(); ++f_iter) {
     // XXX: @CJF: this is a dirty hack.
     if (!("St060115_update_args" == tstruct->get_name() || "St060115_update_pargs" == tstruct->get_name())) {
