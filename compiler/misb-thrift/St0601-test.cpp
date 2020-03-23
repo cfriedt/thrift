@@ -859,6 +859,27 @@ TEST_F( St0601Test, VMTILocalSetVTargetPack ) {
 
     VMTILocalSet expected_vmtiLocalSet;
 
+    expected_vmtiLocalSet.__set_totalNumberOfTargetsDetectedInTheFrame(1);
+    expected_vmtiLocalSet.__set_numberOfReportedTargets(1);
+    expected_vmtiLocalSet.__set_motionImageryFrameNumber(1);
+    expected_vmtiLocalSet.__set_vmtiSourceSensor(string(16,char('\0')));
+
+    VTargetPack tgt;
+    tgt.__set_targetIdNumber(0);
+    tgt.__set_targetCentroidPixelNumber(0);
+    tgt.__set_targetCentroidPixelNumber(0);
+    tgt.__set_boundingBoxTopLeftPixelNumber(0);
+    tgt.__set_boundingBoxBottomRightPixelNumber(0);
+    tgt.__set_targetCentroidPixelRow(0);
+    tgt.__set_targetCentroidPixelColumn(0);
+
+    VTrackerLocalSet trk;
+
+    trk.__set_algorithm(string(16,char('\0')));
+    tgt.__set_vTrackerLs(trk);
+
+    expected_vmtiLocalSet.__set_vTargetSeries( tgt );
+
     expected_message.__set_vmtiLocalSet( expected_vmtiLocalSet );
     ASSERT_TRUE( expected_message.__isset.vmtiLocalSet );
 
@@ -867,9 +888,33 @@ TEST_F( St0601Test, VMTILocalSetVTargetPack ) {
     EXPECT_TRUE( actual_message.__isset.vmtiLocalSet );
     VMTILocalSet actual_vmtiLocalSet = actual_message.vmtiLocalSet;
 
+    // XXX: @CJF: 20200323: put together some enums for the keys below
     const vector<uint8_t> expected_v8 {
-        30,
-        1,
+        // total number of targets detected
+        5, 3, 0, 0, 1,
+        // number of reported targets
+        6, 1, 1,
+        // motion imagery frame number
+        7, 4, 0, 0, 0,
+        // vmti source sensor
+        10, 16, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+        // vtarget series
+        101, 47,
+            // target id number
+            0,
+            // target centroid pixel number
+            1, 4, 0, 0, 0, 0,
+            // bounding box top left pixel number
+            2, 4, 0, 0, 0, 0,
+            // bounding box bottom right pixel number
+            3, 4, 0, 0, 0, 0,
+            // target centroid pixel row
+            19, 2, 0, 0,
+            // target centroid pixel column
+            20, 2, 0, 0,
+            // vtracker ls
+            104, 12,
+            6, 16, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
     };
 
     validateBytes( St0601Tag::VMTI_LOCAL_SET, expected_v8);

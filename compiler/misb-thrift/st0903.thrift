@@ -296,5 +296,6 @@ struct VMTILocalSet {
 	
 	// XXX: @CJF: 20200323: list is not yet supported
 	//101: optional list<VTargetPack> vTargetSeries
-	101: optional binary vTargetSeries
+	//101: optional binary vTargetSeries
+	101: optional VTargetPack vTargetSeries
 }
