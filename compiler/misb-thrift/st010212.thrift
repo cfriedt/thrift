@@ -1,4 +1,3 @@
-/*
 namespace cpp org.misb
 
 enum SecurityClassification {
@@ -61,4 +60,3 @@ struct SecurityLocalSet {
     23: optional string classifyingCountryAndReleasingInstructionsCountryCodingMethodVersionDate
     24: optional string objectCountryCodingMethodVersionDate
 }
-*/
