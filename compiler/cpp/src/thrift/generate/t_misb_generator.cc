@@ -1501,7 +1501,7 @@ void t_misb_generator::generate_struct_reader(ostream& out, t_struct* tstruct, b
   vector<t_field*>::const_iterator f_iter;
 
   // XXX: @CJF: this is a dirty hack.
-  if ("St060115_update_args" == tstruct->get_name()) {
+  if ("St0601_update_args" == tstruct->get_name()) {
 
     f_iter = fields.begin();
 
@@ -1535,7 +1535,7 @@ void t_misb_generator::generate_struct_reader(ostream& out, t_struct* tstruct, b
       ;
 
   // XXX: @CJF: this is a dirty hack.
-  if (!("UasDataLinkLocalSet" == tstruct->get_name() || "St060115_update_args" == tstruct->get_name() || "St060115_update_pargs" == tstruct->get_name() )) {
+  if (!("UasDataLinkLocalSet" == tstruct->get_name() || "St0601_update_args" == tstruct->get_name() || "St0601_update_pargs" == tstruct->get_name() )) {
       out << endl;
       out << indent() << "structBerLen = ::apache::thrift::protocol::readBer(iprot, structBer);" << endl;
       out << indent() << "xfer += structBerLen;" << endl;
@@ -1557,7 +1557,7 @@ void t_misb_generator::generate_struct_reader(ostream& out, t_struct* tstruct, b
   scope_up(out);
 
   // XXX: @CJF: this is a dirty hack.
-  if (!("UasDataLinkLocalSet" == tstruct->get_name() || "St060115_update_args" == tstruct->get_name() || "St060115_update_pargs" == tstruct->get_name() )) {
+  if (!("UasDataLinkLocalSet" == tstruct->get_name() || "St0601_update_args" == tstruct->get_name() || "St0601_update_pargs" == tstruct->get_name() )) {
       indent(out) << "if (xfer - structBerLen >= structBer) {" << endl;
       out << indent() << indent() << "break;" << endl;
       indent(out) << "}" << endl;
@@ -1698,7 +1698,7 @@ void t_misb_generator::generate_struct_writeLen(ostream& out, t_struct* tstruct,
   indent(out) << "::apache::thrift::protocol::TOutputRecursionTracker tracker(*oprot);" << endl;
 
   // XXX: @CJF: this is a dirty hack.
-  if (!("St060115_update_args" == tstruct->get_name() || "St060115_update_pargs" == tstruct->get_name())) {
+  if (!("St0601_update_args" == tstruct->get_name() || "St0601_update_pargs" == tstruct->get_name())) {
   indent(out) << "xfer += oprot->writeStructBegin(\"" << name << "\");" << endl;
   }
 
@@ -1708,7 +1708,7 @@ void t_misb_generator::generate_struct_writeLen(ostream& out, t_struct* tstruct,
     bool beroid = getBEROIDParams((*f_iter)->annotations_);
 
     // XXX: @CJF: this is a dirty hack.
-    if (!("St060115_update_args" == tstruct->get_name() || "St060115_update_pargs" == tstruct->get_name())) {
+    if (!("St0601_update_args" == tstruct->get_name() || "St0601_update_pargs" == tstruct->get_name())) {
     check_if_set = (*f_iter)->get_req() == t_field::T_OPTIONAL
                         || (*f_iter)->get_type()->is_xception();
     if (check_if_set) {
@@ -1722,7 +1722,7 @@ void t_misb_generator::generate_struct_writeLen(ostream& out, t_struct* tstruct,
     t_type *type = (*f_iter)->get_type();
 
     // XXX: @CJF: this is a dirty hack.
-    if (!("St060115_update_args" == tstruct->get_name() || "St060115_update_pargs" == tstruct->get_name() || dlp)) {
+    if (!("St0601_update_args" == tstruct->get_name() || "St0601_update_pargs" == tstruct->get_name() || dlp)) {
     // Write field header
     out << indent() << "xfer += oprot->writeFieldBegin("
         << "\"" << (*f_iter)->get_name() << "\", " << type_to_enum(type) << ", "
@@ -1818,12 +1818,12 @@ void t_misb_generator::generate_struct_writeLen(ostream& out, t_struct* tstruct,
       generate_serialize_field(out, *f_iter, "this->");
     }
     // XXX: @CJF: this is a dirty hack.
-    if (!("St060115_update_args" == tstruct->get_name() || "St060115_update_pargs" == tstruct->get_name())) {
+    if (!("St0601_update_args" == tstruct->get_name() || "St0601_update_pargs" == tstruct->get_name())) {
     // Write field closer
     indent(out) << "xfer += oprot->writeFieldEnd();" << endl;
     }
     // XXX: @CJF: this is a dirty hack.
-    if (!("St060115_update_args" == tstruct->get_name() || "St060115_update_pargs" == tstruct->get_name())) {
+    if (!("St0601_update_args" == tstruct->get_name() || "St0601_update_pargs" == tstruct->get_name())) {
     if (check_if_set) {
       indent_down();
       indent(out) << '}';
@@ -1834,7 +1834,7 @@ void t_misb_generator::generate_struct_writeLen(ostream& out, t_struct* tstruct,
   out << endl;
 
   // XXX: @CJF: this is a dirty hack.
-  if (!("St060115_update_args" == tstruct->get_name() || "St060115_update_pargs" == tstruct->get_name())) {
+  if (!("St0601_update_args" == tstruct->get_name() || "St0601_update_pargs" == tstruct->get_name())) {
   // Write the struct map
   out << indent() << "xfer += oprot->writeFieldStop();" << endl << indent()
       << "xfer += oprot->writeStructEnd();" << endl << indent()
@@ -1881,14 +1881,14 @@ void t_misb_generator::generate_struct_writer(ostream& out, t_struct* tstruct, b
   indent(out) << "xfer += oprot->writeStructBegin(\"" << name << "\");" << endl;
 
   // XXX: @CJF: this is a dirty hack.
-  if (!("UasDataLinkLocalSet" == tstruct->get_name() || "St060115_update_args" == tstruct->get_name() || "St060115_update_pargs" == tstruct->get_name() )) {
+  if (!("UasDataLinkLocalSet" == tstruct->get_name() || "St0601_update_args" == tstruct->get_name() || "St0601_update_pargs" == tstruct->get_name() )) {
     indent(out) << "xfer += writeBer(oprot, writeLen());" << endl;
   }
 
   bool check_if_set = false;
   for (f_iter = fields.begin(); f_iter != fields.end(); ++f_iter) {
     // XXX: @CJF: this is a dirty hack.
-    if (!("St060115_update_args" == tstruct->get_name() || "St060115_update_pargs" == tstruct->get_name())) {
+    if (!("St0601_update_args" == tstruct->get_name() || "St0601_update_pargs" == tstruct->get_name())) {
     check_if_set = (*f_iter)->get_req() == t_field::T_OPTIONAL
                         || (*f_iter)->get_type()->is_xception();
     if (check_if_set) {
@@ -1904,7 +1904,7 @@ void t_misb_generator::generate_struct_writer(ostream& out, t_struct* tstruct, b
     bool beroid = getBEROIDParams((*f_iter)->annotations_);
 
     // XXX: @CJF: this is a dirty hack.
-    if (!("St060115_update_args" == tstruct->get_name() || "St060115_update_pargs" == tstruct->get_name() || dlp )) {
+    if (!("St0601_update_args" == tstruct->get_name() || "St0601_update_pargs" == tstruct->get_name() || dlp )) {
     // Write field header
     out << indent() << "xfer += oprot->writeFieldBegin("
         << "\"" << (*f_iter)->get_name() << "\", " << type_to_enum(type) << ", "
@@ -2000,12 +2000,12 @@ void t_misb_generator::generate_struct_writer(ostream& out, t_struct* tstruct, b
       generate_serialize_field(out, *f_iter, "this->");
     }
     // XXX: @CJF: this is a dirty hack.
-    if (!("St060115_update_args" == tstruct->get_name() || "St060115_update_pargs" == tstruct->get_name())) {
+    if (!("St0601_update_args" == tstruct->get_name() || "St0601_update_pargs" == tstruct->get_name())) {
     // Write field closer
     indent(out) << "xfer += oprot->writeFieldEnd();" << endl;
     }
     // XXX: @CJF: this is a dirty hack.
-    if (!("St060115_update_args" == tstruct->get_name() || "St060115_update_pargs" == tstruct->get_name())) {
+    if (!("St0601_update_args" == tstruct->get_name() || "St0601_update_pargs" == tstruct->get_name())) {
     if (check_if_set) {
       indent_down();
       indent(out) << '}';
@@ -2016,7 +2016,7 @@ void t_misb_generator::generate_struct_writer(ostream& out, t_struct* tstruct, b
   out << endl;
 
   // XXX: @CJF: this is a dirty hack.
-  if (!("St060115_update_args" == tstruct->get_name() || "St060115_update_pargs" == tstruct->get_name())) {
+  if (!("St0601_update_args" == tstruct->get_name() || "St0601_update_pargs" == tstruct->get_name())) {
   // Write the struct map
   out << indent() << "xfer += oprot->writeFieldStop();" << endl << indent()
       << "xfer += oprot->writeStructEnd();" << endl << indent()
