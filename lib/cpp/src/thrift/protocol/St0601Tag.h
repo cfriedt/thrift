@@ -1,5 +1,5 @@
-#ifndef ST060115TAG_H_
-#define ST060115TAG_H_
+#ifndef ST0601TAG_H_
+#define ST0601TAG_H_
 
 #if defined( __cplusplus )
 namespace org {
@@ -148,11 +148,11 @@ typedef enum {
     ACTIVE_PAYLOADS = 139,
     WEAPON_STORES = 140,
     WAYPOINT_LIST = 141,
-} St060115Tag;
+} St0601Tag;
 
 #if defined( __cplusplus )
 } /* namespace misb */
 } /* namespace org */
 #endif
 
-#endif /* ST060115TAG_H_ */
+#endif /* ST0601TAG_H_ */

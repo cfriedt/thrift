@@ -1,4 +1,5 @@
-include "st010212.thrift"
+include "st0102.thrift"
+include "st0903.thrift"
 
 namespace cpp org.misb
 
@@ -24,8 +25,7 @@ enum SensorFieldOfViewName {
 
 struct RvtLocalSet {
 }
-struct VmtiLocalSet {
-}
+
 enum OperationalMode {
 	OTHER
 	OPERATIONAL
@@ -330,7 +330,7 @@ struct UasDataLinkLocalSet {
 	47: optional GenericFlagData genericFlagData (
 		MaxLength = "1"
 	),	
-	48: optional st010212.SecurityLocalSet securityLocalSet
+	48: optional st0102.SecurityLocalSet securityLocalSet
 	49: optional double differentialPressure (
 		SinglePrecision
 		IMAPB = "0, 5000, 2"
@@ -423,7 +423,7 @@ struct UasDataLinkLocalSet {
 		Unsigned
 	)
 	73: optional RvtLocalSet rvtLocalSet
-	74: optional VmtiLocalSet vmtiLocalSet
+	74: optional st0903.VMTILocalSet vmtiLocalSet
 	75: optional double sensorEllipsoidHeight (
 		SinglePrecision
 		IMAPB = "-900, 19000, 2"
@@ -629,6 +629,6 @@ struct UasDataLinkLocalSet {
 		Unsigned
 	)
 }
-service St060115 {
+service St0601 {
 	oneway void update( 1: UasDataLinkLocalSet message )
 }

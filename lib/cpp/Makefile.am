@@ -162,7 +162,7 @@ include_protocol_HEADERS = \
                          src/thrift/protocol/ber.h \
                          src/thrift/protocol/beroid.h \
                          src/thrift/protocol/imap.h \
-                         src/thrift/protocol/St060115Tag.h \
+                         src/thrift/protocol/St0601Tag.h \
                          src/thrift/protocol/TBinaryProtocol.h \
                          src/thrift/protocol/TBinaryProtocol.tcc \
                          src/thrift/protocol/TCompactProtocol.h \

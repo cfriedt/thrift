@@ -21,7 +21,7 @@
 #include "../../lib/cpp/src/thrift/transport/TBufferTransports.h"
 
 // the thrift-generated protocol header
-#include "St060115.h"
+#include "St0601.h"
 
 // just some header files for testing
 #undef DEBUG
@@ -140,12 +140,12 @@ condition_variable TServerSharedTransport::defaultCv;
 mutex TServerSharedTransport::defaultM;
 bool TServerSharedTransport::defaultR;
 
-class St060115Handler : virtual public St060115If {
+class St0601Handler : virtual public St0601If {
  public:
 
   UasDataLinkLocalSet msg;
 
-  St060115Handler( condition_variable & c, mutex & m, bool & p ) : cv( c ), mu( m ), processed( p )  {
+  St0601Handler( condition_variable & c, mutex & m, bool & p ) : cv( c ), mu( m ), processed( p )  {
   }
 
   void update(const UasDataLinkLocalSet& message) {
@@ -170,7 +170,7 @@ public:
 
   ~TSimpleTransportFactory() override = default;
 
-  /**
+  /*
    * returns the exact same transport that is passed in
    */
   std::shared_ptr<TTransport> getTransport(std::shared_ptr<TTransport> trans) override {
@@ -180,10 +180,10 @@ public:
 
 
 constexpr size_t TMemoryBufferDefaultSize = 1024;
-class St060115Test : public ::testing::Test {
+class St0601Test : public ::testing::Test {
 
 public:
-    ~St060115Test() = default;
+    ~St0601Test() = default;
 
 protected:
     void SetUp() override {
@@ -198,8 +198,8 @@ protected:
         transport = make_shared<TMemoryBuffer>(memory, TMemoryBufferDefaultSize, TMemoryBuffer::MemoryPolicy::TAKE_OWNERSHIP);
 
         // first set up the server
-        handler = make_shared<St060115Handler>( processedCv, processedMu, processed );
-        processor = make_shared<St060115Processor>(handler);
+        handler = make_shared<St0601Handler>( processedCv, processedMu, processed );
+        processor = make_shared<St0601Processor>(handler);
         serverTransport = make_shared<TServerSharedTransport>(transport, readyMu, readyCv, ready);
         transportFactory = make_shared<TSimpleTransportFactory>();
         protocolFactory = make_shared<TMISBProtocolFactory>();
@@ -212,7 +212,7 @@ protected:
 
         // then set up the client
         protocol = make_shared<TMISBProtocol>(transport);
-        client = make_shared<St060115Client>(protocol);
+        client = make_shared<St0601Client>(protocol);
     }
 
     void TearDown() override {
@@ -364,7 +364,7 @@ protected:
     uint8_t *memory;
     shared_ptr<TTransport> transport;
 
-    shared_ptr<St060115Handler> handler;
+    shared_ptr<St0601Handler> handler;
     shared_ptr<TProcessor> processor;
     shared_ptr<TServerTransport> serverTransport;
     shared_ptr<TTransportFactory> transportFactory;
@@ -373,16 +373,16 @@ protected:
     thread serverThread;
 
     shared_ptr<TProtocol> protocol;
-    shared_ptr<St060115Client> client;
+    shared_ptr<St0601Client> client;
 
     unordered_map<unsigned,size_t> tagOffset;
     unordered_map<unsigned,size_t> tagSize;
 };
-const uint16_t St060115Test::expected_checksum = 0xabcd;
-const uint64_t St060115Test::expected_precisionTimeStamp = 0x0011223344556677;
-const uint8_t St060115Test::expected_uasDatalinkLsVersionNumber = 15;
+const uint16_t St0601Test::expected_checksum = 0xabcd;
+const uint64_t St0601Test::expected_precisionTimeStamp = 0x0011223344556677;
+const uint8_t St0601Test::expected_uasDatalinkLsVersionNumber = 15;
 
-TEST_F( St060115Test, testMemoryWrite ) {
+TEST_F( St0601Test, testMemoryWrite ) {
     expected_message.__set_precisionTimeStamp( expected_precisionTimeStamp );
     expected_message.__set_checksum( expected_checksum );
     expected_message.__set_uasDatalinkLsVersionNumber( expected_uasDatalinkLsVersionNumber );
@@ -400,11 +400,11 @@ TEST_F( St060115Test, testMemoryWrite ) {
  * 3) generated decoder works as expected
  */
 
-/**
+/*
  * Simply test the 3 required items within the UAS Datalink Local Set are sent,
  * are in the correct order, and have the correct binary encoding.
  */
-TEST_F( St060115Test, requiredTags ) {
+TEST_F( St0601Test, requiredTags ) {
     // if we return from this function, then the decoder is verified to work for
     // the three named fields. Note: we are not verifying the checksum is calculated
     // correctly, just that the value in the tag is correctly serialized / deserialized.
@@ -434,11 +434,11 @@ TEST_F( St060115Test, requiredTags ) {
     EXPECT_EQ( actual_v8, expected_v8 );
 }
 
-/**
+/*
  * Test that we can encode / decode a string tag and that it is
  * binary-compatible with MISB
  */
-TEST_F( St060115Test, string ) {
+TEST_F( St0601Test, string ) {
     string expected_string( "Testing, Testing, 123" );
 
     expected_message.__set_platformDesignation( expected_string );
@@ -451,13 +451,13 @@ TEST_F( St060115Test, string ) {
 
     EXPECT_EQ( actual_string, expected_string );
 
-    validateBytes( St060115Tag::PLATFORM_DESIGNATION, to_vector( expected_string ) );
+    validateBytes( St0601Tag::PLATFORM_DESIGNATION, to_vector( expected_string ) );
 }
 
-/**
+/*
  * Test that that the MaxLength annotation is respected for strings
  */
-TEST_F( St060115Test, string_MaxLength_127 ) {
+TEST_F( St0601Test, string_MaxLength_127 ) {
     string expected_string( 127, 'x' );
 
     expected_message.__set_platformDesignation( expected_string + expected_string );
@@ -473,12 +473,12 @@ TEST_F( St060115Test, string_MaxLength_127 ) {
 
 // This test fails (predictably)
 #if 0
-/**
+/*
  * Test that that the FixedLength annotation is respected for strings
  * Note, 0601.15 does not currently support any fixed-length strings that
- * I'm aware of, so this test is only successful if you adjust st060115.thrift
+ * I'm aware of, so this test is only successful if you adjust st0601.thrift
  */
-TEST_F( St060115Test, string_FixedLength_lt127 ) {
+TEST_F( St0601Test, string_FixedLength_lt127 ) {
     string x( "x" );
     string expected_string = x + string( 126, '\0' );
 
@@ -494,12 +494,12 @@ TEST_F( St060115Test, string_FixedLength_lt127 ) {
 }
 #endif
 
-/**
+/*
  * Test that that the FixedLength annotation is respected for strings
  * Note, 0601.15 does not currently support any fixed-length strings that
- * I'm aware of, so this test is only successful if you adjust st060115.thrift
+ * I'm aware of, so this test is only successful if you adjust st0601.thrift
  */
-TEST_F( St060115Test, string_FixedLength_gt127 ) {
+TEST_F( St0601Test, string_FixedLength_gt127 ) {
     string expected_string( 127, 'x' );
 
     expected_message.__set_platformDesignation( expected_string + expected_string );
@@ -513,11 +513,11 @@ TEST_F( St060115Test, string_FixedLength_gt127 ) {
     EXPECT_EQ( actual_string, expected_string );
 }
 
-/**
+/*
  * Test that we can encode / decode a bool tag and that it is
  * binary-compatible with MISB
  */
-TEST_F( St060115Test, bool ) {
+TEST_F( St0601Test, bool ) {
     bool expected_bool = true;
 
     expected_message.__set_icingDetected( expected_bool );
@@ -534,14 +534,14 @@ TEST_F( St060115Test, bool ) {
 		U8(expected_bool >> 0),
     };
 
-    validateBytes( St060115Tag::ICING_DETECTED, expected_v8 );
+    validateBytes( St0601Tag::ICING_DETECTED, expected_v8 );
 }
 
-/**
+/*
  * Test that we can encode / decode an i8 tag and that it is
  * binary-compatible with MISB
  */
-TEST_F( St060115Test, i8 ) {
+TEST_F( St0601Test, i8 ) {
     int8_t expected_int8 = -25;
 
     expected_message.__set_outsideAirTemperature( expected_int8 );
@@ -558,17 +558,17 @@ TEST_F( St060115Test, i8 ) {
 		U8(expected_int8 >> 0),
     };
 
-    validateBytes( St060115Tag::OUTSIDE_AIR_TEMPERATURE, expected_v8 );
+    validateBytes( St0601Tag::OUTSIDE_AIR_TEMPERATURE, expected_v8 );
 }
 
 // FIXME: currently, the "Unsigned" annotation does nothing for integer values
 // XXX: unsure if there are any signed 16-bit tags that we can test with
 
-/**
+/*
  * Test that we can encode / decode an i16 tag and that it is
  * binary-compatible with MISB
  */
-TEST_F( St060115Test, i16 ) {
+TEST_F( St0601Test, i16 ) {
 
     int16_t expected_int16 = 0xaabb;
 
@@ -587,14 +587,14 @@ TEST_F( St060115Test, i16 ) {
 		U8(expected_int16 >> 0),
     };
 
-    validateBytes( St060115Tag::WEAPON_LOAD, expected_v8 );
+    validateBytes( St0601Tag::WEAPON_LOAD, expected_v8 );
 }
 
-/**
+/*
  * Test that we can encode / decode an i32 tag and that it is
  * binary-compatible with MISB
  */
-TEST_F( St060115Test, i32 ) {
+TEST_F( St0601Test, i32 ) {
 
     int32_t expected_int32 = 0xaabbccdd;
 
@@ -615,14 +615,14 @@ TEST_F( St060115Test, i32 ) {
 		U8(expected_int32 >> 0),
     };
 
-    validateBytes( St060115Tag::LEAP_SECONDS, expected_v8 );
+    validateBytes( St0601Tag::LEAP_SECONDS, expected_v8 );
 }
 
-/**
+/*
  * Test that we can encode / decode an i64 tag and that it is
  * binary-compatible with MISB
  */
-TEST_F( St060115Test, i64 ) {
+TEST_F( St0601Test, i64 ) {
 
     int64_t expected_int64 = 0x0011223344556677;
 
@@ -647,14 +647,14 @@ TEST_F( St060115Test, i64 ) {
 		U8(expected_int64 >> 0),
     };
 
-    validateBytes( St060115Tag::CORRECTION_OFFSET, expected_v8 );
+    validateBytes( St0601Tag::CORRECTION_OFFSET, expected_v8 );
 }
 
-/**
+/*
  * Test that we can encode / decode an enum tag and that it is
  * binary-compatible with MISB
  */
-TEST_F( St060115Test, enum ) {
+TEST_F( St0601Test, enum ) {
 
     OperationalMode::type expected_operationalMode = OperationalMode::OPERATIONAL;
 
@@ -672,17 +672,17 @@ TEST_F( St060115Test, enum ) {
         U8(expected_operationalMode >> 0),
     };
 
-    validateBytes( St060115Tag::OPERATIONAL_MODE, expected_v8 );
+    validateBytes( St0601Tag::OPERATIONAL_MODE, expected_v8 );
 }
 
-/**
+/*
  * Test that the IMAPA annotation correctly triggers IMAPA encode & decode, and
  * that the encoded / decoded values are correct using the platformCourseAngle()
  * method.
  *
  * IMAPA(0,360,0.016625)
  */
-TEST_F( St060115Test, IMAPA ) {
+TEST_F( St0601Test, IMAPA ) {
 
     const double lowerBound = 0;
     const double upperBound = 360;
@@ -716,17 +716,17 @@ TEST_F( St060115Test, IMAPA ) {
     };
     ASSERT_EQ( expected_v8.size(), expected_size );
 
-    validateBytes( St060115Tag::PLATFORM_COURSE_ANGLE, expected_v8);
+    validateBytes( St0601Tag::PLATFORM_COURSE_ANGLE, expected_v8);
 }
 
-/**
+/*
  * Test that the IMAPB annotation correctly triggers IMAPB encode & decode, and
  * that the encoded / decoded values are correct using the alternatePlatformLongitude()
  * method.
  *
  * IMAPB(-180, 180, 4)
  */
-TEST_F( St060115Test, IMAPB ) {
+TEST_F( St0601Test, IMAPB ) {
 
     const double lowerBound = -180;
     const double upperBound = 180;
@@ -757,13 +757,13 @@ TEST_F( St060115Test, IMAPB ) {
     };
     ASSERT_EQ( expected_v8.size(), expected_size );
 
-    validateBytes( St060115Tag::ALTERNATE_PLATFORM_LONGITUDE, expected_v8);
+    validateBytes( St0601Tag::ALTERNATE_PLATFORM_LONGITUDE, expected_v8);
 }
 
-/**
+/*
  * Test that nested local sets are properly encoded / decoded
  */
-TEST_F( St060115Test, NestedStruct ) {
+TEST_F( St0601Test, NestedStruct ) {
 
     SecurityLocalSet expected_securityLocalSet;
 
@@ -792,13 +792,13 @@ TEST_F( St060115Test, NestedStruct ) {
         22,2,0,12,
     };
 
-    validateBytes( St060115Tag::SECURITY_LOCAL_SET, expected_v8);
+    validateBytes( St0601Tag::SECURITY_LOCAL_SET, expected_v8);
 }
 
-/**
+/*
  * Test that DLP are properly encoded / decoded
  */
-TEST_F( St060115Test, DLP ) {
+TEST_F( St0601Test, DLP ) {
 
     SensorFrameRatePack expected_sensorFrameRatePack;
 
@@ -820,13 +820,13 @@ TEST_F( St060115Test, DLP ) {
         30,
     };
 
-    validateBytes( St060115Tag::SENSOR_FRAME_RATE_PACK, expected_v8);
+    validateBytes( St0601Tag::SENSOR_FRAME_RATE_PACK, expected_v8);
 }
 
-/**
+/*
  * Test that DLP are properly encoded / decoded
  */
-TEST_F( St060115Test, DLP2 ) {
+TEST_F( St0601Test, DLP2 ) {
 
     SensorFrameRatePack expected_sensorFrameRatePack;
 
@@ -846,5 +846,31 @@ TEST_F( St060115Test, DLP2 ) {
         1,
     };
 
-    validateBytes( St060115Tag::SENSOR_FRAME_RATE_PACK, expected_v8);
+    validateBytes( St0601Tag::SENSOR_FRAME_RATE_PACK, expected_v8);
+}
+
+/*
+ * Test that the VMTI Local Set is properly encoded / decoded
+ *
+ * Specifically, the VTarget Pack with its irregular VTarget ID
+ * field that has no key or length but is BER-OID encoded.
+ */
+TEST_F( St0601Test, VMTILocalSetVTargetPack ) {
+
+    VMTILocalSet expected_vmtiLocalSet;
+
+    expected_message.__set_vmtiLocalSet( expected_vmtiLocalSet );
+    ASSERT_TRUE( expected_message.__isset.vmtiLocalSet );
+
+    common();
+
+    EXPECT_TRUE( actual_message.__isset.vmtiLocalSet );
+    VMTILocalSet actual_vmtiLocalSet = actual_message.vmtiLocalSet;
+
+    const vector<uint8_t> expected_v8 {
+        30,
+        1,
+    };
+
+    validateBytes( St0601Tag::VMTI_LOCAL_SET, expected_v8);
 }

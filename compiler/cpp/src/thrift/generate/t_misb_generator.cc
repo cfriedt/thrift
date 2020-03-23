@@ -2296,6 +2296,7 @@ void t_misb_generator::generate_service(t_service* tservice) {
               << "namespace apache { namespace thrift { namespace async {" << endl
               << "class TAsyncChannel;" << endl << "}}}" << endl;
   }
+  f_header_ << "#include <thrift/protocol/TMISBProtocol.h>" << endl;
   f_header_ << "#include <thrift/TDispatchProcessor.h>" << endl;
   if (gen_cob_style_) {
     f_header_ << "#include <thrift/async/TAsyncDispatchProcessor.h>" << endl;
@@ -4708,12 +4709,14 @@ void t_misb_generator::generate_serialize_field(ostream& out,
                 throw "INVALID IMAPB SPECIFICATION: " + name + ": (" + lowerBoundS + ", " + upperBoundS + ", " + sizeInBytesS + " )";
             }
 
-            indent(out) <<  "uintmax_t imapb;" << endl;
-            indent(out) <<  "::imapBEncode(" << lowerBoundS << ", " << upperBoundS << ", " << sizeInBytes << ", " << name << ", & imapb );" << endl;
-            // network byte order
-            for( int i = sizeInBytes; i > 0; --i ) {
-                indent(out) <<  "xfer += oprot->writeByte( uint8_t( imapb >> " << ((i - 1) * 8) << " ) );" << endl;
-            }
+            indent(out) <<  "{" << endl;
+                out << indent() << indent() << "uintmax_t imapb;" << endl;
+                out << indent() << indent() << "::imapBEncode(" << lowerBoundS << ", " << upperBoundS << ", " << sizeInBytes << ", " << name << ", & imapb );" << endl;
+                // network byte order
+                for( int i = sizeInBytes; i > 0; --i ) {
+                    out << indent() << indent() << "xfer += oprot->writeByte( uint8_t( imapb >> " << ((i - 1) * 8) << " ) );" << endl;
+                }
+            indent(out) <<  "}" << endl;
         } else {
             indent(out) <<  "xfer += oprot->writeDouble(" << name << ");";
         }
