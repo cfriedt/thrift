@@ -891,11 +891,11 @@ TEST_F( St0601Test, VMTILocalSetVTargetPack ) {
     // XXX: @CJF: 20200323: put together some enums for the keys below
     const vector<uint8_t> expected_v8 {
         // total number of targets detected
-        5, 3, 0, 0, 1,
+        5, 1, 1,
         // number of reported targets
         6, 1, 1,
         // motion imagery frame number
-        7, 4, 0, 0, 0,
+        7, 3, 0, 0, 0,
         // vmti source sensor
         10, 16, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
         // vtarget series
@@ -913,7 +913,7 @@ TEST_F( St0601Test, VMTILocalSetVTargetPack ) {
             // target centroid pixel column
             20, 2, 0, 0,
             // vtracker ls
-            104, 12,
+            104, 18,
             6, 16, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
     };
 
