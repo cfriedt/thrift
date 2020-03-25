@@ -30,7 +30,7 @@ size_t writeBeroid(::apache::thrift::protocol::TProtocol* oprot, const uintmax_t
     int nBytes = ::berOidUintEncode( x, beroid, sizeof(beroid) );
     for( int i = 0; i < nBytes; ++i ) {
         oprot->writeByte( beroid[ i ] );
-    }
+}
 
     return size_t( nBytes );
 }
@@ -75,6 +75,47 @@ size_t writeBer(::apache::thrift::protocol::TProtocol* oprot, const uintmax_t & 
     return berLen;
 }
 
+size_t writeVariableLengthInteger(::apache::thrift::protocol::TProtocol* oprot, const size_t & maxLength, const uintmax_t & _x) {
+    size_t r;
+
+    using ::apache::thrift::protocol::TProtocolException;
+
+    if ( 0 == maxLength || maxLength > sizeof(int64_t) ) {
+        throw TProtocolException(TProtocolException::INVALID_DATA);
+    }
+
+    uintmax_t mask;
+    if ( 8 == maxLength ) {
+        mask = -1;
+    } else {
+        mask = (1ULL << (8 * maxLength)) - 1;
+    }
+
+    uintmax_t x = _x & mask;
+    if ( 0 == x ) {
+        if ( nullptr != oprot ) {
+            oprot->writeByte(0);
+        }
+        return 1;
+    }
+
+    r = 0;
+    bool foundNonZero = false;
+    for( size_t i = maxLength; i > 0; --i ) {
+        uint8_t byte = (x >> ((i - 1) * 8));
+        if ( ! foundNonZero && 0 == byte ) {
+            continue;
+        }
+        foundNonZero = true;
+        if ( nullptr == oprot ) {
+            r++;
+        } else {
+            r += oprot->writeByte(byte);
+        }
+    }
+
+    return r;
+}
 
 }
 }

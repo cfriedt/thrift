@@ -624,7 +624,7 @@ TEST_F( St0601Test, i32 ) {
  */
 TEST_F( St0601Test, i64 ) {
 
-    int64_t expected_int64 = 0x0011223344556677;
+    int64_t expected_int64 = 0x1122334455667788;
 
     expected_message.__set_correctionOffset( expected_int64 );
     ASSERT_TRUE( expected_message.__isset.correctionOffset );

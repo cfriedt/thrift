@@ -164,6 +164,44 @@ static size_t getSizeParam( t_field *tfield, const string & param ) {
                 throw "";
             }
             r = size_t( x );
+
+            if ( 0 == r ) {
+                throw "";
+            }
+
+            t_type *ttype = tfield->get_type();
+            if ( ttype->is_base_type() ) {
+                switch( ((t_base_type*)ttype)->get_base() ) {
+                case t_base_type::TYPE_DOUBLE:
+                    // ignoring here for now
+                    break;
+                case t_base_type::TYPE_STRING:
+                    // can be "long"
+                    break;
+                case t_base_type::TYPE_I16:
+                    if ( r > sizeof(int16_t) ) {
+                        throw "";
+                    }
+                    break;
+                case t_base_type::TYPE_I32:
+                    if ( r > sizeof(int32_t) ) {
+                        throw "";
+                    }
+                    break;
+                case t_base_type::TYPE_I64:
+                    if ( r > sizeof(int64_t) ) {
+                        throw "";
+                    }
+                    break;
+                case t_base_type::TYPE_BOOL:
+                //case t_base_type::TYPE_DOUBLE:
+                case t_base_type::TYPE_I8:
+                default:
+                    // does not make sense to use a MaxLength parameter
+                    throw "";
+                    break;
+                }
+            }
         } catch( ... ) {
             throw "INVALID SIZE ANNOTATION: " + tfield->get_name() + ": " + param;
         }
@@ -1705,6 +1743,8 @@ void t_misb_generator::generate_struct_writeLen(ostream& out, t_struct* tstruct,
   bool check_if_set = false;
   for (f_iter = fields.begin(); f_iter != fields.end(); ++f_iter) {
 
+    size_t maxLength = getMaxLengthParam( (*f_iter) );
+
     bool beroid = getBEROIDParams((*f_iter)->annotations_);
 
     // XXX: @CJF: this is a dirty hack.
@@ -1758,7 +1798,12 @@ void t_misb_generator::generate_struct_writeLen(ostream& out, t_struct* tstruct,
           if ( beroid ) {
               out << indent() << "xfer += writeBer(oprot, sizeof(this->" << (*f_iter)->get_name() << "));" << endl;
           } else {
-              out << indent() << "xfer += writeBer(oprot, sizeof(this->" << (*f_iter)->get_name() << "));" << endl;
+              if ( size_t(-1) != maxLength ) {
+                  // support variable-length integers
+                  out << indent() << "xfer += writeBer(oprot, ::apache::thrift::protocol::writeVariableLengthInteger(nullptr, " << maxLength << ", this->" << (*f_iter)->get_name() << "));" << endl;
+              } else {
+                  out << indent() << "xfer += writeBer(oprot, sizeof(this->" << (*f_iter)->get_name() << "));" << endl;
+              }
           }
           break;
 
@@ -1887,6 +1932,9 @@ void t_misb_generator::generate_struct_writer(ostream& out, t_struct* tstruct, b
 
   bool check_if_set = false;
   for (f_iter = fields.begin(); f_iter != fields.end(); ++f_iter) {
+
+    size_t maxLength = getMaxLengthParam( (*f_iter) );
+
     // XXX: @CJF: this is a dirty hack.
     if (!("St0601_update_args" == tstruct->get_name() || "St0601_update_pargs" == tstruct->get_name())) {
     check_if_set = (*f_iter)->get_req() == t_field::T_OPTIONAL
@@ -1940,7 +1988,12 @@ void t_misb_generator::generate_struct_writer(ostream& out, t_struct* tstruct, b
           if ( beroid ) {
             out << indent() << "xfer += writeBer(oprot, ::berOidUintEncodeLength(" << (*f_iter)->get_name() << "));" << endl;
           } else {
-            out << indent() << "xfer += writeBer(oprot, sizeof(this->" << (*f_iter)->get_name() << "));" << endl;
+            if ( size_t(-1) != maxLength ) {
+                // support variable-length integers
+                out << indent() << "xfer += writeBer(oprot, ::apache::thrift::protocol::writeVariableLengthInteger(nullptr, " << maxLength << ", this->" << (*f_iter)->get_name() << "));" << endl;
+            } else {
+                out << indent() << "xfer += writeBer(oprot, sizeof(this->" << (*f_iter)->get_name() << "));" << endl;
+            }
           }
           break;
 
@@ -4665,21 +4718,33 @@ void t_misb_generator::generate_serialize_field(ostream& out,
         if ( beroid ) {
           indent(out) <<  "xfer += writeBeroid(oprot," << name << ");";
         } else {
-          indent(out) <<  "xfer += oprot->writeI16(" << name << ");";
+          if ( size_t(-1) != maxLength ) {
+              indent(out) <<  "xfer += writeVariableLengthInteger(oprot, " << maxLength << ", " << name << ");";
+          } else {
+              indent(out) <<  "xfer += oprot->writeI16(" << name << ");";
+          }
         }
         break;
       case t_base_type::TYPE_I32:
         if ( beroid ) {
           indent(out) <<  "xfer += writeBeroid(oprot," << name << ");";
         } else {
-          indent(out) <<  "xfer += oprot->writeI32(" << name << ");";
+            if ( size_t(-1) != maxLength ) {
+                indent(out) <<  "xfer += writeVariableLengthInteger(oprot, " << maxLength << ", " << name << ");";
+            } else {
+                indent(out) <<  "xfer += oprot->writeI32(" << name << ");";
+            }
         }
         break;
       case t_base_type::TYPE_I64:
         if ( beroid ) {
           indent(out) <<  "xfer += writeBeroid(oprot," << name << ");";
         } else {
-          indent(out) <<  "xfer += oprot->writeI64(" << name << ");";
+            if ( size_t(-1) != maxLength ) {
+                indent(out) <<  "xfer += writeVariableLengthInteger(oprot, " << maxLength << ", " << name << ");";
+            } else {
+                indent(out) <<  "xfer += oprot->writeI64(" << name << ");";
+            }
         }
         break;
       case t_base_type::TYPE_DOUBLE:

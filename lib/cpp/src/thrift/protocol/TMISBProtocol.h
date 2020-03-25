@@ -37,6 +37,7 @@ size_t writeBeroid(::apache::thrift::protocol::TProtocol* oprot, const uintmax_t
 size_t readBer(::apache::thrift::protocol::TProtocol* iprot, uintmax_t & r);
 size_t writeBer(::apache::thrift::protocol::TProtocol* oprot, const uintmax_t & x);
 
+size_t writeVariableLengthInteger(::apache::thrift::protocol::TProtocol* oprot, const size_t & maxLength, const uintmax_t & x);
 /**
  * The default binary protocol for thrift. Writes all data in a very basic
  * binary format, essentially just spitting out the raw bytes.
