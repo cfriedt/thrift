@@ -650,6 +650,28 @@ TEST_F( St0601Test, i64 ) {
     validateBytes( St0601Tag::CORRECTION_OFFSET, expected_v8 );
 }
 
+TEST_F( St0601Test, i64_VariableLength ) {
+
+    // With variable-length integers (non-beroid, non-ber)
+    // any zeros in the upper bytes are not transmitted.
+    // In this case, we expect 1 byte for the zero value.
+    int64_t expected_int64 = 0;
+
+    expected_message.__set_correctionOffset( expected_int64 );
+    ASSERT_TRUE( expected_message.__isset.correctionOffset );
+
+    common();
+
+    EXPECT_TRUE( actual_message.__isset.correctionOffset );
+    int64_t actual_int64 = actual_message.correctionOffset;
+
+    EXPECT_EQ( actual_int64, expected_int64 );
+
+    const vector<uint8_t> expected_v8 { 0 };
+
+    validateBytes( St0601Tag::CORRECTION_OFFSET, expected_v8 );
+}
+
 /*
  * Test that we can encode / decode an enum tag and that it is
  * binary-compatible with MISB

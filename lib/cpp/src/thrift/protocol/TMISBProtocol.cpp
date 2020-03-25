@@ -117,6 +117,28 @@ size_t writeVariableLengthInteger(::apache::thrift::protocol::TProtocol* oprot, 
     return r;
 }
 
+size_t readVariableLengthInteger(::apache::thrift::protocol::TProtocol* iprot, const size_t & maxLength, uintmax_t & x) {
+    size_t r;
+
+    using ::apache::thrift::protocol::TProtocolException;
+
+    if ( 0 == maxLength || maxLength > sizeof(int64_t) ) {
+        throw TProtocolException(TProtocolException::INVALID_DATA);
+    }
+
+    x = 0;
+    r = 0;
+    for( size_t i = 0; i < maxLength; ++i ) {
+        int8_t byte;
+        iprot->readByte(byte);
+        x <<= 8;
+        x |= uint8_t(byte);
+        r++;
+    }
+
+    return r;
+}
+
 }
 }
 } // apache::thrift::protocol

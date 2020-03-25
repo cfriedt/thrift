@@ -4365,6 +4365,8 @@ void t_misb_generator::generate_deserialize_field(ostream& out,
     throw "CANNOT GENERATE DESERIALIZE CODE FOR void TYPE: " + prefix + tfield->get_name();
   }
 
+  size_t maxLength = getMaxLengthParam(tfield);
+
   bool beroid = getBEROIDParams(tfield->annotations_);
 
   string name = prefix + tfield->get_name() + suffix;
@@ -4404,7 +4406,15 @@ void t_misb_generator::generate_deserialize_field(ostream& out,
         indent(out) << "xfer += readBeroid(iprot, beroidv);" << endl;
         indent(out) << name << " = beroidv;" << endl;
       } else {
-        indent(out) << "xfer += iprot->readI16(" << name << ");";
+        if ( size_t(-1) == maxLength ) {
+          indent(out) << "xfer += iprot->readI16(" << name << ");";
+        } else {
+          indent(out) << "{" << endl;
+          indent(out) << indent() << "uintmax_t var;" << endl;
+          indent(out) << indent() << "xfer += readVariableLengthInteger(iprot, std::min(uintmax_t(" << maxLength << "), ber), var);";
+          indent(out) << indent() << name << " = var;" << endl;
+          indent(out) << "}" << endl;
+        }
       }
       break;
     case t_base_type::TYPE_I32:
@@ -4413,7 +4423,15 @@ void t_misb_generator::generate_deserialize_field(ostream& out,
         indent(out) << "xfer += readBeroid(iprot, beroidv);" << endl;
         indent(out) << name << " = beroidv;" << endl;
       } else {
-        indent(out) << "xfer += iprot->readI32(" << name << ");";
+        if ( size_t(-1) == maxLength ) {
+          indent(out) << "xfer += iprot->readI32(" << name << ");";
+        } else {
+          indent(out) << "{" << endl;
+          indent(out) << indent() << "uintmax_t var;" << endl;
+          indent(out) << indent() << "xfer += readVariableLengthInteger(iprot, std::min(uintmax_t(" << maxLength << "), ber), var);";
+          indent(out) << indent() << name << " = var;" << endl;
+          indent(out) << "}" << endl;
+        }
       }
       break;
     case t_base_type::TYPE_I64:
@@ -4422,7 +4440,15 @@ void t_misb_generator::generate_deserialize_field(ostream& out,
         indent(out) << "xfer += readBeroid(iprot, beroidv);" << endl;
         indent(out) << name << " = beroidv;" << endl;
       } else {
-        indent(out) << "xfer += iprot->readI64(" << name << ");";
+        if ( size_t(-1) == maxLength ) {
+          indent(out) << "xfer += iprot->readI64(" << name << ");";
+        } else {
+          indent(out) << "{" << endl;
+          indent(out) << indent() << "uintmax_t var;" << endl;
+          indent(out) << indent() << "xfer += readVariableLengthInteger(iprot, std::min(uintmax_t(" << maxLength << "), ber), var);";
+          indent(out) << indent() << name << " = var;" << endl;
+          indent(out) << "}" << endl;
+        }
       }
       break;
     case t_base_type::TYPE_DOUBLE: {
