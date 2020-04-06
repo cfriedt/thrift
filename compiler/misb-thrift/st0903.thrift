@@ -167,11 +167,15 @@ struct VTrackerLocalSet {
 }
 
 struct VTargetPack {
-	// must come first in the VTargetPack 
+	// must come first in the VTargetPack.  
+	// 32767 is the highest number supported by thrift for enumerating fields 
 	32767: required i32 targetIdNumber (
 		Unsigned
 		BEROID
+		MinValue = "1"
 		MaxValue = "2097151"
+		OmitKey
+		OmitLength
 	)
 	1: optional i64 targetCentroidPixelNumber (
 		Unsigned

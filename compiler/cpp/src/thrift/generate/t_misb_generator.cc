@@ -70,6 +70,24 @@ static vector<string> split( const string & s, const int delimiter, const bool t
     return tokens;
 }
 
+static bool getOmitKeyParam( const std::map<string,string> & annotations ) {
+    auto it = annotations.find( "OmitKey" );
+    if ( annotations.end() == it ) {
+        return false;
+    } else {
+        return true;
+    }
+}
+
+static bool getOmitLengthParam( const std::map<string,string> & annotations ) {
+    auto it = annotations.find( "OmitLength" );
+    if ( annotations.end() == it ) {
+        return false;
+    } else {
+        return true;
+    }
+}
+
 static bool getBEROIDParams( const std::map<string,string> & annotations ) {
     auto it = annotations.find( "BEROID" );
     if ( annotations.end() == it ) {
@@ -1743,8 +1761,9 @@ void t_misb_generator::generate_struct_writeLen(ostream& out, t_struct* tstruct,
   bool check_if_set = false;
   for (f_iter = fields.begin(); f_iter != fields.end(); ++f_iter) {
 
+    bool omitKey = getOmitKeyParam((*f_iter)->annotations_);
+    bool omitLength = getOmitLengthParam((*f_iter)->annotations_);
     size_t maxLength = getMaxLengthParam( (*f_iter) );
-
     bool beroid = getBEROIDParams((*f_iter)->annotations_);
 
     // XXX: @CJF: this is a dirty hack.
@@ -1762,7 +1781,7 @@ void t_misb_generator::generate_struct_writeLen(ostream& out, t_struct* tstruct,
     t_type *type = (*f_iter)->get_type();
 
     // XXX: @CJF: this is a dirty hack.
-    if (!("St0601_update_args" == tstruct->get_name() || "St0601_update_pargs" == tstruct->get_name() || dlp)) {
+    if (!(omitKey || "St0601_update_args" == tstruct->get_name() || "St0601_update_pargs" == tstruct->get_name() || dlp)) {
     // Write field header
     out << indent() << "xfer += oprot->writeFieldBegin("
         << "\"" << (*f_iter)->get_name() << "\", " << type_to_enum(type) << ", "
@@ -1795,6 +1814,9 @@ void t_misb_generator::generate_struct_writeLen(ostream& out, t_struct* tstruct,
       case t_base_type::TYPE_I16:
       case t_base_type::TYPE_I32:
       case t_base_type::TYPE_I64:
+          if ( omitLength ) {
+              break;
+          }
           if ( beroid ) {
               out << indent() << "xfer += writeBer(oprot, sizeof(this->" << (*f_iter)->get_name() << "));" << endl;
           } else {
@@ -1933,7 +1955,10 @@ void t_misb_generator::generate_struct_writer(ostream& out, t_struct* tstruct, b
   bool check_if_set = false;
   for (f_iter = fields.begin(); f_iter != fields.end(); ++f_iter) {
 
+    bool omitKey = getOmitKeyParam((*f_iter)->annotations_);
+    bool omitLength = getOmitLengthParam((*f_iter)->annotations_);
     size_t maxLength = getMaxLengthParam( (*f_iter) );
+    bool beroid = getBEROIDParams((*f_iter)->annotations_);
 
     // XXX: @CJF: this is a dirty hack.
     if (!("St0601_update_args" == tstruct->get_name() || "St0601_update_pargs" == tstruct->get_name())) {
@@ -1949,10 +1974,8 @@ void t_misb_generator::generate_struct_writer(ostream& out, t_struct* tstruct, b
 
     t_type *type = (*f_iter)->get_type();
 
-    bool beroid = getBEROIDParams((*f_iter)->annotations_);
-
     // XXX: @CJF: this is a dirty hack.
-    if (!("St0601_update_args" == tstruct->get_name() || "St0601_update_pargs" == tstruct->get_name() || dlp )) {
+    if (!(omitKey || "St0601_update_args" == tstruct->get_name() || "St0601_update_pargs" == tstruct->get_name() || dlp )) {
     // Write field header
     out << indent() << "xfer += oprot->writeFieldBegin("
         << "\"" << (*f_iter)->get_name() << "\", " << type_to_enum(type) << ", "
@@ -1985,6 +2008,9 @@ void t_misb_generator::generate_struct_writer(ostream& out, t_struct* tstruct, b
       case t_base_type::TYPE_I16:
       case t_base_type::TYPE_I32:
       case t_base_type::TYPE_I64:
+          if ( omitLength ) {
+              break;
+          }
           if ( beroid ) {
             out << indent() << "xfer += writeBer(oprot, ::berOidUintEncodeLength(" << (*f_iter)->get_name() << "));" << endl;
           } else {

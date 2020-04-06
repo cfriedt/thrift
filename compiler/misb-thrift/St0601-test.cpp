@@ -1,3 +1,4 @@
+#include <algorithm>
 #include <cstdint>
 #include <cstdlib>
 #include <condition_variable>
@@ -7,6 +8,7 @@
 #include <mutex>
 #include <thread>
 #include <unordered_map>
+#include <vector>
 
 #include <gtest/gtest.h>
 
@@ -382,6 +384,7 @@ const uint16_t St0601Test::expected_checksum = 0xabcd;
 const uint64_t St0601Test::expected_precisionTimeStamp = 0x0011223344556677;
 const uint8_t St0601Test::expected_uasDatalinkLsVersionNumber = 15;
 
+#if 0
 TEST_F( St0601Test, testMemoryWrite ) {
     expected_message.__set_precisionTimeStamp( expected_precisionTimeStamp );
     expected_message.__set_checksum( expected_checksum );
@@ -870,6 +873,7 @@ TEST_F( St0601Test, DLP2 ) {
 
     validateBytes( St0601Tag::SENSOR_FRAME_RATE_PACK, expected_v8);
 }
+#endif
 
 /*
  * Test that the VMTI Local Set is properly encoded / decoded
@@ -879,15 +883,18 @@ TEST_F( St0601Test, DLP2 ) {
  */
 TEST_F( St0601Test, VMTILocalSetVTargetPack ) {
 
+    const string sourceSensor("The Eye of Sauron");
+    const string vmtiAlgorithm("Bogosort");
+
     VMTILocalSet expected_vmtiLocalSet;
 
     expected_vmtiLocalSet.__set_totalNumberOfTargetsDetectedInTheFrame(1);
     expected_vmtiLocalSet.__set_numberOfReportedTargets(1);
-    expected_vmtiLocalSet.__set_motionImageryFrameNumber(1);
-    expected_vmtiLocalSet.__set_vmtiSourceSensor(string(16,char('\0')));
+    expected_vmtiLocalSet.__set_motionImageryFrameNumber(0);
+    expected_vmtiLocalSet.__set_vmtiSourceSensor(sourceSensor);
 
     VTargetPack tgt;
-    tgt.__set_targetIdNumber(0);
+    tgt.__set_targetIdNumber(144); // use the BER-OID example from MISB
     tgt.__set_targetCentroidPixelNumber(0);
     tgt.__set_targetCentroidPixelNumber(0);
     tgt.__set_boundingBoxTopLeftPixelNumber(0);
@@ -897,7 +904,7 @@ TEST_F( St0601Test, VMTILocalSetVTargetPack ) {
 
     VTrackerLocalSet trk;
 
-    trk.__set_algorithm(string(16,char('\0')));
+    trk.__set_algorithm(vmtiAlgorithm);
     tgt.__set_vTrackerLs(trk);
 
     expected_vmtiLocalSet.__set_vTargetSeries( tgt );
@@ -910,34 +917,57 @@ TEST_F( St0601Test, VMTILocalSetVTargetPack ) {
     EXPECT_TRUE( actual_message.__isset.vmtiLocalSet );
     VMTILocalSet actual_vmtiLocalSet = actual_message.vmtiLocalSet;
 
-    // XXX: @CJF: 20200323: put together some enums for the keys below
-    const vector<uint8_t> expected_v8 {
-        // total number of targets detected
-        5, 1, 1,
-        // number of reported targets
-        6, 1, 1,
-        // motion imagery frame number
-        7, 3, 0, 0, 0,
-        // vmti source sensor
-        10, 16, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-        // vtarget series
-        101, 47,
-            // target id number
-            0,
-            // target centroid pixel number
-            1, 4, 0, 0, 0, 0,
-            // bounding box top left pixel number
-            2, 4, 0, 0, 0, 0,
-            // bounding box bottom right pixel number
-            3, 4, 0, 0, 0, 0,
-            // target centroid pixel row
-            19, 2, 0, 0,
-            // target centroid pixel column
-            20, 2, 0, 0,
-            // vtracker ls
-            104, 18,
-            6, 16, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+    auto append = []( vector<uint8_t> & a, const vector<uint8_t> & b ) {
+      copy( begin(b), end( b ), back_inserter( a ) );
     };
+    auto sappend = []( vector<uint8_t> & a, const string & s ) {
+      for( auto & c: s ) {
+          a.push_back(uint8_t(c));
+      }
+    };
+
+    vector<uint8_t> vmtiLocalSetData;
+
+    // total number of targets detected
+    append(vmtiLocalSetData, vector<uint8_t>({ 5, 1, 1 }));
+    // number of reported targets
+    append(vmtiLocalSetData, vector<uint8_t>({ 6, 1, 1 }));
+    // motion imagery frame number
+    append(vmtiLocalSetData, vector<uint8_t>({ 7, 1, 0 }));
+    // vmti source sensor
+    vmtiLocalSetData.push_back(10);
+    append(vmtiLocalSetData, vector<uint8_t>({uint8_t(sourceSensor.size())}));
+    sappend(vmtiLocalSetData, sourceSensor);
+
+    vector<uint8_t> vtargetSeriesData;
+    // target id number. This is the BER-OID encoding of decimal 144 from MISB
+    append(vtargetSeriesData, vector<uint8_t>({0x81, 0x10}));
+    // target centroid pixel number
+    append(vtargetSeriesData, vector<uint8_t>({1, 1, 0}));
+    // bounding box top left pixel number
+    append(vtargetSeriesData, vector<uint8_t>({2, 1, 0}));
+    // bounding box bottom right pixel number
+    append(vtargetSeriesData, vector<uint8_t>({3, 1, 0}));
+    // target centroid pixel row
+    append(vtargetSeriesData, vector<uint8_t>({19, 1, 0}));
+    // target centroid pixel column
+    append(vtargetSeriesData, vector<uint8_t>({20, 1, 0}));
+
+    vector<uint8_t> vtrackerLocalSetData;
+    // vmti algorithm
+    vtrackerLocalSetData.push_back(6);
+    vtrackerLocalSetData.push_back(vmtiAlgorithm.size());
+    sappend(vtrackerLocalSetData, vmtiAlgorithm);
+
+    vtargetSeriesData.push_back(104);
+    vtargetSeriesData.push_back(vtrackerLocalSetData.size());
+    append(vtargetSeriesData, vtrackerLocalSetData);
+
+    vmtiLocalSetData.push_back(101);
+    vmtiLocalSetData.push_back(vtargetSeriesData.size());
+    append(vmtiLocalSetData, vtargetSeriesData);
+
+    const vector<uint8_t> expected_v8 = vmtiLocalSetData;
 
     validateBytes( St0601Tag::VMTI_LOCAL_SET, expected_v8);
 }
