@@ -70,17 +70,8 @@ static vector<string> split( const string & s, const int delimiter, const bool t
     return tokens;
 }
 
-static bool getOmitKeyParam( const std::map<string,string> & annotations ) {
-    auto it = annotations.find( "OmitKey" );
-    if ( annotations.end() == it ) {
-        return false;
-    } else {
-        return true;
-    }
-}
-
-static bool getOmitLengthParam( const std::map<string,string> & annotations ) {
-    auto it = annotations.find( "OmitLength" );
+static bool getSoreThumbParam( const std::map<string,string> & annotations ) {
+    auto it = annotations.find( "SoreThumb" );
     if ( annotations.end() == it ) {
         return false;
     } else {
@@ -1608,6 +1599,76 @@ void t_misb_generator::generate_struct_reader(ostream& out, t_struct* tstruct, b
   }
   out << endl;
 
+  /*
+   * XXX: @CJF: 20200407: VTarget ID breaks KLV conventions
+   *
+   * In 0903.x, the VTarget Pack / VTarget ID field breaks all of the MISB
+   * conventions for KLV, DLP, VLP, and FLP encodings.
+   *
+   * Hopefully in a subsequent revision of the standard they correct that
+   * abnormality and just use e.g. a 64-bit integer or a 16-byte UUID.
+   *
+   * The annotation used is "SoreThumb" because this abnormality sticks out
+   * like a sore them.
+   */
+  {
+      size_t _i;
+      size_t _n;
+      for (_i = 0, _n = 0, f_iter = fields.begin(); f_iter != fields.end(); ++f_iter, ++_i) {
+
+          // skip over any field that does not have the SoreThumb annotation
+          bool soreThumb = getSoreThumbParam((*f_iter)->annotations_);
+          if (!soreThumb) {
+              continue;
+          }
+
+          // must be first field transmitted or recieved
+          if ( 0 != _i ) {
+              throw "INVALID USE OF SORE THUMB ANNOTATION: " + (*f_iter)->get_name();
+          }
+
+          bool required = (*f_iter)->get_req();
+          if ( t_field::T_REQUIRED != required ) {
+              throw "INVALID USE OF SORE THUMB ANNOTATION: " + (*f_iter)->get_name();
+          }
+
+          // THERE CAN BE ONLY ONE !!
+          ++_n;
+          if ( _n > 1 ) {
+              throw "INVALID USE OF SORE THUMB ANNOTATION: " + (*f_iter)->get_name();
+          }
+
+          // Must be BER-OID encoded (i.e. it must describe its own length)
+          // Technically, BER encoding would also be acceptable.
+          // The field must describe its own length.
+          // Is someone planning on using this for mass surveillance? (O.o)
+          bool beroid = getBEROIDParams((*f_iter)->annotations_);
+          if ( ! beroid ) {
+              throw "INVALID USE OF SORE THUMB ANNOTATION: " + (*f_iter)->get_name();
+          }
+
+          t_type *type = (*f_iter)->get_type();
+          if (!type->is_base_type()) {
+              throw "INVALID USE OF SORE THUMB ANNOTATION: " + (*f_iter)->get_name();
+          }
+
+          t_base_type::t_base tbase = ((t_base_type*)type)->get_base();
+          switch(tbase) {
+              case t_base_type::TYPE_BOOL:
+              case t_base_type::TYPE_I8:
+              case t_base_type::TYPE_I16:
+              case t_base_type::TYPE_I32:
+              case t_base_type::TYPE_I64:
+                  break;
+              default:
+                  throw "INVALID USE OF SORE THUMB ANNOTATION: " + (*f_iter)->get_name();
+          }
+
+          generate_deserialize_field(out, *f_iter, "this->");
+          out << "isset_" << (*f_iter)->get_name() << " = true;" << endl;
+      }
+  }
+
   // Loop over reading in fields
   indent(out) << "while (true)" << endl;
   scope_up(out);
@@ -1646,6 +1707,12 @@ void t_misb_generator::generate_struct_reader(ostream& out, t_struct* tstruct, b
     // Generate deserialization code for known cases
     for (f_iter = fields.begin(); f_iter != fields.end(); ++f_iter) {
 
+      // skip any field that has the SoreThumb annotation
+      bool soreThumb = getSoreThumbParam((*f_iter)->annotations_);
+      if (soreThumb) {
+          continue;
+      }
+
       t_type *type = (*f_iter)->get_type();
 
       indent(out) << "case " << (*f_iter)->get_key() << ":" << endl;
@@ -1653,7 +1720,7 @@ void t_misb_generator::generate_struct_reader(ostream& out, t_struct* tstruct, b
       indent(out) << "if (ftype == " << type_to_enum(type) << ") {" << endl;
       indent_up();
       ((t_base_type*)type)->get_base();
-      if ( !( ( type->is_base_type() && t_base_type::TYPE_STRING == ((t_base_type*)type)->get_base() ) || type->is_struct() || dlp ) ) {
+      if ( !( ( type->is_base_type() && t_base_type::TYPE_STRING == ((t_base_type*)type)->get_base() ) || type->is_struct() || dlp) ) {
           indent(out) << "xfer += ::apache::thrift::protocol::readBer( iprot, ber );" << endl;
       }
 
@@ -1758,13 +1825,86 @@ void t_misb_generator::generate_struct_writeLen(ostream& out, t_struct* tstruct,
   indent(out) << "xfer += oprot->writeStructBegin(\"" << name << "\");" << endl;
   }
 
+  /*
+   * XXX: @CJF: 20200407: VTarget ID breaks KLV conventions
+   *
+   * In 0903.x, the VTarget Pack / VTarget ID field breaks all of the MISB
+   * conventions for KLV, DLP, VLP, and FLP encodings.
+   *
+   * Hopefully in a subsequent revision of the standard they correct that
+   * abnormality and just use e.g. a 64-bit integer or a 16-byte UUID.
+   *
+   * The annotation used is "SoreThumb" because this abnormality sticks out
+   * like a sore them.
+   */
+  {
+      size_t _i;
+      size_t _n;
+      for (_i = 0, _n = 0, f_iter = fields.begin(); f_iter != fields.end(); ++f_iter, ++_i) {
+
+          // skip over any field that does not have the SoreThumb annotation
+          bool soreThumb = getSoreThumbParam((*f_iter)->annotations_);
+          if (!soreThumb) {
+              continue;
+          }
+
+          // must be first field transmitted or recieved
+          if ( 0 != _i ) {
+              throw "INVALID USE OF SORE THUMB ANNOTATION: " + (*f_iter)->get_name();
+          }
+
+          bool required = (*f_iter)->get_req();
+          if ( t_field::T_REQUIRED != required ) {
+              throw "INVALID USE OF SORE THUMB ANNOTATION: " + (*f_iter)->get_name();
+          }
+
+          // THERE CAN BE ONLY ONE !!
+          ++_n;
+          if ( _n > 1 ) {
+              throw "INVALID USE OF SORE THUMB ANNOTATION: " + (*f_iter)->get_name();
+          }
+
+          // Must be BER-OID encoded (i.e. it must describe its own length)
+          // Technically, BER encoding would also be acceptable.
+          // The field must describe its own length.
+          // Is someone planning on using this for mass surveillance? (O.o)
+          bool beroid = getBEROIDParams((*f_iter)->annotations_);
+          if ( ! beroid ) {
+              throw "INVALID USE OF SORE THUMB ANNOTATION: " + (*f_iter)->get_name();
+          }
+
+          t_type *type = (*f_iter)->get_type();
+          if (!type->is_base_type()) {
+              throw "INVALID USE OF SORE THUMB ANNOTATION: " + (*f_iter)->get_name();
+          }
+
+          t_base_type::t_base tbase = ((t_base_type*)type)->get_base();
+          switch(tbase) {
+              case t_base_type::TYPE_BOOL:
+              case t_base_type::TYPE_I8:
+              case t_base_type::TYPE_I16:
+              case t_base_type::TYPE_I32:
+              case t_base_type::TYPE_I64:
+                  break;
+              default:
+                  throw "INVALID USE OF SORE THUMB ANNOTATION: " + (*f_iter)->get_name();
+          }
+
+          generate_serialize_field(out, *f_iter, "this->");
+      }
+  }
+
   bool check_if_set = false;
   for (f_iter = fields.begin(); f_iter != fields.end(); ++f_iter) {
 
-    bool omitKey = getOmitKeyParam((*f_iter)->annotations_);
-    bool omitLength = getOmitLengthParam((*f_iter)->annotations_);
+    bool soreThumb = getSoreThumbParam((*f_iter)->annotations_);
     size_t maxLength = getMaxLengthParam( (*f_iter) );
     bool beroid = getBEROIDParams((*f_iter)->annotations_);
+
+    // skip any field that has the SoreThumb annotation
+    if (soreThumb) {
+        continue;
+    }
 
     // XXX: @CJF: this is a dirty hack.
     if (!("St0601_update_args" == tstruct->get_name() || "St0601_update_pargs" == tstruct->get_name())) {
@@ -1781,7 +1921,7 @@ void t_misb_generator::generate_struct_writeLen(ostream& out, t_struct* tstruct,
     t_type *type = (*f_iter)->get_type();
 
     // XXX: @CJF: this is a dirty hack.
-    if (!(omitKey || "St0601_update_args" == tstruct->get_name() || "St0601_update_pargs" == tstruct->get_name() || dlp)) {
+    if (!("St0601_update_args" == tstruct->get_name() || "St0601_update_pargs" == tstruct->get_name() || dlp)) {
     // Write field header
     out << indent() << "xfer += oprot->writeFieldBegin("
         << "\"" << (*f_iter)->get_name() << "\", " << type_to_enum(type) << ", "
@@ -1814,9 +1954,6 @@ void t_misb_generator::generate_struct_writeLen(ostream& out, t_struct* tstruct,
       case t_base_type::TYPE_I16:
       case t_base_type::TYPE_I32:
       case t_base_type::TYPE_I64:
-          if ( omitLength ) {
-              break;
-          }
           if ( beroid ) {
               out << indent() << "xfer += writeBer(oprot, sizeof(this->" << (*f_iter)->get_name() << "));" << endl;
           } else {
@@ -1952,13 +2089,86 @@ void t_misb_generator::generate_struct_writer(ostream& out, t_struct* tstruct, b
     indent(out) << "xfer += writeBer(oprot, writeLen());" << endl;
   }
 
+  /*
+   * XXX: @CJF: 20200407: VTarget ID breaks KLV conventions
+   *
+   * In 0903.x, the VTarget Pack / VTarget ID field breaks all of the MISB
+   * conventions for KLV, DLP, VLP, and FLP encodings.
+   *
+   * Hopefully in a subsequent revision of the standard they correct that
+   * abnormality and just use e.g. a 64-bit integer or a 16-byte UUID.
+   *
+   * The annotation used is "SoreThumb" because this abnormality sticks out
+   * like a sore them.
+   */
+  {
+      size_t _i;
+      size_t _n;
+      for (_i = 0, _n = 0, f_iter = fields.begin(); f_iter != fields.end(); ++f_iter, ++_i) {
+
+          // skip over any field that does not have the SoreThumb annotation
+          bool soreThumb = getSoreThumbParam((*f_iter)->annotations_);
+          if (!soreThumb) {
+              continue;
+          }
+
+          // must be first field transmitted or recieved
+          if ( 0 != _i ) {
+              throw "INVALID USE OF SORE THUMB ANNOTATION: " + (*f_iter)->get_name();
+          }
+
+          bool required = (*f_iter)->get_req();
+          if ( t_field::T_REQUIRED != required ) {
+              throw "INVALID USE OF SORE THUMB ANNOTATION: " + (*f_iter)->get_name();
+          }
+
+          // THERE CAN BE ONLY ONE !!
+          ++_n;
+          if ( _n > 1 ) {
+              throw "INVALID USE OF SORE THUMB ANNOTATION: " + (*f_iter)->get_name();
+          }
+
+          // Must be BER-OID encoded (i.e. it must describe its own length)
+          // Technically, BER encoding would also be acceptable.
+          // The field must describe its own length.
+          // Is someone planning on using this for mass surveillance? (O.o)
+          bool beroid = getBEROIDParams((*f_iter)->annotations_);
+          if ( ! beroid ) {
+              throw "INVALID USE OF SORE THUMB ANNOTATION: " + (*f_iter)->get_name();
+          }
+
+          t_type *type = (*f_iter)->get_type();
+          if (!type->is_base_type()) {
+              throw "INVALID USE OF SORE THUMB ANNOTATION: " + (*f_iter)->get_name();
+          }
+
+          t_base_type::t_base tbase = ((t_base_type*)type)->get_base();
+          switch(tbase) {
+              case t_base_type::TYPE_BOOL:
+              case t_base_type::TYPE_I8:
+              case t_base_type::TYPE_I16:
+              case t_base_type::TYPE_I32:
+              case t_base_type::TYPE_I64:
+                  break;
+              default:
+                  throw "INVALID USE OF SORE THUMB ANNOTATION: " + (*f_iter)->get_name();
+          }
+
+          generate_serialize_field(out, *f_iter, "this->");
+      }
+  }
+
   bool check_if_set = false;
   for (f_iter = fields.begin(); f_iter != fields.end(); ++f_iter) {
 
-    bool omitKey = getOmitKeyParam((*f_iter)->annotations_);
-    bool omitLength = getOmitLengthParam((*f_iter)->annotations_);
+    bool soreThumb = getSoreThumbParam((*f_iter)->annotations_);
     size_t maxLength = getMaxLengthParam( (*f_iter) );
     bool beroid = getBEROIDParams((*f_iter)->annotations_);
+
+    // skip any field that has the SoreThumb annotation
+    if (soreThumb) {
+        continue;
+    }
 
     // XXX: @CJF: this is a dirty hack.
     if (!("St0601_update_args" == tstruct->get_name() || "St0601_update_pargs" == tstruct->get_name())) {
@@ -1975,7 +2185,7 @@ void t_misb_generator::generate_struct_writer(ostream& out, t_struct* tstruct, b
     t_type *type = (*f_iter)->get_type();
 
     // XXX: @CJF: this is a dirty hack.
-    if (!(omitKey || "St0601_update_args" == tstruct->get_name() || "St0601_update_pargs" == tstruct->get_name() || dlp )) {
+    if (!("St0601_update_args" == tstruct->get_name() || "St0601_update_pargs" == tstruct->get_name() || dlp )) {
     // Write field header
     out << indent() << "xfer += oprot->writeFieldBegin("
         << "\"" << (*f_iter)->get_name() << "\", " << type_to_enum(type) << ", "
@@ -2008,9 +2218,6 @@ void t_misb_generator::generate_struct_writer(ostream& out, t_struct* tstruct, b
       case t_base_type::TYPE_I16:
       case t_base_type::TYPE_I32:
       case t_base_type::TYPE_I64:
-          if ( omitLength ) {
-              break;
-          }
           if ( beroid ) {
             out << indent() << "xfer += writeBer(oprot, ::berOidUintEncodeLength(" << (*f_iter)->get_name() << "));" << endl;
           } else {

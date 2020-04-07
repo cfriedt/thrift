@@ -384,7 +384,6 @@ const uint16_t St0601Test::expected_checksum = 0xabcd;
 const uint64_t St0601Test::expected_precisionTimeStamp = 0x0011223344556677;
 const uint8_t St0601Test::expected_uasDatalinkLsVersionNumber = 15;
 
-#if 0
 TEST_F( St0601Test, testMemoryWrite ) {
     expected_message.__set_precisionTimeStamp( expected_precisionTimeStamp );
     expected_message.__set_checksum( expected_checksum );
@@ -873,7 +872,6 @@ TEST_F( St0601Test, DLP2 ) {
 
     validateBytes( St0601Tag::SENSOR_FRAME_RATE_PACK, expected_v8);
 }
-#endif
 
 /*
  * Test that the VMTI Local Set is properly encoded / decoded

@@ -174,8 +174,9 @@ struct VTargetPack {
 		BEROID
 		MinValue = "1"
 		MaxValue = "2097151"
-		OmitKey
-		OmitLength
+		// This field sticks out like a sore thumb, because it breaks most of
+		// MISB's otherwise consistent KLV, DLP, VLP, and FLP rules. 
+		SoreThumb
 	)
 	1: optional i64 targetCentroidPixelNumber (
 		Unsigned
