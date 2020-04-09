@@ -3,8 +3,8 @@
 
 #include <iostream>
 
-#include "St060115.h"
-#include <thrift/protocol/TBinaryProtocol.h>
+#include "St0601.h"
+#include <thrift/protocol/TMISBProtocol.h>
 #include <thrift/server/TSimpleServer.h>
 #include <thrift/transport/TServerSocket.h>
 #include <thrift/transport/TBufferTransports.h>
@@ -18,9 +18,9 @@ using namespace ::apache::thrift::server;
 
 using namespace  ::org::misb;
 
-class St060115Handler : virtual public St060115If {
+class St0601Handler : virtual public St0601If {
  public:
-  St060115Handler() {
+  St0601Handler() {
     // Your initialization goes here
   }
 
@@ -34,11 +34,11 @@ int main(int argc, char **argv) {
     (void) argc;
     (void) argv;
   int port = 9090;
-  shared_ptr<St060115Handler> handler(new St060115Handler());
-  shared_ptr<TProcessor> processor(new St060115Processor(handler));
+  shared_ptr<St0601Handler> handler(new St0601Handler());
+  shared_ptr<TProcessor> processor(new St0601Processor(handler));
   shared_ptr<TServerTransport> serverTransport(new TServerSocket(port));
   shared_ptr<TTransportFactory> transportFactory(new TBufferedTransportFactory());
-  shared_ptr<TProtocolFactory> protocolFactory(new TBinaryProtocolFactory());
+  shared_ptr<TProtocolFactory> protocolFactory(new TMISBProtocolFactory());
 
   TSimpleServer server(processor, serverTransport, transportFactory, protocolFactory);
   server.serve();

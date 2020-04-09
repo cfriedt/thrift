@@ -1,10 +1,10 @@
 #include <iostream>
 
-#include <thrift/protocol/TBinaryProtocol.h>
+#include <thrift/protocol/TMISBProtocol.h>
 #include <thrift/transport/TSocket.h>
 #include <thrift/transport/TTransportUtils.h>
 
-#include "St060115.h"
+#include "St0601.h"
 
 using namespace ::std;
 
@@ -23,9 +23,10 @@ int main(int argc, char **argv) {
 
     shared_ptr<TTransport> socket(new TSocket("localhost", 9090));
     shared_ptr<TTransport> transport(new TBufferedTransport(socket));
-    shared_ptr<TProtocol> protocol(new TBinaryProtocol(transport));
-    St060115Client st060115Client(protocol);
+    shared_ptr<TProtocol> protocol(new TMISBProtocol(transport));
+    St0601Client st0601Client(protocol);
 
+#if 0
     try {
         transport->open();
     } catch( ... ) {
@@ -38,14 +39,16 @@ int main(int argc, char **argv) {
         UasDataLinkLocalSet msg;
         // precisionTimeStamp is a required field
         msg.__set_precisionTimeStamp( -1 );
+        msg.__set_precisionTimeStamp( -1 );
         msg.__set_alternatePlatformName( "Hello, from Thrift!" );
 
-        st060115Client.update( msg );
+        st0601Client.update( msg );
 
     } catch ( ... ) {
         cout << "an exception was thrown" << endl;
     }
     transport->close();
+#endif
 
     try {
 
@@ -58,9 +61,7 @@ int main(int argc, char **argv) {
         msg.__set_uasDatalinkLsVersionNumber(15);
         msg.__set_alternatePlatformName( "Hello, from C++!" );
 
-        st060115Client.update( msg );
-
-        cout << "no exception was thrown" << endl;
+        st0601Client.update( msg );
 
     } catch ( ... ) {
         cout << "an exception was thrown" << endl;

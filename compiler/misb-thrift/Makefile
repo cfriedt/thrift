@@ -87,7 +87,7 @@ BUILT_SOURCES :=
 CLEANFILES :=
 
 CSRC += $(shell find * -name '*.c' | grep -v "$(GENCDIR)")
-CXXSRC += $(shell find * -name '*.cpp' | grep -v "$(GENCXXDIR)")
+CXXSRC += $(shell find * -name '*.cpp' | grep -v "$(GENCXXDIR)" | grep -v "client\.cpp" | grep -v "server\.cpp")
 CXXSRC := $(filter-out %-test.cpp,$(CXXSRC))
 PYSRC += $(shell find * -name '*.py' | grep -v "$(GENPYDIR)")
 TEST += $(shell find * -name '*-test.cpp')
@@ -128,14 +128,15 @@ $(foreach _t, $(TSRC:.thrift=), \
 #	$(eval PYEXE += $(_T)-py-server) \
 #
 
-#	$(eval CXXEXE += $(_T)-cxx-client) \
-#	$(eval CXXEXE += $(_T)-cxx-server) \
 #
 
 #	$(eval CEXE += $(_T)-c-client) \
 #	$(eval CEXE += $(_T)-c-server) \
 #	$(eval $(call sources-thrift-to-c,$(_t),$(_T))) \
 #
+
+CXXEXE += St0601-cxx-client
+CXXEXE += St0601-cxx-server
 
 EXE += $(CXXEXE) $(CEXE) $(PYEXE) $(TESTEXE)
 
