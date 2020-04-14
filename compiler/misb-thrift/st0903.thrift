@@ -264,27 +264,22 @@ struct VMTILocalSet {
 	)
 	5: optional i32 totalNumberOfTargetsDetectedInTheFrame (
 		Unsigned
-		MaxValue = "16777215"
 		MaxLength = "3"
 	)
 	6: optional i32 numberOfReportedTargets (
 		Unsigned
-		MaxValue = "16777215"
 		MaxLength = "3"
 	)
 	7: optional i32 motionImageryFrameNumber (
 		Unsigned
-		MaxValue = "16777215"
 		MaxLength = "3"		
 	)
 	8: optional i32 frameWidth (
 		Unsigned
-		MaxValue = "16777215"
 		MaxLength = "3"		
 	)
 	9: optional i32 frameHeight (
 		Unsigned
-		MaxValue = "16777215"
 		MaxLength = "3"		
 	)
 	10: optional string vmtiSourceSensor (

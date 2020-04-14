@@ -39,8 +39,7 @@ enum OperationalMode {
 
 struct ImageHorizontalPixelPack {
 } (
-	OmitKey
-	OmitLength
+	DLP
 )
 
 struct SarMotionImageryLocalSet {
@@ -57,32 +56,36 @@ struct AmendLocalSet {
 }
 struct SdccFlp {
 } (
-	OmitKey
-	OmitLength
-	LastFieldHasVariableLength
+	FLP
 )
 
 struct ControlCommand {
 } (
-	OmitKey
-	OmitLength
+	DLP
 )
 
 struct ControlCommandVerificationList {
 } (
-	OmitKey
-	OmitLength
+	DLP
 )
 
 struct ActiveWavelengthList {
 } (
-	OmitKey
-	OmitLength
+	// this is a list of VLPs
+)
+
+struct WavelengthsList {
+} (
+	// this is a list of VLPs
 )
 
 struct CountryCodes {
+	1: required i8 codingMethod
+	2: required string overflightCountry
+	3: optional string operatorCountry
+	4: optional string countryOfManufacture
 } (
-	OmitKey
+	VLP
 )
 
 enum PlatformStatus {
@@ -121,11 +124,6 @@ struct SensorFrameRatePack {
 } (
 	DLP
 	MaxLength = "16"
-)
-
-struct WaveLengthList {
-} (
-	OmitKey
 )
 
 struct AirbaseLocations {
@@ -589,7 +587,7 @@ struct UasDataLinkLocalSet {
 	125: optional PlatformStatus platformStatus
 	126: optional SensorControlMode sensorControlMode
 	127: optional SensorFrameRatePack sensorFrameRatePack
-	128: optional WaveLengthList wavelengthsList
+	128: optional WavelengthsList wavelengthsList
 	129: optional string targetId (
 		MaxLength = "32"
 	)

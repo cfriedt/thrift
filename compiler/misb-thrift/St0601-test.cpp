@@ -969,3 +969,41 @@ TEST_F( St0601Test, VMTILocalSetVTargetPack ) {
 
     validateBytes( St0601Tag::VMTI_LOCAL_SET, expected_v8);
 }
+
+/*
+ * Test that a VLP is properly encoded / decoded
+ *
+ * VLPs have a fixed set of keys but the length values can vary.
+ * Each length can actually be zero. Like the DLP, the VLP becomes
+ * a truncation pack when the number of bytes read do not fit inside
+ * of the total length of the pack.
+ */
+TEST_F( St0601Test, VLP ) {
+
+    CountryCodes expected_countryCodes;
+
+    expected_countryCodes.__set_codingMethod(0x0e);
+    expected_countryCodes.__set_overflightCountry("CAN");
+    expected_countryCodes.__set_operatorCountry(""); // length zero field
+    expected_countryCodes.__set_countryOfManufacture("FRA");
+
+    expected_message.__set_countryCodes( expected_countryCodes );
+    ASSERT_TRUE( expected_message.__isset.countryCodes );
+
+    common();
+
+    EXPECT_TRUE( actual_message.__isset.countryCodes );
+    CountryCodes actual_countryCodes = actual_message.countryCodes;
+
+    EXPECT_EQ(actual_countryCodes, expected_countryCodes);
+
+    const vector<uint8_t> expected_v8 {
+        0x01,
+        0x0e,
+        0x03, 'C', 'A', 'N',
+        0x00,
+        0x03, 'F', 'R', 'A'
+    };
+
+    validateBytes( St0601Tag::COUNTRY_CODES, expected_v8);
+}
