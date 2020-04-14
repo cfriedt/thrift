@@ -71,12 +71,12 @@ struct ControlCommandVerificationList {
 
 struct ActiveWavelengthList {
 } (
-	// this is a list of VLPs
+	// list of VLPs
 )
 
 struct WavelengthsList {
 } (
-	// this is a list of VLPs
+	// list of VLPs
 )
 
 struct CountryCodes {
@@ -128,22 +128,22 @@ struct SensorFrameRatePack {
 
 struct AirbaseLocations {
 } (
-	OmitKey
+	// list of VLPs
 )
 
 struct PayloadList {
 } (
-	OmitKey
+	// list of VLPs
 )
 
 struct WeaponStores {
 } (
-	OmitKey
+	// list of VLPs
 )
 
 struct WaypointList {
 } (
-	OmitKey
+	// list of VLPs
 )
 
 struct UasDataLinkLocalSet {

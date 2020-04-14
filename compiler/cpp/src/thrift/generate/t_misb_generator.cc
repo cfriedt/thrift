@@ -1680,7 +1680,7 @@ void t_misb_generator::generate_struct_reader(ostream& out, t_struct* tstruct, b
       indent(out) << "}" << endl;
   }
 
-  if ( ! dlp ) {
+  if ( ! (dlp || vlp)) {
   // Read beginning field marker
   indent(out) << "xfer += iprot->readFieldBegin(fname, ftype, fid);" << endl;
 
@@ -1762,7 +1762,7 @@ void t_misb_generator::generate_struct_reader(ostream& out, t_struct* tstruct, b
   // Read field end marker
   indent(out) << "xfer += iprot->readFieldEnd();" << endl;
 
-  if ( dlp ) {
+  if ( dlp || vlp ) {
       indent(out) << "fid++;" << endl;
   }
 
@@ -1922,10 +1922,13 @@ void t_misb_generator::generate_struct_writeLen(ostream& out, t_struct* tstruct,
 
     // XXX: @CJF: this is a dirty hack.
     if (!("St0601_update_args" == tstruct->get_name() || "St0601_update_pargs" == tstruct->get_name() || dlp)) {
+
+    if ( ! vlp ) {
     // Write field header
     out << indent() << "xfer += oprot->writeFieldBegin("
         << "\"" << (*f_iter)->get_name() << "\", " << type_to_enum(type) << ", "
         << (*f_iter)->get_key() << ");" << endl;
+    }
 
     if ( false ) {
     } else if (type->is_enum()) {
@@ -2186,10 +2189,14 @@ void t_misb_generator::generate_struct_writer(ostream& out, t_struct* tstruct, b
 
     // XXX: @CJF: this is a dirty hack.
     if (!("St0601_update_args" == tstruct->get_name() || "St0601_update_pargs" == tstruct->get_name() || dlp )) {
+
+
+    if ( ! vlp ) {
     // Write field header
     out << indent() << "xfer += oprot->writeFieldBegin("
         << "\"" << (*f_iter)->get_name() << "\", " << type_to_enum(type) << ", "
         << (*f_iter)->get_key() << ");" << endl;
+    }
 
     if ( false ) {
     } else if (type->is_enum()) {
