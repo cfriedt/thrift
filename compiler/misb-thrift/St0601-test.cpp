@@ -453,7 +453,7 @@ TEST_F( St0601Test, string ) {
 
     EXPECT_EQ( actual_string, expected_string );
 
-    validateBytes( St0601Tag::PLATFORM_DESIGNATION, to_vector( expected_string ) );
+    validateBytes( St0601Tag::ST_0601_PLATFORM_DESIGNATION, to_vector( expected_string ) );
 }
 
 /*
@@ -536,7 +536,7 @@ TEST_F( St0601Test, bool ) {
 		U8(expected_bool >> 0),
     };
 
-    validateBytes( St0601Tag::ICING_DETECTED, expected_v8 );
+    validateBytes( St0601Tag::ST_0601_ICING_DETECTED, expected_v8 );
 }
 
 /*
@@ -560,7 +560,7 @@ TEST_F( St0601Test, i8 ) {
 		U8(expected_int8 >> 0),
     };
 
-    validateBytes( St0601Tag::OUTSIDE_AIR_TEMPERATURE, expected_v8 );
+    validateBytes( St0601Tag::ST_0601_OUTSIDE_AIR_TEMPERATURE, expected_v8 );
 }
 
 // FIXME: currently, the "Unsigned" annotation does nothing for integer values
@@ -589,7 +589,7 @@ TEST_F( St0601Test, i16 ) {
 		U8(expected_int16 >> 0),
     };
 
-    validateBytes( St0601Tag::WEAPON_LOAD, expected_v8 );
+    validateBytes( St0601Tag::ST_0601_WEAPON_LOAD, expected_v8 );
 }
 
 /*
@@ -617,7 +617,7 @@ TEST_F( St0601Test, i32 ) {
 		U8(expected_int32 >> 0),
     };
 
-    validateBytes( St0601Tag::LEAP_SECONDS, expected_v8 );
+    validateBytes( St0601Tag::ST_0601_LEAP_SECONDS, expected_v8 );
 }
 
 /*
@@ -649,7 +649,7 @@ TEST_F( St0601Test, i64 ) {
 		U8(expected_int64 >> 0),
     };
 
-    validateBytes( St0601Tag::CORRECTION_OFFSET, expected_v8 );
+    validateBytes( St0601Tag::ST_0601_CORRECTION_OFFSET, expected_v8 );
 }
 
 TEST_F( St0601Test, i64_VariableLength ) {
@@ -671,7 +671,7 @@ TEST_F( St0601Test, i64_VariableLength ) {
 
     const vector<uint8_t> expected_v8 { 0 };
 
-    validateBytes( St0601Tag::CORRECTION_OFFSET, expected_v8 );
+    validateBytes( St0601Tag::ST_0601_CORRECTION_OFFSET, expected_v8 );
 }
 
 /*
@@ -696,7 +696,7 @@ TEST_F( St0601Test, enum ) {
         U8(expected_operationalMode >> 0),
     };
 
-    validateBytes( St0601Tag::OPERATIONAL_MODE, expected_v8 );
+    validateBytes( St0601Tag::ST_0601_OPERATIONAL_MODE, expected_v8 );
 }
 
 /*
@@ -740,7 +740,7 @@ TEST_F( St0601Test, IMAPA ) {
     };
     ASSERT_EQ( expected_v8.size(), expected_size );
 
-    validateBytes( St0601Tag::PLATFORM_COURSE_ANGLE, expected_v8);
+    validateBytes( St0601Tag::ST_0601_PLATFORM_COURSE_ANGLE, expected_v8);
 }
 
 /*
@@ -781,7 +781,7 @@ TEST_F( St0601Test, IMAPB ) {
     };
     ASSERT_EQ( expected_v8.size(), expected_size );
 
-    validateBytes( St0601Tag::ALTERNATE_PLATFORM_LONGITUDE, expected_v8);
+    validateBytes( St0601Tag::ST_0601_ALTERNATE_PLATFORM_LONGITUDE, expected_v8);
 }
 
 /*
@@ -816,7 +816,7 @@ TEST_F( St0601Test, NestedStruct ) {
         22,2,0,12,
     };
 
-    validateBytes( St0601Tag::SECURITY_LOCAL_SET, expected_v8);
+    validateBytes( St0601Tag::ST_0601_SECURITY_LOCAL_SET, expected_v8);
 }
 
 /*
@@ -844,7 +844,7 @@ TEST_F( St0601Test, DLP ) {
         30,
     };
 
-    validateBytes( St0601Tag::SENSOR_FRAME_RATE_PACK, expected_v8);
+    validateBytes( St0601Tag::ST_0601_SENSOR_FRAME_RATE_PACK, expected_v8);
 }
 
 /*
@@ -870,7 +870,7 @@ TEST_F( St0601Test, DLP2 ) {
         1,
     };
 
-    validateBytes( St0601Tag::SENSOR_FRAME_RATE_PACK, expected_v8);
+    validateBytes( St0601Tag::ST_0601_SENSOR_FRAME_RATE_PACK, expected_v8);
 }
 
 /*
@@ -967,7 +967,7 @@ TEST_F( St0601Test, VMTILocalSetVTargetPack ) {
 
     const vector<uint8_t> expected_v8 = vmtiLocalSetData;
 
-    validateBytes( St0601Tag::VMTI_LOCAL_SET, expected_v8);
+    validateBytes( St0601Tag::ST_0601_VMTI_LOCAL_SET, expected_v8);
 }
 
 /*
@@ -1005,5 +1005,5 @@ TEST_F( St0601Test, VLP ) {
         0x03, 'F', 'R', 'A'
     };
 
-    validateBytes( St0601Tag::COUNTRY_CODES, expected_v8);
+    validateBytes( St0601Tag::ST_0601_COUNTRY_CODES, expected_v8);
 }

@@ -1,10 +1,13 @@
 #include <iostream>
+#include <unordered_set>
 
 #include <thrift/protocol/TMISBProtocol.h>
 #include <thrift/transport/TSocket.h>
 #include <thrift/transport/TTransportUtils.h>
 
 #include "St0601.h"
+
+#include "St0601Getter.h"
 
 using namespace ::std;
 
@@ -21,47 +24,36 @@ int main(int argc, char **argv) {
 
     int r = 0;
 
+    // socket transport for demonstration purposes
+    // but a memory buffer transport also works as well
     shared_ptr<TTransport> socket(new TSocket("localhost", 9090));
     shared_ptr<TTransport> transport(new TBufferedTransport(socket));
+
+
     shared_ptr<TProtocol> protocol(new TMISBProtocol(transport));
-    St0601Client st0601Client(protocol);
+    St0601Client client(protocol);
 
-#if 0
-    try {
-        transport->open();
-    } catch( ... ) {
-        cout << "failed to open transport" << endl;
-        return -1;
-    }
-
-    try {
-
-        UasDataLinkLocalSet msg;
-        // precisionTimeStamp is a required field
-        msg.__set_precisionTimeStamp( -1 );
-        msg.__set_precisionTimeStamp( -1 );
-        msg.__set_alternatePlatformName( "Hello, from Thrift!" );
-
-        st0601Client.update( msg );
-
-    } catch ( ... ) {
-        cout << "an exception was thrown" << endl;
-    }
-    transport->close();
-#endif
+    const St0601Getter getter;
 
     try {
 
         transport->open();
         UasDataLinkLocalSet msg;
-        // oh, that's right! The checksum is a required field too
-        msg.__set_checksum( -1 );
-        msg.__set_precisionTimeStamp( -1 );
-        // oh, that's right! The uasDatalinkLsVersionNumber is a required field too
-        msg.__set_uasDatalinkLsVersionNumber(15);
-        msg.__set_alternatePlatformName( "Hello, from C++!" );
 
-        st0601Client.update( msg );
+        // order is specified by the position in st0601.thrift
+        static const unordered_set<St0601Tag> tags {
+
+            // required tags in every frame
+
+            St0601Tag::ST_0601_CHECKSUM,
+            St0601Tag::ST_0601_TIMESTAMP,
+            St0601Tag::ST_0601_UAS_DATALINK_LS_VERSION_NUMBER,
+
+            St0601Tag::ST_0601_ALTERNATE_PLATFORM_NAME,
+        };
+
+        getter.getTags(tags, msg);
+        client.update( msg );
 
     } catch ( ... ) {
         cout << "an exception was thrown" << endl;

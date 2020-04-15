@@ -25,7 +25,8 @@ class St0601Handler : virtual public St0601If {
   }
 
   void update(const UasDataLinkLocalSet& message) {
-    cout << "received message: " << message << endl;
+    (void) message;
+    cout << "received message successfully" << endl;
   }
 
 };

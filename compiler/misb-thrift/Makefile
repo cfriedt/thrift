@@ -140,6 +140,11 @@ CXXEXE += St0601-cxx-server
 
 EXE += $(CXXEXE) $(CEXE) $(PYEXE) $(TESTEXE)
 
+CPP_DEMOS := $(find * -name '*-server.cpp' -o -name '*-client.cpp')
+CPP_DEMOS := $(CPP_DEMOS:.cpp=)
+
+EXE += $(CPP_DEMOS)
+
 all: $(LIB) $(EXE)
 
 # $1 := base of the thrift filename
@@ -235,6 +240,10 @@ $(CXXLIB): $(CXXOBJ)
 	$(QUIET)$(CXX) $(CPPFLAGS) -I$(GENCXXDIR) $(CXXFLAGS) $(GTEST_CXXFLAGS) $(LDFLAGS) $< -o $@ -Wl,--whole-archive $(CLIB) $(CXXLIB) -Wl,--no-whole-archive $(THRIFT_CXX_LIBS) $(GTEST_LIBS)
 
 %-cxx-client: %-cxx-client.cpp $(CXXLIB)
+	@echo "[CXXLD] $@"
+	$(QUIET)$(CXX) $(CPPFLAGS) -I$(GENCXXDIR) $(CXXFLAGS) $(LDFLAGS) $< -o $@ $(CXXLIB) $(THRIFT_CXX_LIBS)
+
+%-cxx-server: %-cxx-server.cpp $(CXXLIB)
 	@echo "[CXXLD] $@"
 	$(QUIET)$(CXX) $(CPPFLAGS) -I$(GENCXXDIR) $(CXXFLAGS) $(LDFLAGS) $< -o $@ $(CXXLIB) $(THRIFT_CXX_LIBS)
 
