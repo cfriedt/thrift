@@ -532,7 +532,7 @@ public:
     switch (policy) {
     case OBSERVE:
     case TAKE_OWNERSHIP:
-      initCommon(buf, sz, policy == TAKE_OWNERSHIP, sz);
+      initCommon(buf, sz, policy == TAKE_OWNERSHIP,  (policy == TAKE_OWNERSHIP) ? 0 : sz );
       break;
     case COPY:
       initCommon(nullptr, sz, true, 0);
@@ -587,11 +587,9 @@ public:
   void resetBuffer() {
     rBase_ = buffer_;
     rBound_ = buffer_;
-    wBase_ = buffer_;
-    // It isn't safe to write into a buffer we don't own.
-    if (!owner_) {
-      wBound_ = wBase_;
-      bufferSize_ = 0;
+    if (owner_) {
+      wBase_ = buffer_;
+      wBound_ = buffer_ + bufferSize_;
     }
   }
 
