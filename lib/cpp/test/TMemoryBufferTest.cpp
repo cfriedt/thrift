@@ -20,6 +20,7 @@
 #include <boost/test/auto_unit_test.hpp>
 #include <iostream>
 #include <climits>
+#include <cstdlib>
 #include <vector>
 #include <thrift/protocol/TBinaryProtocol.h>
 #include <memory>
@@ -123,6 +124,51 @@ BOOST_AUTO_TEST_CASE(test_error_set_max_buffer_size_too_small)
 {
   TMemoryBuffer buf;
   BOOST_CHECK_THROW(buf.setMaxBufferSize(buf.getBufferSize() - 1), TTransportException);
+}
+
+BOOST_AUTO_TEST_CASE(test_observer)
+{
+  constexpr size_t N = 1024;
+  std::array<uint8_t,N> buf_mem;
+  TMemoryBuffer buf(&buf_mem.front(), N, TMemoryBuffer::MemoryPolicy::OBSERVE);
+
+  // check that the buffer can be read but not written
+  BOOST_CHECK_EQUAL(N, buf.available_read());
+  BOOST_CHECK_EQUAL(0, buf.available_write());
+
+  // check that the buffer cannot be read after it has already been read
+  // and that it still cannot be written
+  BOOST_CHECK_EQUAL(N, buf.read(&buf_mem.front(), N));
+  BOOST_CHECK_EQUAL(0, buf.available_read());
+  BOOST_CHECK_EQUAL(0, buf.available_write());
+
+  // check that the buffer can be reread after being reset
+  // and that it still cannot be written
+  buf.resetBuffer();
+  BOOST_CHECK_EQUAL(N, buf.available_read());
+  BOOST_CHECK_EQUAL(0, buf.available_write());
+}
+
+BOOST_AUTO_TEST_CASE(test_take_ownership)
+{
+  constexpr size_t N = 1024;
+  // malloc here, as take ownership expects a heap-allocated buffer and calls free()
+  uint8_t *buf_mem = static_cast<uint8_t*>(::malloc(N));
+  TMemoryBuffer buf(buf_mem, N, TMemoryBuffer::MemoryPolicy::TAKE_OWNERSHIP);
+
+  // check that the buffer can be written but not read (no bytes available yet)
+  BOOST_CHECK_EQUAL(0, buf.available_read());
+  BOOST_CHECK_EQUAL(N, buf.available_write());
+
+  // after writing check that the buffer can be read but not written
+  buf.write(buf_mem, N);
+  BOOST_CHECK_EQUAL(N, buf.available_read());
+  BOOST_CHECK_EQUAL(0, buf.available_write());
+
+  // after reset, check the buffer can be re-written to but not read
+  buf.resetBuffer();
+  BOOST_CHECK_EQUAL(0, buf.available_read());
+  BOOST_CHECK_EQUAL(N, buf.available_write());
 }
 
 BOOST_AUTO_TEST_CASE(test_maximum_buffer_size)
