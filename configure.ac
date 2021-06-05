@@ -111,6 +111,7 @@ have_libs=yes
 if test "$enable_libs" = "no"; then
   have_libs="no"
   with_cpp="no"
+  with_c="no"
   with_c_glib="no"
   with_cl="no"
   with_java="no"
@@ -173,6 +174,12 @@ AM_CONDITIONAL([AMX_HAVE_LIBEVENT], [test "$have_libevent" = "yes"])
 AM_CONDITIONAL([AMX_HAVE_ZLIB], [test "$have_zlib" = "yes"])
 AM_CONDITIONAL([AMX_HAVE_QT5], [test "$have_qt5" = "yes"])
 AM_CONDITIONAL([QT5_REDUCE_RELOCATIONS], [test "x$qt_reduce_reloc" != "x"])
+
+AX_THRIFT_LIB(c, [C], yes)
+if test "$with_c" = "yes"; then
+  have_c="yes"
+fi
+AM_CONDITIONAL(WITH_C, [test "$have_c" = "yes"])
 
 AX_THRIFT_LIB(c_glib, [C (GLib)], yes)
 if test "$with_c_glib" = "yes"; then
@@ -739,6 +746,9 @@ AC_CONFIG_FILES([
   lib/cpp/thrift-z.pc
   lib/cpp/thrift-qt5.pc
   lib/cpp/thrift.pc
+  lib/c/Makefile
+  lib/c/thrift_c.pc
+  lib/c/test/Makefile
   lib/c_glib/Makefile
   lib/c_glib/thrift_c_glib.pc
   lib/c_glib/test/Makefile
@@ -779,6 +789,7 @@ AC_CONFIG_FILES([
   lib/xml/test/Makefile
   test/Makefile
   test/features/Makefile
+  test/c/Makefile
   test/c_glib/Makefile
   test/cl/Makefile
   test/cpp/Makefile
@@ -796,6 +807,7 @@ AC_CONFIG_FILES([
   test/rb/Makefile
   test/rs/Makefile
   tutorial/Makefile
+  tutorial/c/Makefile
   tutorial/c_glib/Makefile
   tutorial/cl/Makefile
   tutorial/cpp/Makefile
@@ -861,6 +873,7 @@ AC_OUTPUT
 echo
 echo "$PACKAGE $VERSION"
 echo
+echo "Building C Library ........... : $have_c"
 echo "Building C (GLib) Library .... : $have_c_glib"
 echo "Building C++ Library ......... : $have_cpp"
 echo "Building Common Lisp Library.. : $have_cl"
