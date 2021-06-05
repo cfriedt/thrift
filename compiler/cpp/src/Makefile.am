@@ -29,7 +29,7 @@ BUILT_SOURCES = thrift/thrifty.cc
 
 noinst_LIBRARIES = thrift/libparse.a
 
-thrift_libparse_a_CPPFLAGS = -I$(srcdir)
+thrift_libparse_a_CPPFLAGS = -I$(srcdir) -I$(builddir)
 thrift_libparse_a_CXXFLAGS = -Wall -Wno-sign-compare -Wno-unused
 
 thrift_libparse_a_SOURCES = thrift/thrifty.yy \
