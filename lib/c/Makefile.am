@@ -4,7 +4,14 @@ pkgconfig_DATA = thrift_c.pc
 pkgconfigdir = $(libdir)/pkgconfig
 
 lib_LTLIBRARIES = libthrift_c.la
-libthrift_c_la_SOURCES = src/thrift/c/thrift.c
+
+libthrift_c_la_SOURCES = \
+    src/thrift/c/thrift.c \
+    src/thrift/c/transport/t_buffered_transports.c
+
+libthrift_c_la_CPPFLAGS = \
+    $(AM_CPPFLAGS) \
+    -I$(srcdir)/src
 
 libthrift_c_la_CFLAGS = \
     $(AM_CFLAGS) \
