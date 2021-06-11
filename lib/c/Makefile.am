@@ -6,8 +6,10 @@ pkgconfigdir = $(libdir)/pkgconfig
 lib_LTLIBRARIES = libthrift_c.la
 
 libthrift_c_la_SOURCES = \
+    src/thrift/c/protocol/t_protocol.c \
+    src/thrift/c/protocol/t_binary_protocol.c \
     src/thrift/c/thrift.c \
-    src/thrift/c/transport/t_buffered_transports.c
+    src/thrift/c/transport/t_buffer_transports.c
 
 libthrift_c_la_CPPFLAGS = \
     $(AM_CPPFLAGS) \
@@ -15,4 +17,5 @@ libthrift_c_la_CPPFLAGS = \
 
 libthrift_c_la_CFLAGS = \
     $(AM_CFLAGS) \
-    -Wall -Wextra -Werror
+    -Wall -Wextra -Werror \
+    -Wno-incompatible-function-pointer-types

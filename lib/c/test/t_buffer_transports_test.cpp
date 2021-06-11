@@ -5,7 +5,7 @@
 #include <boost/test/unit_test.hpp>
 
 #include "thrift/c/transport/t_transport.h"
-#include "thrift/c/transport/t_buffered_transports.h"
+#include "thrift/c/transport/t_buffer_transports.h"
 
 using namespace std;
 
@@ -20,14 +20,20 @@ BOOST_AUTO_TEST_CASE(test_t_memory_buffer_init) {
     BOOST_CHECK_EQUAL(-EINVAL, t_memory_buffer_init(&_transport, &buffer.front(), 0));
 
     BOOST_CHECK_EQUAL(0, t_memory_buffer_init(&_transport, &buffer.front(), buffer.size()));
+    BOOST_CHECK(_transport.isOpen != nullptr);
+    BOOST_CHECK(_transport.peek != nullptr);
     BOOST_CHECK(_transport.open != nullptr);
     BOOST_CHECK(_transport.close != nullptr);
-    BOOST_CHECK(_transport.isOpen != nullptr);
     BOOST_CHECK(_transport.read != nullptr);
+    BOOST_CHECK(_transport.readAll != nullptr);
     BOOST_CHECK(_transport.write != nullptr);
+    BOOST_CHECK(_transport.writeAll != nullptr);
     BOOST_CHECK(_transport.flush != nullptr);
     BOOST_CHECK(_transport.readEnd != nullptr);
     BOOST_CHECK(_transport.writeEnd != nullptr);
+    BOOST_CHECK(_transport.borrow != nullptr);
+    BOOST_CHECK(_transport.consume != nullptr);
+    BOOST_CHECK(_transport.getOrigin != nullptr);
     BOOST_CHECK(_transport.available_read != nullptr);
     BOOST_CHECK(_transport.available_write != nullptr);
 
@@ -38,6 +44,29 @@ BOOST_AUTO_TEST_CASE(test_t_memory_buffer_init) {
     BOOST_CHECK_EQUAL(_transport.rBound_, &buffer[0]);
     BOOST_CHECK_EQUAL(_transport.wBase_, &buffer[0]);
     BOOST_CHECK_EQUAL(_transport.wBound_, &buffer[buffer.size()]);
+}
+
+BOOST_AUTO_TEST_CASE(test_t_memory_buffer_isOpen) {
+    BOOST_REQUIRE_EQUAL(0, t_memory_buffer_init(&_transport, &buffer.front(), buffer.size()));
+
+    BOOST_CHECK_EQUAL(false, t->peek(nullptr));
+
+    BOOST_CHECK_EQUAL(false, t->peek(nullptr));
+    _transport.rBound_ = _transport.rBase_ + 1;
+    _transport.wBase_ = _transport.rBound_;
+    BOOST_CHECK_EQUAL(true, t->peek(t));
+}
+
+BOOST_AUTO_TEST_CASE(test_t_memory_buffer_peek) {
+    BOOST_REQUIRE_EQUAL(0, t_memory_buffer_init(&_transport, &buffer.front(), buffer.size()));
+
+    BOOST_CHECK_EQUAL(false, t->isOpen(nullptr));
+
+    BOOST_REQUIRE_EQUAL(false, _transport.open_);
+    BOOST_CHECK_EQUAL(false, t->isOpen(t));
+
+    _transport.open_ = true;
+    BOOST_CHECK_EQUAL(true, t->isOpen(t));
 }
 
 BOOST_AUTO_TEST_CASE(test_t_memory_buffer_open) {
@@ -63,18 +92,6 @@ BOOST_AUTO_TEST_CASE(test_t_memory_buffer_close) {
     _transport.open_ = true;
     BOOST_CHECK_EQUAL(0, t->close(t));
     BOOST_CHECK_EQUAL(false, _transport.open_);
-}
-
-BOOST_AUTO_TEST_CASE(test_t_memory_buffer_isOpen) {
-    BOOST_REQUIRE_EQUAL(0, t_memory_buffer_init(&_transport, &buffer.front(), buffer.size()));
-
-    BOOST_CHECK_EQUAL(false, t->isOpen(nullptr));
-
-    BOOST_REQUIRE_EQUAL(false, _transport.open_);
-    BOOST_CHECK_EQUAL(false, t->isOpen(t));
-
-    _transport.open_ = true;
-    BOOST_CHECK_EQUAL(true, t->isOpen(t));
 }
 
 BOOST_AUTO_TEST_CASE(test_t_memory_buffer_read) {
@@ -137,6 +154,67 @@ BOOST_AUTO_TEST_CASE(test_t_memory_buffer_writeEnd) {
 
     BOOST_CHECK_EQUAL(-EINVAL, t->writeEnd(nullptr));
     BOOST_CHECK_EQUAL(0, t->writeEnd(t));
+}
+
+BOOST_AUTO_TEST_CASE(test_t_memory_buffer_borrow) {
+    BOOST_REQUIRE_EQUAL(0, t_memory_buffer_init(&_transport, &buffer.front(), buffer.size()));
+
+    uint8_t buf_[32];
+    void *buf = buf_;
+    uint32_t len = sizeof(buf_);
+    BOOST_CHECK_EQUAL(-EINVAL, t->borrow(nullptr, &buf, &len));
+    BOOST_CHECK_EQUAL(-EINVAL, t->borrow(t, NULL, &len));
+    BOOST_CHECK_EQUAL(-EINVAL, t->borrow(t, &buf, NULL));
+    BOOST_CHECK_EQUAL(0, t->borrow(t, &buf, &len));
+    BOOST_CHECK_EQUAL(0, len);
+
+    _transport.rBound_ = _transport.rBase_ + 6;
+    _transport.wBase_ = _transport.rBase_ + 6;
+    _transport.rBase_[0] = 0xaa;
+    _transport.rBase_[1] = 0xbb;
+    _transport.rBase_[2] = 0xcc;
+    _transport.rBase_[3] = 0xdd;
+    _transport.rBase_[4] = 0xee;
+    _transport.rBase_[5] = 0xff;
+    
+    memset(buf_, 0, sizeof(buf_));
+    buf = buf_;
+    len = sizeof(buf_);
+    BOOST_CHECK_EQUAL(6, t->borrow(t, &buf, &len));
+    BOOST_CHECK_EQUAL(6, len);
+    BOOST_CHECK(buf == buf_);
+    BOOST_CHECK_EQUAL(0, memcmp(buf, _transport.rBase_, 6));
+
+    memset(buf_, 0, sizeof(buf_));
+    buf = NULL;
+    len = sizeof(buf_);
+    BOOST_CHECK_EQUAL(6, t->borrow(t, &buf, &len));
+    BOOST_CHECK_EQUAL(6, len);
+    BOOST_CHECK(buf == _transport.rBase_);
+}
+
+BOOST_AUTO_TEST_CASE(test_t_memory_buffer_consume) {
+    BOOST_REQUIRE_EQUAL(0, t_memory_buffer_init(&_transport, &buffer.front(), buffer.size()));
+
+    BOOST_CHECK_EQUAL(-EINVAL, t->consume(nullptr, 5000));
+
+    _transport.rBound_ = _transport.rBase_ + 6;
+    _transport.wBase_ = _transport.rBound_;
+    _transport.rBase_[0] = 0xaa;
+    _transport.rBase_[1] = 0xbb;
+    _transport.rBase_[2] = 0xcc;
+    _transport.rBase_[3] = 0xdd;
+    _transport.rBase_[4] = 0xee;
+    _transport.rBase_[5] = 0xff;
+
+    BOOST_CHECK_EQUAL(0, t->consume(t, 6));
+}
+
+BOOST_AUTO_TEST_CASE(test_t_memory_buffer_getOrigin) {
+    BOOST_REQUIRE_EQUAL(0, t_memory_buffer_init(&_transport, &buffer.front(), buffer.size()));
+
+    BOOST_CHECK_EQUAL(nullptr, t->getOrigin(nullptr));
+    BOOST_CHECK_EQUAL("memory", t->getOrigin(t));
 }
 
 BOOST_AUTO_TEST_CASE(test_t_memory_buffer_available_read) {

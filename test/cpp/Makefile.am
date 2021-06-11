@@ -25,7 +25,7 @@ BUILT_SOURCES = gen-cpp/ThriftTest.cpp \
                 gen-cpp/Service.cpp
 
 noinst_LTLIBRARIES = libtestgencpp.la libstresstestgencpp.la
-nodist_libtestgencpp_la_SOURCES = \
+libtestgencpp_la_SOURCES = \
 	gen-cpp/SecondService.cpp \
 	gen-cpp/SecondService.h \
 	gen-cpp/SecondService.tcc \
@@ -41,7 +41,7 @@ nodist_libtestgencpp_la_SOURCES = \
 
 libtestgencpp_la_LIBADD = $(top_builddir)/lib/cpp/libthrift.la
 
-nodist_libstresstestgencpp_la_SOURCES = \
+libstresstestgencpp_la_SOURCES = \
 	gen-cpp/StressTest_types.h \
 	gen-cpp/Service.cpp \
 	gen-cpp/Service.h
@@ -106,7 +106,7 @@ gen-cpp/Service.cpp: $(top_srcdir)/test/StressTest.thrift $(THRIFT)
 gen-cpp/SpecificNameTest_types.cpp gen-cpp/EchoService.cpp: $(top_srcdir)/test/SpecificName.thrift $(THRIFT)
 	$(THRIFT) --gen cpp $<
 
-AM_CPPFLAGS = $(BOOST_CPPFLAGS) $(LIBEVENT_CPPFLAGS) -I$(top_srcdir)/lib/cpp/src -Igen-cpp -I.
+AM_CPPFLAGS = $(BOOST_CPPFLAGS) $(LIBEVENT_CPPFLAGS) -I$(top_srcdir)/lib/cpp/src -Igen-cpp -I. -I/opt/homebrew/Cellar/openssl@1.1/1.1.1k/include
 AM_CXXFLAGS = -Wall -Wextra -pedantic -D__STDC_FORMAT_MACROS -D__STDC_LIMIT_MACROS
 AM_LDFLAGS = $(BOOST_LDFLAGS) $(LIBEVENT_LDFLAGS) $(ZLIB_LIBS)
 

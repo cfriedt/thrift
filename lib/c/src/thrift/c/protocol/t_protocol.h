@@ -7,6 +7,10 @@
 
 #include <thrift/c/protocol/t_enum.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 struct t_byte_order {
   uint16_t (*toWire16)(uint16_t x);
   uint32_t (*toWire32)(uint32_t x);
@@ -22,6 +26,7 @@ extern const struct t_byte_order t_network_little_endian;
 static inline bool t_byte_order_is_valid(const struct t_byte_order *bo)
 {
     return !(false
+        || bo == NULL
         || bo->toWire16 == NULL
         || bo->toWire32 == NULL
         || bo->toWire64 == NULL
@@ -53,7 +58,7 @@ static inline bool t_byte_order_is_valid(const struct t_byte_order *bo)
     int (*writeDouble)(struct t_protocol *p, double d); \
     int (*writeString)(struct t_protocol *p, uint32_t size, const char *s); \
     \
-    int (*readMessageBegin)(struct t_protocol *p, char **name, enum t_message_type *message_type, uint32_t *seq); \
+    int (*readMessageBegin)(struct t_protocol *p, uint32_t *len, char **name, enum t_message_type *message_type, uint32_t *seq); \
     int (*readMessageEnd)(struct t_protocol *p); \
     int (*readStructBegin)(struct t_protocol *p, uint32_t *len, char **name); \
     int (*readStructEnd)(struct t_protocol *p); \
@@ -77,5 +82,9 @@ struct t_protocol;
 struct t_protocol {
   T_PROTOCOL_METHODS;
 };
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* THRIFT_C_T_PROTOCOL_H_ */

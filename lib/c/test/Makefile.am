@@ -1,15 +1,43 @@
 AUTOMAKE_OPTIONS = subdir-objects serial-tests nostdinc
 
-check_PROGRAMS = \
-    t_memory_buffer_test
+BUILT_SOURCES =
+CLEANFILES =
+noinst_LTLIBRARIES =
+check_PROGRAMS =
 
-t_memory_buffer_test_SOURCES = \
-    t_memory_buffer_test.cpp
-t_memory_buffer_test_CPPFLAGS = \
+check_PROGRAMS += \
+    t_buffer_transports_test
+t_buffer_transports_test_SOURCES = \
+    t_buffer_transports_test.cpp
+t_buffer_transports_test_CPPFLAGS = \
     $(AM_CPPFLAGS) \
     $(BOOST_CPPFLAGS) \
     -I$(srcdir)/../src
-t_memory_buffer_test_LDADD = \
+t_buffer_transports_test_LDADD = \
+  $(top_builddir)/lib/c/libthrift_c.la \
+  $(BOOST_TEST_LDADD) \
+  $(BOOST_SYSTEM_LDADD) \
+  /opt/homebrew/Cellar/boost/1.76.0/lib/libboost_thread-mt.a
+
+check_PROGRAMS += t_protocol_test
+t_protocol_test_SOURCES = t_protocol_test.cpp
+t_protocol_test_CPPFLAGS = \
+    $(AM_CPPFLAGS) \
+    $(BOOST_CPPFLAGS) \
+    -I$(srcdir)/../src
+t_protocol_test_LDADD = \
+  $(top_builddir)/lib/c/libthrift_c.la \
+  $(BOOST_TEST_LDADD) \
+  $(BOOST_SYSTEM_LDADD) \
+  /opt/homebrew/Cellar/boost/1.76.0/lib/libboost_thread-mt.a
+
+check_PROGRAMS += t_binary_protocol_test
+t_binary_protocol_test_SOURCES = t_binary_protocol_test.cpp
+t_binary_protocol_test_CPPFLAGS = \
+    $(AM_CPPFLAGS) \
+    $(BOOST_CPPFLAGS) \
+    -I$(srcdir)/../src
+t_binary_protocol_test_LDADD = \
   $(top_builddir)/lib/c/libthrift_c.la \
   $(BOOST_TEST_LDADD) \
   $(BOOST_SYSTEM_LDADD) \

@@ -137,7 +137,7 @@ UnitTests_LDADD = \
   libtestgencpp.la \
   $(BOOST_TEST_LDADD) \
   $(BOOST_SYSTEM_LDADD) \
-  $(BOOST_THREAD_LDADD)
+  /opt/homebrew/Cellar/boost/1.76.0/lib/libboost_thread-mt.a
 
 TInterruptTest_SOURCES = \
 	TSocketInterruptTest.cpp \
@@ -149,7 +149,7 @@ TInterruptTest_LDADD = \
   $(BOOST_FILESYSTEM_LDADD) \
   $(BOOST_CHRONO_LDADD) \
   $(BOOST_SYSTEM_LDADD) \
-  $(BOOST_THREAD_LDADD)
+  /opt/homebrew/Cellar/boost/1.76.0/lib/libboost_thread-mt.a
 
 TServerIntegrationTest_SOURCES = \
 	TServerIntegrationTest.cpp
@@ -159,7 +159,7 @@ TServerIntegrationTest_LDADD = \
   libprocessortest.la \
   $(BOOST_TEST_LDADD) \
   $(BOOST_SYSTEM_LDADD) \
-  $(BOOST_THREAD_LDADD)
+  /opt/homebrew/Cellar/boost/1.76.0/lib/libboost_thread-mt.a
 
 SecurityTest_SOURCES = \
 	SecurityTest.cpp
@@ -170,7 +170,7 @@ SecurityTest_LDADD = \
   $(BOOST_TEST_LDADD) \
   $(BOOST_FILESYSTEM_LDADD) \
   $(BOOST_SYSTEM_LDADD) \
-  $(BOOST_THREAD_LDADD)
+  /opt/homebrew/Cellar/boost/1.76.0/lib/libboost_thread-mt.a
 
 SecurityFromBufferTest_SOURCES = \
 	SecurityFromBufferTest.cpp
@@ -181,7 +181,7 @@ SecurityFromBufferTest_LDADD = \
   $(BOOST_TEST_LDADD) \
   $(BOOST_FILESYSTEM_LDADD) \
   $(BOOST_SYSTEM_LDADD) \
-  $(BOOST_THREAD_LDADD)
+  /opt/homebrew/Cellar/boost/1.76.0/lib/libboost_thread-mt.a
 
 TransportTest_SOURCES = \
 	TransportTest.cpp
@@ -249,7 +249,7 @@ TPipedTransportTest_LDADD = \
 	$(top_builddir)/lib/cpp/libthrift.la \
 	$(BOOST_TEST_LDADD) \
 	$(BOOST_SYSTEM_LDADD) \
-	$(BOOST_THREAD_LDADD)
+	/opt/homebrew/Cellar/boost/1.76.0/lib/libboost_thread-mt.a
 
 #
 # AllProtocolsTest
@@ -308,7 +308,7 @@ TNonblockingSSLServerTest_LDADD = libprocessortest.la \
                                $(BOOST_FILESYSTEM_LDADD) \
                                $(BOOST_CHRONO_LDADD) \
                                $(BOOST_SYSTEM_LDADD) \
-                               $(BOOST_THREAD_LDADD) \
+                               /opt/homebrew/Cellar/boost/1.76.0/lib/libboost_thread-mt.a \
                                $(LIBEVENT_LIBS)
 
 #
@@ -417,7 +417,7 @@ gen-cpp/OneWayService.cpp gen-cpp/OneWayTest_types.h gen-cpp/OneWayService.h: On
 gen-cpp/ChildService.cpp gen-cpp/ChildService.h gen-cpp/ParentService.cpp gen-cpp/ParentService.h gen-cpp/proc_types.cpp gen-cpp/proc_types.h: processor/proc.thrift
 	$(THRIFT) --gen cpp:templates,cob_style $<
 
-AM_CPPFLAGS = $(BOOST_CPPFLAGS) -I$(top_srcdir)/lib/cpp/src -I$(top_srcdir)/lib/cpp/src/thrift -D__STDC_FORMAT_MACROS -D__STDC_LIMIT_MACROS -I.
+AM_CPPFLAGS = $(BOOST_CPPFLAGS) -I/opt/homebrew/Cellar/openssl@1.1/1.1.1k/include -I/opt/homebrew/include -I$(top_srcdir)/lib/cpp/src -I$(top_srcdir)/lib/cpp/src/thrift -D__STDC_FORMAT_MACROS -D__STDC_LIMIT_MACROS -I.
 AM_LDFLAGS = $(BOOST_LDFLAGS)
 AM_CXXFLAGS = -Wall -Wextra -pedantic
 

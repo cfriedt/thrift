@@ -30,7 +30,7 @@ struct t_memory_buffer {
     T_BUFFERED_FIELDS;
 };
 
-int t_memory_buffer_init(struct t_memory_buffer *t, void *buffer, size_t size);
+int t_memory_buffer_init(struct t_memory_buffer *t, void *buffer, uint32_t size);
 
 struct t_buffered_transport {
     T_TRANSPORT_METHODS;
@@ -39,7 +39,7 @@ struct t_buffered_transport {
     struct t_transport *trans;
 };
 
-int t_buffered_transport_init(struct t_buffered_transport *t, void *buffer, size_t size, struct t_transport *trans);
+int t_buffered_transport_init(struct t_buffered_transport *t, void *buffer, uint32_t size, struct t_transport *trans);
 
 #ifdef __cplusplus
 }
