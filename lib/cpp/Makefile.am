@@ -209,7 +209,8 @@ include_transport_HEADERS = \
                          src/thrift/transport/TShortReadTransport.h \
                          src/thrift/transport/TZlibTransport.h \
                          src/thrift/transport/TWebSocketServer.h \
-                         src/thrift/transport/SocketCommon.h
+                         src/thrift/transport/SocketCommon.h \
+                         src/thrift/transport/TWrappedCTransport.h
 
 include_serverdir = $(include_thriftdir)/server
 include_server_HEADERS = \

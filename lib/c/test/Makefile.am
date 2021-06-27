@@ -19,6 +19,18 @@ t_buffer_transports_test_LDADD = \
   $(BOOST_SYSTEM_LDADD) \
   /opt/homebrew/Cellar/boost/1.76.0/lib/libboost_thread-mt.a
 
+check_PROGRAMS += t_socket_test
+t_socket_test_SOURCES = t_socket_test.cpp
+t_socket_test_CPPFLAGS = \
+    $(AM_CPPFLAGS) \
+    $(BOOST_CPPFLAGS) \
+    -I$(srcdir)/../src
+t_socket_test_LDADD = \
+  $(top_builddir)/lib/c/libthrift_c.la \
+  $(BOOST_TEST_LDADD) \
+  $(BOOST_SYSTEM_LDADD) \
+  /opt/homebrew/Cellar/boost/1.76.0/lib/libboost_thread-mt.a
+
 check_PROGRAMS += t_protocol_test
 t_protocol_test_SOURCES = t_protocol_test.cpp
 t_protocol_test_CPPFLAGS = \

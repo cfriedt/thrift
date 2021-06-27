@@ -1,5 +1,4 @@
-#ifndef THRIFT_C_T_PROTOCOL_H_
-#define THRIFT_C_T_PROTOCOL_H_
+#pragma once
 
 #include <stdbool.h>
 #include <stddef.h>
@@ -12,79 +11,75 @@ extern "C" {
 #endif
 
 struct t_byte_order {
-  uint16_t (*toWire16)(uint16_t x);
-  uint32_t (*toWire32)(uint32_t x);
-  uint64_t (*toWire64)(uint64_t x);
-  uint16_t (*fromWire16)(uint16_t x);
-  uint32_t (*fromWire32)(uint32_t x);
-  uint64_t (*fromWire64)(uint64_t x);
+  uint16_t (*to_wire16)(uint16_t x);
+  uint32_t (*to_wire32)(uint32_t x);
+  uint64_t (*to_wire64)(uint64_t x);
+  uint16_t (*from_wire16)(uint16_t x);
+  uint32_t (*from_wire32)(uint32_t x);
+  uint64_t (*from_wire64)(uint64_t x);
 };
 
 extern const struct t_byte_order t_network_big_endian;
 extern const struct t_byte_order t_network_little_endian;
 
-static inline bool t_byte_order_is_valid(const struct t_byte_order *bo)
-{
-    return !(false
-        || bo == NULL
-        || bo->toWire16 == NULL
-        || bo->toWire32 == NULL
-        || bo->toWire64 == NULL
-        || bo->fromWire16 == NULL
-        || bo->fromWire32 == NULL
-        || bo->fromWire64 == NULL
-    );
-}
+bool t_byte_order_is_valid(const struct t_byte_order* bo);
 
-#define T_PROTOCOL_METHODS \
-    int (*writeMessageBegin)(struct t_protocol *p, const char *name, enum t_message_type message_type, uint32_t seq); \
-    int (*writeMessageEnd)(struct t_protocol *p); \
-    int (*writeStructBegin)(struct t_protocol *p, const char *name); \
-    int (*writeStructEnd)(struct t_protocol *p); \
-    int (*writeFieldBegin)(struct t_protocol *p, const char *name, enum t_type field_type, int field_id); \
-    int (*writeFieldEnd)(struct t_protocol *p); \
-    int (*writeFieldStop)(struct t_protocol *p); \
-    int (*writeMapBegin)(struct t_protocol *p, enum t_type ktype, enum t_type vtype, uint32_t size); \
-    int (*writeMapEnd)(struct t_protocol *p); \
-    int (*writeListBegin)(struct t_protocol *p, enum t_type etype, uint32_t size); \
-    int (*writeListEnd)(struct t_protocol *p); \
-    int (*writeSetBegin)(struct t_protocol *p, enum t_type etype, uint32_t size); \
-    int (*writeSetEnd)(struct t_protocol *p); \
-    int (*writeBool)(struct t_protocol *p, bool b); \
-    int (*writeByte)(struct t_protocol *p, uint8_t b); \
-    int (*writeI16)(struct t_protocol *p, int16_t s); \
-    int (*writeI32)(struct t_protocol *p, int32_t w); \
-    int (*writeI64)(struct t_protocol *p, int64_t l); \
-    int (*writeDouble)(struct t_protocol *p, double d); \
-    int (*writeString)(struct t_protocol *p, uint32_t size, const char *s); \
-    \
-    int (*readMessageBegin)(struct t_protocol *p, uint32_t *len, char **name, enum t_message_type *message_type, uint32_t *seq); \
-    int (*readMessageEnd)(struct t_protocol *p); \
-    int (*readStructBegin)(struct t_protocol *p, uint32_t *len, char **name); \
-    int (*readStructEnd)(struct t_protocol *p); \
-    int (*readFieldBegin)(struct t_protocol *p, uint32_t *len, char **name, enum t_type *field_type, uint16_t *field_id); \
-    int (*readFieldEnd)(struct t_protocol *p); \
-    int (*readMapBegin)(struct t_protocol *p, enum t_type *ktype, enum t_type *vtype, uint32_t *size); \
-    int (*readMapEnd)(struct t_protocol *p); \
-    int (*readListBegin)(struct t_protocol *p, enum t_type *etype, uint32_t *size); \
-    int (*readListEnd)(struct t_protocol *p); \
-    int (*readSetBegin)(struct t_protocol *p, enum t_type *etype, uint32_t *size); \
-    int (*readSetEnd)(struct t_protocol *p); \
-    int (*readBool)(struct t_protocol *p, bool *b); \
-    int (*readByte)(struct t_protocol *p, uint8_t *b); \
-    int (*readI16)(struct t_protocol *p, int16_t *s); \
-    int (*readI32)(struct t_protocol *p, int32_t *w); \
-    int (*readI64)(struct t_protocol *p, int64_t *l); \
-    int (*readDouble)(struct t_protocol *p, double *d); \
-    int (*readString)(struct t_protocol *p, uint32_t *size, char **s);
+// FIXME: these should use underscores instead of camelCase
+#define T_PROTOCOL_METHODS                                                                         \
+  int (*write_message_begin)(struct t_protocol * p, const char* name,                              \
+                             enum t_message_type message_type, uint32_t seq);                      \
+  int (*write_message_end)(struct t_protocol * p);                                                 \
+  int (*write_struct_begin)(struct t_protocol * p, const char* name);                              \
+  int (*write_struct_end)(struct t_protocol * p);                                                  \
+  int (*write_field_begin)(struct t_protocol * p, const char* name, enum t_type field_type,        \
+                           int field_id);                                                          \
+  int (*write_field_end)(struct t_protocol * p);                                                   \
+  int (*write_field_stop)(struct t_protocol * p);                                                  \
+  int (*write_map_begin)(struct t_protocol * p, enum t_type ktype, enum t_type vtype,              \
+                         uint32_t size);                                                           \
+  int (*write_map_end)(struct t_protocol * p);                                                     \
+  int (*write_list_begin)(struct t_protocol * p, enum t_type etype, uint32_t size);                \
+  int (*write_list_end)(struct t_protocol * p);                                                    \
+  int (*write_set_begin)(struct t_protocol * p, enum t_type etype, uint32_t size);                 \
+  int (*write_set_end)(struct t_protocol * p);                                                     \
+  int (*write_bool)(struct t_protocol * p, bool b);                                                \
+  int (*write_byte)(struct t_protocol * p, uint8_t b);                                             \
+  int (*write_i16)(struct t_protocol * p, int16_t s);                                              \
+  int (*write_i32)(struct t_protocol * p, int32_t w);                                              \
+  int (*write_i64)(struct t_protocol * p, int64_t l);                                              \
+  int (*write_double)(struct t_protocol * p, double d);                                            \
+  int (*write_string)(struct t_protocol * p, uint32_t size, const char* s);                        \
+                                                                                                   \
+  int (*read_message_begin)(struct t_protocol * p, uint32_t * len, char** name,                    \
+                            enum t_message_type* message_type, uint32_t* seq);                     \
+  int (*read_message_end)(struct t_protocol * p);                                                  \
+  int (*read_struct_begin)(struct t_protocol * p, uint32_t * len, char** name);                    \
+  int (*read_struct_end)(struct t_protocol * p);                                                   \
+  int (*read_field_begin)(struct t_protocol * p, uint32_t * len, char** name,                      \
+                          enum t_type* field_type, uint16_t* field_id);                            \
+  int (*read_field_end)(struct t_protocol * p);                                                    \
+  int (*read_map_begin)(struct t_protocol * p, enum t_type * ktype, enum t_type * vtype,           \
+                        uint32_t * size);                                                          \
+  int (*read_map_end)(struct t_protocol * p);                                                      \
+  int (*read_list_begin)(struct t_protocol * p, enum t_type * etype, uint32_t * size);             \
+  int (*read_list_end)(struct t_protocol * p);                                                     \
+  int (*read_set_begin)(struct t_protocol * p, enum t_type * etype, uint32_t * size);              \
+  int (*read_set_end)(struct t_protocol * p);                                                      \
+  int (*read_bool)(struct t_protocol * p, bool* b);                                                \
+  int (*read_byte)(struct t_protocol * p, uint8_t * b);                                            \
+  int (*read_i16)(struct t_protocol * p, int16_t * s);                                             \
+  int (*read_i32)(struct t_protocol * p, int32_t * w);                                             \
+  int (*read_i64)(struct t_protocol * p, int64_t * l);                                             \
+  int (*read_double)(struct t_protocol * p, double* d);                                            \
+  int (*read_string)(struct t_protocol * p, uint32_t * size, char** s);
 
 struct t_protocol;
 struct t_protocol {
   T_PROTOCOL_METHODS;
 };
 
+bool t_protocol_is_valid(const struct t_protocol* p);
+
 #ifdef __cplusplus
 }
 #endif
-
-#endif /* THRIFT_C_T_PROTOCOL_H_ */

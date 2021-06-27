@@ -1,10 +1,10 @@
-#ifndef THRIFT_C_T_BINARY_PROTOCOL_H_
-#define THRIFT_C_T_BINARY_PROTOCOL_H_
+#pragma once
 
 #include <stdbool.h>
 #include <stdint.h>
 
 #include <thrift/c/protocol/t_protocol.h>
+#include <thrift/c/protocol/t_protocol_factory.h>
 #include <thrift/c/transport/t_transport.h>
 
 #ifdef __cplusplus
@@ -12,17 +12,25 @@ extern "C" {
 #endif
 
 struct t_binary_protocol {
-    T_PROTOCOL_METHODS;
+  T_PROTOCOL_METHODS;
 
-    struct t_transport *trans;
-    const struct t_byte_order *bo;
+  struct t_transport* trans;
+  const struct t_byte_order* byte_order;
 };
 
-/* TODO: add endianness support */
-int t_binary_protocol_init(struct t_binary_protocol *p, struct t_transport *t, const struct t_byte_order *bo);
+int t_binary_protocol_init(struct t_binary_protocol* protocol,
+                           struct t_transport* transport,
+                           const struct t_byte_order* byte_order);
+
+struct t_binary_protocol_factory {
+  T_PROTOCOL_FACTORY_METHODS;
+  const struct t_byte_order* byte_order;
+};
+
+int t_binary_protocol_factory_init_with_byte_order(struct t_binary_protocol_factory* factory,
+                                                   const struct t_byte_order* byte_order);
+int t_binary_protocol_factory_init(struct t_binary_protocol_factory* factory);
 
 #ifdef __cplusplus
 }
 #endif
-
-#endif /* THRIFT_C_T_PROTOCOL_H_ */
