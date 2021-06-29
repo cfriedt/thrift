@@ -66,8 +66,12 @@ int t_socket_open(struct t_transport* t) {
   } sa = {};
   struct t_socket* const sock = (struct t_socket*)t;
 
-  if (t == NULL) {
+  if (!t_transport_is_valid(t)) {
     return -EINVAL;
+  }
+
+  if (sock->host == NULL) {
+    return EINVAL;
   }
 
   // try to resolve a UNIX-domain socket (a.k.a. named pipe)

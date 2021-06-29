@@ -34,12 +34,13 @@ BOOST_AUTO_TEST_CASE(test_t_memory_buffer_init) {
 BOOST_AUTO_TEST_CASE(test_t_memory_buffer_is_open) {
   BOOST_REQUIRE_EQUAL(0, t_memory_buffer_init(&memory_buffer, &buffer.front(), buffer.size()));
 
-  BOOST_CHECK_EQUAL(false, t->peek(nullptr));
+  BOOST_CHECK_EQUAL(false, t->is_open(nullptr));
 
-  BOOST_CHECK_EQUAL(false, t->peek(nullptr));
-  memory_buffer.rBound_ = memory_buffer.rBase_ + 1;
-  memory_buffer.wBase_ = memory_buffer.rBound_;
-  BOOST_CHECK_EQUAL(true, t->peek(t));
+  BOOST_CHECK_EQUAL(false, t->is_open(t));
+  BOOST_REQUIRE_EQUAL(0, t->open(t));
+  BOOST_CHECK_EQUAL(true, t->is_open(t));
+  BOOST_REQUIRE_EQUAL(0, t->close(t));
+  BOOST_CHECK_EQUAL(false, t->is_open(t));
 }
 
 BOOST_AUTO_TEST_CASE(test_t_memory_buffer_peek) {
@@ -86,6 +87,9 @@ BOOST_AUTO_TEST_CASE(test_t_memory_buffer_read) {
 
   BOOST_CHECK_EQUAL(-EINVAL, t->read(nullptr, &buf.front(), hi.size() + 1));
   BOOST_CHECK_EQUAL(-EINVAL, t->read(t, nullptr, hi.size() + 1));
+  BOOST_CHECK_EQUAL(-EBADF, t->read(t, &buf.front(), 0));
+
+  BOOST_REQUIRE_EQUAL(0, t->open(t));
   BOOST_CHECK_EQUAL(0, t->read(t, &buf.front(), 0));
 
   strcpy((char*)memory_buffer.buffer_, hi.c_str());
@@ -105,6 +109,9 @@ BOOST_AUTO_TEST_CASE(test_t_memory_buffer_write) {
 
   BOOST_CHECK_EQUAL(-EINVAL, t->write(nullptr, hi.c_str(), hi.size() + 1));
   BOOST_CHECK_EQUAL(-EINVAL, t->write(t, nullptr, hi.size() + 1));
+  BOOST_CHECK_EQUAL(-EBADF, t->write(t, hi.c_str(), 0));
+
+  BOOST_REQUIRE_EQUAL(0, t->open(t));
   BOOST_CHECK_EQUAL(0, t->write(t, hi.c_str(), 0));
 
   BOOST_CHECK_EQUAL(hi.size() + 1, t->write(t, hi.c_str(), hi.size() + 1));
@@ -144,14 +151,20 @@ BOOST_AUTO_TEST_CASE(test_t_memory_buffer_write_end) {
 }
 
 BOOST_AUTO_TEST_CASE(test_t_memory_buffer_borrow) {
-  BOOST_REQUIRE_EQUAL(0, t_memory_buffer_init(&memory_buffer, &buffer.front(), buffer.size()));
 
   uint8_t buf_[32];
   uint8_t* buf = buf_;
   uint32_t len = sizeof(buf_);
+
+  BOOST_REQUIRE_EQUAL(0, t_memory_buffer_init(&memory_buffer, &buffer.front(), buffer.size()));
+
   BOOST_CHECK_EQUAL(-EINVAL, t->borrow(nullptr, &buf, &len));
   BOOST_CHECK_EQUAL(-EINVAL, t->borrow(t, NULL, &len));
   BOOST_CHECK_EQUAL(-EINVAL, t->borrow(t, &buf, NULL));
+  BOOST_CHECK_EQUAL(-EBADF, t->borrow(t, &buf, &len));
+
+  BOOST_REQUIRE_EQUAL(0, t->open(t));
+
   BOOST_CHECK_EQUAL(0, t->borrow(t, &buf, &len));
   BOOST_CHECK_EQUAL(0, len);
 
@@ -185,6 +198,9 @@ BOOST_AUTO_TEST_CASE(test_t_memory_buffer_consume) {
 
   BOOST_CHECK_EQUAL(-EINVAL, t->consume(nullptr, 5000));
 
+  BOOST_CHECK_EQUAL(-EBADF, t->consume(t, 0));
+  BOOST_REQUIRE_EQUAL(0, t->open(t));
+
   memory_buffer.rBound_ = memory_buffer.rBase_ + 6;
   memory_buffer.wBase_ = memory_buffer.rBound_;
   memory_buffer.rBase_[0] = 0xaa;
@@ -197,7 +213,7 @@ BOOST_AUTO_TEST_CASE(test_t_memory_buffer_consume) {
   BOOST_CHECK_EQUAL(0, t->consume(t, 6));
 }
 
-BOOST_AUTO_TEST_CASE(test_t_memory_buffer_getOrigin) {
+BOOST_AUTO_TEST_CASE(test_t_memory_buffer_get_origin) {
   BOOST_REQUIRE_EQUAL(0, t_memory_buffer_init(&memory_buffer, &buffer.front(), buffer.size()));
 
   BOOST_CHECK_EQUAL(nullptr, t->get_origin(nullptr));
@@ -207,7 +223,9 @@ BOOST_AUTO_TEST_CASE(test_t_memory_buffer_getOrigin) {
 BOOST_AUTO_TEST_CASE(test_t_memory_buffer_available_read) {
   BOOST_REQUIRE_EQUAL(0, t_memory_buffer_init(&memory_buffer, &buffer.front(), buffer.size()));
 
-  BOOST_REQUIRE_EQUAL(0, t->available_read(t));
+  BOOST_CHECK_EQUAL(-EBADF, t->available_read(t));
+  BOOST_REQUIRE_EQUAL(0, t->open(t));
+  BOOST_CHECK_EQUAL(0, t->available_read(t));
 
   memory_buffer.rBound_ += 5;
   BOOST_REQUIRE_EQUAL(5, t->available_read(t));
@@ -219,7 +237,9 @@ BOOST_AUTO_TEST_CASE(test_t_memory_buffer_available_read) {
 BOOST_AUTO_TEST_CASE(test_t_memory_buffer_available_write) {
   BOOST_REQUIRE_EQUAL(0, t_memory_buffer_init(&memory_buffer, &buffer.front(), buffer.size()));
 
-  BOOST_REQUIRE_EQUAL(buffer.size(), t->available_write(t));
+  BOOST_CHECK_EQUAL(-EBADF, t->available_write(t));
+  BOOST_REQUIRE_EQUAL(0, t->open(t));
+  BOOST_CHECK_EQUAL(buffer.size(), t->available_write(t));
 
   memory_buffer.wBase_ += 5;
   BOOST_REQUIRE_EQUAL(buffer.size() - 5, t->available_write(t));

@@ -13,6 +13,7 @@
 #define BOOST_TEST_MODULE t_socket
 #include <boost/test/unit_test.hpp>
 
+#include "thrift/c/transport/t_buffer_transports.h"
 #include "thrift/c/transport/t_socket.h"
 
 using namespace std;
@@ -38,7 +39,7 @@ string to_string(const sockaddr* sa) {
 
   if (sa->sa_family == AF_INET6) {
     inet_ntop(AF_INET6, &sa6->sin6_addr, buf, sa6->sin6_len);
-    return string(buf) + ":" + to_string(ntohs(sa6->sin6_port));
+    return string("[") + string(buf) + "]:" + to_string(ntohs(sa6->sin6_port));
   }
 
   return "<unknown>";
@@ -103,6 +104,8 @@ public:
     int r;
     socklen_t len;
 
+    // clog << "created server socket " << server_sock << endl;
+
     if (sa->sa_family == AF_INET || sa->sa_family == AF_INET6) {
       r = 1;
       len = sizeof(r);
@@ -110,7 +113,6 @@ public:
       if (r < 0) {
         throw system_error(errno, system_category(), "setsockopt");
       }
-      // clog << "set SO_REUSEADDR on socket " << server_sock << endl;
     }
 
     r = ::bind(server_sock, sa, sa->sa_len);
@@ -131,28 +133,25 @@ public:
       }
     }
 
-    // clog << "bound socket " << server_sock << " to " << to_string(sa) << endl;
+    // clog << "bound server socket " << server_sock << " to " << to_string(sa) << endl;
 
     r = listen(server_sock, 1);
     if (r < 0) {
       throw system_error(errno, system_category(), "listen");
     }
 
-    // clog << "listening on fd " << server_sock << endl;
-
     accept_thread = thread([&]() {
       try {
         sockaddr_storage client_addr;
         socklen_t client_len = sizeof(client_addr);
-        // clog << "accepting connections on socket " << server_sock << endl;
         r = accept(server_sock, (sockaddr*)&client_addr, &len);
         if (r < 0) {
-          perror("accept");
           throw system_error(errno, system_category(), "accept");
         }
+
         server_fd = r;
-        // clog << "accepted connection from " << to_string((sockaddr*)&client_addr) << " as fd " <<
-        // server_fd << endl;
+        // clog << "accepted connection from " << to_string((sockaddr*)&client_addr) << " as socket
+        // " << server_fd << endl;
 
         if (client_addr.ss_family == AF_INET || client_addr.ss_family == AF_INET6) {
           r = 1;
@@ -161,26 +160,26 @@ public:
           if (r < 0) {
             throw system_error(errno, system_category(), "setsockopt");
           }
-          // clog << "set TCP_NODELAY on socket " << server_fd << endl;
         }
 
         ready.unlock();
       } catch (exception& e) {
-        cerr << e.what() << endl;
+        // cerr << e.what() << endl;
       }
     });
   }
 
   ~Harness() {
-    // clog << "closing socket " << server_sock << endl;
+    // clog << "closing server socket " << server_sock << endl;
     close(server_sock);
-    // clog << "shutting down socket " << server_fd << endl;
+    // clog << "server fd " << server_fd << endl;
     shutdown(server_fd, SHUT_RDWR);
-    // clog << "closing socket " << client_fd << endl;
+    // clog << "client fd " << client_fd << endl;
     close(client_fd);
     accept_thread.join();
 
     if (!path.empty()) {
+      // clog << "removing path " << path << endl;
       remove(path.c_str());
     }
   }
@@ -195,8 +194,8 @@ public:
   timed_mutex ready;
 };
 
-static struct t_socket sock;
-static struct t_transport* const t = (struct t_transport*)&sock;
+struct t_socket sock;
+struct t_transport* const t = (struct t_transport*)&sock;
 
 BOOST_AUTO_TEST_CASE(test_t_socket_init) {
 
@@ -263,7 +262,7 @@ BOOST_AUTO_TEST_CASE(test_t_socket_close) {
   string sun_path(tmpnam(nullptr));
   Harness h(sun_path);
 
-  BOOST_REQUIRE_EQUAL(0, t_socket_init(&sock, sun_path.c_str(), h.port));
+  BOOST_REQUIRE_EQUAL(0, t_socket_init_path(&sock, sun_path.c_str()));
 
   BOOST_CHECK_EQUAL(-EINVAL, t->close(nullptr));
 
@@ -306,9 +305,9 @@ BOOST_AUTO_TEST_CASE(test_t_socket_read) {
 BOOST_AUTO_TEST_CASE(test_t_socket_write) {
   string s("Hello, t_socket world!");
   vector<uint8_t> buf(s.size());
-  Harness h(AF_INET);
+  Harness h(AF_INET6);
 
-  BOOST_REQUIRE_EQUAL(0, t_socket_init(&sock, "127.0.0.1", h.port));
+  BOOST_REQUIRE_EQUAL(0, t_socket_init(&sock, "::1", h.port));
 
   BOOST_CHECK_EQUAL(-EINVAL, t->write(nullptr, &buf.front(), buf.size()));
   BOOST_CHECK_EQUAL(-EINVAL, t->write(t, nullptr, buf.size()));
@@ -356,9 +355,9 @@ BOOST_AUTO_TEST_CASE(test_t_socket_available_read) {
 }
 
 BOOST_AUTO_TEST_CASE(test_t_socket_available_write) {
-  Harness h(AF_INET);
+  Harness h(AF_INET6);
 
-  BOOST_REQUIRE_EQUAL(0, t_socket_init(&sock, "127.0.0.1", h.port));
+  BOOST_REQUIRE_EQUAL(0, t_socket_init(&sock, "::1", h.port));
 
   BOOST_CHECK_EQUAL(-EINVAL, t->available_write(nullptr));
 
@@ -370,4 +369,58 @@ BOOST_AUTO_TEST_CASE(test_t_socket_available_write) {
   h.client_fd = sock.sd;
 
   BOOST_CHECK(t->available_write(t) > 0);
+}
+
+/*
+ * Buffered Socket Tests
+ */
+
+static t_buffered_transport buffered;
+static t_transport* const t2 = (t_transport*)&buffered;
+
+BOOST_AUTO_TEST_CASE(test_t_buffered_socket_write) {
+  string s("Hello, buffered world!");
+  vector<uint8_t> buf(64);
+  Harness h(AF_INET6);
+
+  // clog << "sock: " << &sock << endl;
+  BOOST_REQUIRE_EQUAL(0, t_socket_init(&sock, "::1", h.port));
+  // clog << "buffered: " << &buffered << endl;
+  BOOST_REQUIRE_EQUAL(0, t_buffered_transport_init(&buffered, &buf.front(), buf.size(), t));
+  // clog << "connecting to " << "[::1]:" << h.port << endl;
+  BOOST_REQUIRE_EQUAL(0, t2->open(t2));
+  h.ready.try_lock_for(chrono::milliseconds(1000));
+  h.client_fd = sock.sd;
+  // clog << "connected to " << "[::1]:" << h.port << " with client socket " << h.client_fd << endl;
+
+  BOOST_CHECK_EQUAL(s.size(), t2->write(t2, s.c_str(), s.size()));
+  BOOST_REQUIRE_EQUAL(s.size(), recv(h.server_fd, &buf.front(), buf.size(), 0));
+
+  BOOST_CHECK_EQUAL(s, string(buf.begin(), buf.begin() + s.size()));
+}
+
+BOOST_AUTO_TEST_CASE(test_t_buffered_socket_read) {
+  vector<uint8_t> buf(1024, '*');
+  vector<uint8_t> buf2(64, 'x');
+  Harness h(AF_INET6);
+
+  // clog << "sock: " << &sock << endl;
+  BOOST_REQUIRE_EQUAL(0, t_socket_init(&sock, "::1", h.port));
+  // clog << "buffered: " << &buffered << endl;
+  BOOST_REQUIRE_EQUAL(0, t_buffered_transport_init(&buffered, &buf.front(), buf.size(), t));
+  // clog << "connecting to " << "[::1]:" << h.port << endl;
+  BOOST_REQUIRE_EQUAL(0, t2->open(t2));
+  h.ready.try_lock_for(chrono::milliseconds(1000));
+  h.client_fd = sock.sd;
+  // clog << "connected to " << "[::1]:" << h.port << " with client socket " << h.client_fd << endl;
+
+  BOOST_REQUIRE_EQUAL(buf.size(), send(h.server_fd, &buf.front(), buf.size(), 0));
+  // clog << "&buffered: " << &buffered << " t2: " << t2 << " buffered.open_: " << buffered.open_
+  //      << endl;
+  BOOST_CHECK_EQUAL(buf2.size(), t2->read(t2, &buf2.front(), buf2.size()));
+
+  BOOST_CHECK_EQUAL(buf.size() - buf2.size(), buffered.rBound_ - buffered.rBase_);
+
+  buf.resize(buf2.size());
+  BOOST_CHECK_EQUAL_COLLECTIONS(buf2.begin(), buf2.end(), buf.begin(), buf.end());
 }

@@ -544,7 +544,8 @@ static int t_binary_protocol_read_string(struct t_protocol* p, uint32_t* size, c
 int t_binary_protocol_init(struct t_binary_protocol* protocol,
                            struct t_transport* transport,
                            const struct t_byte_order* byte_order) {
-  if (protocol == NULL || transport == NULL) {
+
+  if (protocol == NULL || !t_transport_is_valid(transport)) {
     return -EINVAL;
   }
 
@@ -600,16 +601,19 @@ int t_binary_protocol_init(struct t_binary_protocol* protocol,
   protocol->trans = transport;
   protocol->byte_order = byte_order;
 
-  return 0;
+  return protocol->trans->open(protocol->trans);
 }
 
 static int t_binary_protocol_factory_put_protocol(struct t_protocol_factory* factory,
                                                   struct t_protocol* protocol) {
+
+  struct t_binary_protocol* const bp = (struct t_binary_protocol*)protocol;
+
   if (factory == NULL || protocol == NULL) {
     return -EINVAL;
   }
 
-  return 0;
+  return bp->trans->close(bp->trans);
 }
 
 static int t_binary_protocol_factory_get_protocol(struct t_protocol_factory* factory,
