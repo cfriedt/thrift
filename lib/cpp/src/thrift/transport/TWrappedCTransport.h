@@ -14,7 +14,7 @@ public:
   TWrappedCTransport(t_transport* xport) : xport(xport) {}
   virtual ~TWrappedCTransport() override = default;
 
-  virtual bool isOpen() const override { return xport->isOpen(xport); }
+  virtual bool isOpen() const override { return xport->is_open(xport); }
   virtual bool peek() override { return xport->peek(xport); }
   virtual void open() override {
     if (0 != xport->open(xport)) {
@@ -39,7 +39,7 @@ public:
   virtual uint32_t readAll_virt(uint8_t* buf, uint32_t len) override {
     int32_t r;
 
-    r = xport->readAll(xport, buf, len);
+    r = xport->read_all(xport, buf, len);
     if (r < 0) {
       throw TTransportException();
     }
@@ -49,7 +49,7 @@ public:
   virtual uint32_t readEnd() override {
     int32_t r;
 
-    r = xport->readEnd(xport);
+    r = xport->read_end(xport);
     if (r < 0) {
       throw TTransportException();
     }
@@ -64,7 +64,7 @@ public:
   virtual uint32_t writeEnd() override {
     int32_t r;
 
-    r = xport->writeEnd(xport);
+    r = xport->write_end(xport);
     if (r < 0) {
       throw TTransportException();
     }
@@ -96,9 +96,9 @@ public:
   virtual const std::string getOrigin() const override {
     const char* origin;
 
-    origin = xport->getOrigin(xport);
+    origin = xport->get_origin(xport);
 
-    return std::string(origin, strlen(origin));
+    return std::string(origin);
   }
 
 protected:
