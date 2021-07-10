@@ -5,14 +5,21 @@ pkgconfigdir = $(libdir)/pkgconfig
 
 lib_LTLIBRARIES = libthrift_c.la
 
-libthrift_c_la_SOURCES = thrift/c/transport/t_transport.c \
-                         thrift/c/transport/t_buffer_transports.c \
-                         thrift/c/transport/t_socket.c \
-                         thrift/c/server/t_simple_server.c \
-                         thrift/c/server/t_server.c \
-                         thrift/c/protocol/t_protocol.c \
-                         thrift/c/protocol/t_binary_protocol.c \
-                         thrift/c/thrift.c
+libthrift_c_la_SOURCES = src/thrift/c/processor/t_processor.c \
+                         src/thrift/c/protocol/t_binary_protocol.c \
+                         src/thrift/c/protocol/t_protocol.c \
+                         src/thrift/c/protocol/t_protocol_factory.c \
+                         src/thrift/c/server/t_simple_server.c \
+                         src/thrift/c/server/t_server.c \
+                         src/thrift/c/bmp.c \
+                         src/thrift/c/thrift.c \
+                         src/thrift/c/transport/t_transport.c \
+                         src/thrift/c/transport/t_buffer_transports.c \
+                         src/thrift/c/transport/t_server_transport.c \
+                         src/thrift/c/transport/t_server_socket.c \
+                         src/thrift/c/transport/t_socket.c \
+                         src/thrift/c/transport/t_simple_transport_factory.c \
+                         src/thrift/c/transport/t_transport_factory.c
 
 libthrift_c_la_CPPFLAGS = \
     $(AM_CPPFLAGS) \

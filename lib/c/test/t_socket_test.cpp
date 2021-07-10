@@ -1,7 +1,9 @@
 #include <arpa/inet.h>
+#include <netdb.h>
 #include <netinet/in.h>
 #include <netinet/tcp.h>
 #include <sys/socket.h>
+#include <sys/types.h>
 #include <sys/un.h>
 
 #include <cerrno>
@@ -13,6 +15,7 @@
 #define BOOST_TEST_MODULE t_socket
 #include <boost/test/unit_test.hpp>
 
+#include "thrift/c/thrift.h"
 #include "thrift/c/transport/t_buffer_transports.h"
 #include "thrift/c/transport/t_socket.h"
 
@@ -47,45 +50,41 @@ string to_string(const sockaddr* sa) {
 
 class Harness {
 public:
-  Harness(string path) : path(path), port(0), server_sock(-1), server_fd(-1), client_fd(-1) {
+  Harness(string path) : Harness(path, 0) {}
+
+  Harness(string addr, uint16_t port)
+    : af(0), port(port), addr(addr), server_sock(-1), server_fd(-1), client_fd(-1) {
 
     ready.lock();
 
-    sockaddr_un sa = {};
-    sa.sun_len = sizeof(sa);
-    sa.sun_family = AF_UNIX;
-    strncpy(sa.sun_path, path.c_str(), sizeof(sa.sun_path));
+    int r;
+    socklen_t len;
+    addrinfo* res = NULL;
+    union {
+      sockaddr_in in;
+      sockaddr_in6 in6;
+      sockaddr_un un;
+    };
+    sockaddr* const sa = (sockaddr*)&in;
 
-    server_sock = socket(AF_UNIX, SOCK_STREAM, 0);
-    if (server_sock < 0) {
-      throw system_error(errno, system_category(), "failed to open path '" + string(path) + "'");
-    }
+    af = thrift_c_addr_family(addr.c_str());
 
-    common((sockaddr*)&sa);
-  }
-
-  Harness(uint8_t af) : af(af), port(0), server_sock(-1), server_fd(-1), client_fd(-1) {
-
-    ready.lock();
-
-    sockaddr_in sa4 = {};
-    sockaddr_in6 sa6 = {};
-    sockaddr* sa;
-
-    // in both AF_INET and AF_INET6 we just use an ephemeral port
     switch (af) {
-    case AF_INET:
-      sa4.sin_len = sizeof(sa4);
-      sa4.sin_family = AF_INET;
-      sa4.sin_addr.s_addr = INADDR_ANY;
-      sa4.sin_len = sizeof(sa4);
-      sa = (sockaddr*)&sa4;
+    case AF_UNIX:
+      un.sun_len = sizeof(un);
+      un.sun_family = AF_UNIX;
+      strncpy(un.sun_path, addr.c_str(), sizeof(un.sun_path));
       break;
+    case AF_INET:
     case AF_INET6:
-      sa6.sin6_len = sizeof(sa6);
-      sa6.sin6_family = AF_INET6;
-      sa6.sin6_addr = in6addr_any;
-      sa = (sockaddr*)&sa6;
+      r = getaddrinfo(addr.c_str(), nullptr, nullptr, &res);
+      if (r < 0) {
+        throw invalid_argument("invalid socket address '" + addr + "'");
+      }
+      memcpy(sa, res->ai_addr, res->ai_addrlen);
+      freeaddrinfo(res);
+      res = NULL;
+      in.sin_port = htons(port);
       break;
     default:
       throw invalid_argument("not a valid address family: " + to_string((int)af));
@@ -94,22 +93,15 @@ public:
 
     server_sock = socket(af, SOCK_STREAM, 0);
     if (server_sock < 0) {
-      throw system_error(errno, system_category(), "failed to open path '" + string(path) + "'");
+      throw system_error(errno, system_category(),
+                         "failed to open socket for " + to_string((sockaddr*)&sa));
     }
-
-    common((sockaddr*)sa);
-  }
-
-  void common(sockaddr* sa) {
-    int r;
-    socklen_t len;
 
     // clog << "created server socket " << server_sock << endl;
 
-    if (sa->sa_family == AF_INET || sa->sa_family == AF_INET6) {
+    if (af == AF_INET || af == AF_INET6) {
       r = 1;
-      len = sizeof(r);
-      r = setsockopt(server_sock, SOL_SOCKET, SO_REUSEADDR, &r, len);
+      r = setsockopt(server_sock, SOL_SOCKET, SO_REUSEADDR, &r, sizeof(int));
       if (r < 0) {
         throw system_error(errno, system_category(), "setsockopt");
       }
@@ -120,17 +112,16 @@ public:
       throw system_error(errno, system_category(), "bind");
     }
 
-    if (sa->sa_family == AF_INET || sa->sa_family == AF_INET6) {
+    if (port == 0 && (af == AF_INET || af == AF_INET6)) {
+      // get the ephemeral port number via getsockname()
+      len = sizeof(in6);
       r = getsockname(server_sock, sa, &len);
       if (r < 0) {
         throw system_error(errno, system_category(), "getsockname");
       }
 
-      if (sa->sa_family == AF_INET) {
-        port = ntohs(((sockaddr_in*)sa)->sin_port);
-      } else {
-        port = ntohs(((sockaddr_in6*)sa)->sin6_port);
-      }
+      // same offset for both AF_INET and AF_INET6
+      this->port = ntohs(in.sin_port);
     }
 
     // clog << "bound server socket " << server_sock << " to " << to_string(sa) << endl;
@@ -175,18 +166,18 @@ public:
     // clog << "server fd " << server_fd << endl;
     shutdown(server_fd, SHUT_RDWR);
     // clog << "client fd " << client_fd << endl;
-    close(client_fd);
+    shutdown(client_fd, SHUT_RDWR);
     accept_thread.join();
 
-    if (!path.empty()) {
+    if (af == AF_UNIX && !addr.empty()) {
       // clog << "removing path " << path << endl;
-      remove(path.c_str());
+      remove(addr.c_str());
     }
   }
 
-  string path;
   uint8_t af;
   uint16_t port;
+  string addr;
   int server_sock;
   int server_fd;
   int client_fd;
@@ -197,6 +188,16 @@ public:
 struct t_socket sock;
 struct t_transport* const t = (struct t_transport*)&sock;
 
+BOOST_AUTO_TEST_CASE(test_thrift_c_addr_family) {
+  BOOST_REQUIRE_EQUAL(-EINVAL, thrift_c_addr_family(nullptr));
+  BOOST_REQUIRE_EQUAL(-EINVAL, thrift_c_addr_family(""));
+  BOOST_REQUIRE_EQUAL(AF_INET, thrift_c_addr_family("0.0.0.0"));
+  BOOST_REQUIRE_EQUAL(AF_INET6, thrift_c_addr_family("::"));
+  BOOST_REQUIRE_EQUAL(AF_UNIX, thrift_c_addr_family("/path/to/unix_domain_socket"));
+  int af = thrift_c_addr_family("google.com");
+  BOOST_REQUIRE(af == AF_INET || af == AF_INET6);
+}
+
 BOOST_AUTO_TEST_CASE(test_t_socket_init) {
 
   BOOST_CHECK_EQUAL(-EINVAL, t_socket_init(nullptr, "", 0));
@@ -206,8 +207,6 @@ BOOST_AUTO_TEST_CASE(test_t_socket_init) {
   BOOST_CHECK_EQUAL(true, t_transport_is_valid(t));
 
   BOOST_CHECK_EQUAL(sock.sd, THRIFT_INVALID_SOCKET);
-  BOOST_CHECK_EQUAL(sock.host, "");
-  BOOST_CHECK_EQUAL(sock.port, 0);
 }
 
 BOOST_AUTO_TEST_CASE(test_t_socket_is_open) {
@@ -222,7 +221,7 @@ BOOST_AUTO_TEST_CASE(test_t_socket_is_open) {
 }
 
 BOOST_AUTO_TEST_CASE(test_t_socket_peek) {
-  Harness h(AF_INET);
+  Harness h("0.0.0.0");
 
   BOOST_REQUIRE_EQUAL(0, t_socket_init(&sock, "127.0.0.1", h.port));
 
@@ -246,10 +245,37 @@ BOOST_AUTO_TEST_CASE(test_t_socket_peek) {
   BOOST_CHECK_EQUAL(true, t->peek(t));
 }
 
-BOOST_AUTO_TEST_CASE(test_t_socket_open) {
-  Harness h(AF_INET);
+BOOST_AUTO_TEST_CASE(test_t_socket_open_unix) {
+  string sun_path(tmpnam(nullptr));
+  Harness h(sun_path);
+
+  BOOST_REQUIRE_EQUAL(h.af, AF_UNIX);
+
+  BOOST_REQUIRE_EQUAL(0, t_socket_init_path(&sock, sun_path.c_str()));
+
+  BOOST_CHECK_EQUAL(-EINVAL, t->open(nullptr));
+
+  BOOST_CHECK_EQUAL(0, t->open(t));
+  BOOST_REQUIRE(THRIFT_INVALID_SOCKET != sock.sd);
+}
+
+BOOST_AUTO_TEST_CASE(test_t_socket_open_ipv4) {
+  Harness h("0.0.0.0");
+  BOOST_REQUIRE_EQUAL(h.af, AF_INET);
 
   BOOST_REQUIRE_EQUAL(0, t_socket_init(&sock, "127.0.0.1", h.port));
+
+  BOOST_CHECK_EQUAL(-EINVAL, t->open(nullptr));
+
+  BOOST_CHECK_EQUAL(0, t->open(t));
+  BOOST_REQUIRE(THRIFT_INVALID_SOCKET != sock.sd);
+}
+
+BOOST_AUTO_TEST_CASE(test_t_socket_open_ipv6) {
+  Harness h("::");
+  BOOST_REQUIRE_EQUAL(h.af, AF_INET6);
+
+  BOOST_REQUIRE_EQUAL(0, t_socket_init(&sock, "::1", h.port));
 
   BOOST_CHECK_EQUAL(-EINVAL, t->open(nullptr));
 
@@ -278,7 +304,7 @@ BOOST_AUTO_TEST_CASE(test_t_socket_close) {
 BOOST_AUTO_TEST_CASE(test_t_socket_read) {
   string s("Hello, t_socket world!");
   vector<uint8_t> buf(s.size());
-  Harness h(AF_INET);
+  Harness h("0.0.0.0");
 
   BOOST_REQUIRE_EQUAL(0, t_socket_init(&sock, "127.0.0.1", h.port));
 
@@ -305,7 +331,7 @@ BOOST_AUTO_TEST_CASE(test_t_socket_read) {
 BOOST_AUTO_TEST_CASE(test_t_socket_write) {
   string s("Hello, t_socket world!");
   vector<uint8_t> buf(s.size());
-  Harness h(AF_INET6);
+  Harness h("::");
 
   BOOST_REQUIRE_EQUAL(0, t_socket_init(&sock, "::1", h.port));
 
@@ -330,7 +356,7 @@ BOOST_AUTO_TEST_CASE(test_t_socket_write) {
 }
 
 BOOST_AUTO_TEST_CASE(test_t_socket_available_read) {
-  Harness h(AF_INET);
+  Harness h("0.0.0.0");
 
   BOOST_REQUIRE_EQUAL(0, t_socket_init(&sock, "127.0.0.1", h.port));
 
@@ -355,7 +381,7 @@ BOOST_AUTO_TEST_CASE(test_t_socket_available_read) {
 }
 
 BOOST_AUTO_TEST_CASE(test_t_socket_available_write) {
-  Harness h(AF_INET6);
+  Harness h("::");
 
   BOOST_REQUIRE_EQUAL(0, t_socket_init(&sock, "::1", h.port));
 
@@ -381,7 +407,7 @@ static t_transport* const t2 = (t_transport*)&buffered;
 BOOST_AUTO_TEST_CASE(test_t_buffered_socket_write) {
   string s("Hello, buffered world!");
   vector<uint8_t> buf(64);
-  Harness h(AF_INET6);
+  Harness h("::");
 
   // clog << "sock: " << &sock << endl;
   BOOST_REQUIRE_EQUAL(0, t_socket_init(&sock, "::1", h.port));
@@ -402,7 +428,7 @@ BOOST_AUTO_TEST_CASE(test_t_buffered_socket_write) {
 BOOST_AUTO_TEST_CASE(test_t_buffered_socket_read) {
   vector<uint8_t> buf(1024, '*');
   vector<uint8_t> buf2(64, 'x');
-  Harness h(AF_INET6);
+  Harness h("::");
 
   // clog << "sock: " << &sock << endl;
   BOOST_REQUIRE_EQUAL(0, t_socket_init(&sock, "::1", h.port));

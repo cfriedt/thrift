@@ -21,8 +21,7 @@ int t_server_init(struct t_server* server,
                   struct t_protocol_factory* output_protocol_factory) {
 
   if (server == NULL || processor == NULL || server_transport == NULL
-      || input_transport_factory == NULL || output_transport_factory == NULL
-      || input_protocol_factory == NULL || output_protocol_factory == NULL) {
+      || input_transport_factory == NULL || input_protocol_factory == NULL) {
     return -EINVAL;
   }
 

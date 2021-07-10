@@ -1,5 +1,7 @@
 #pragma once
 
+#include <stdbool.h>
+
 #include <thrift/c/protocol/t_protocol.h>
 #include <thrift/c/transport/t_transport.h>
 
@@ -16,6 +18,8 @@ struct t_protocol_factory;
 struct t_protocol_factory {
   T_PROTOCOL_FACTORY_METHODS;
 };
+
+bool t_protocol_factory_is_valid(struct t_protocol_factory* proto);
 
 #ifdef __cplusplus
 }

@@ -1,17 +1,28 @@
+#include <array>
+#include <cstddef>
 #include <cstdlib>
 #include <string>
+#include <thread>
 #include <vector>
 
 #include <gtest/gtest.h>
 
 #include "thrift/protocol/TBinaryProtocol.h"
-#include "thrift/transport/TWrappedCTransport.h"
+#include "thrift/transport/TSocket.h"
 
+#include "thrift/c/processor/t_processor.h"
 #include "thrift/c/protocol/t_binary_protocol.h"
+#include "thrift/c/server/t_simple_server.h"
+#include "thrift/c/thrift.h"
 #include "thrift/c/transport/t_buffer_transports.h"
+#include "thrift/c/transport/t_server_socket.h"
+#include "thrift/c/transport/t_simple_transport_factory.h"
+#include "thrift/c/transport/t_socket.h"
 
 #include "SecondService.h"
 #include "ThriftTest.h"
+
+#define container_of(p, t, f) ((t*)((uint8_t*)p - offsetof(t, f)))
 
 using namespace std;
 using namespace apache::thrift;
@@ -20,6 +31,7 @@ using namespace apache::thrift::transport;
 
 using namespace thrift::test;
 
+extern "C" {
 // TODO: create a ThriftTest 'handler' for the 'processor' (normally auto-generated)
 struct thrift_test_handler {
   void (*testVoid)(void);
@@ -46,43 +58,106 @@ struct thrift_test_handler {
   // oneway void testOneway(1:i32 secondsToSleep)
 };
 
-// TODO: create a ThriftTest 'processor' for `t_simple_server` (normally auto-generated)
+static int thrift_test_handler_init(struct thrift_test_handler* handler) {
+  (void)handler;
+  return 0;
+}
+
+// dispatch-style
+struct thrift_test_processor {
+  T_PROCESSOR_METHODS;
+  struct thrift_test_handler* handler;
+};
+
+static int thrift_test_processor_process(struct t_processor* p,
+                                         struct t_protocol* input_protocol,
+                                         struct t_protocol* output_protocol) {
+  (void)p;
+  (void)input_protocol;
+  (void)output_protocol;
+
+  return -ENOSYS;
+}
+
+static int thrift_test_processor_init(struct thrift_test_processor* p,
+                                      struct thrift_test_handler* handler) {
+  p->process = thrift_test_processor_process;
+  p->handler = handler;
+  return 0;
+}
+}
 
 class ThriftTest : public testing::Test {
+public:
+  ThriftTest() {}
+  ~ThriftTest() {}
+
 protected:
-  static constexpr size_t memory_size = 1024;
-  vector<uint8_t> memory;
+  // storage for server transport and protocol factories
+  array<t_socket, 1> transport_factory_storage;
+  long transport_factory_usage;
+  array<t_binary_protocol, 1> protocol_factory_storage;
+  long protocol_factory_usage;
+
+  // C server
+  thread server_thread;
+  thrift_test_handler c_handler;
+  thrift_test_processor c_processor;
+  t_server_socket c_server_transport;
+  t_socket c_client_transport;
+  t_simple_transport_factory c_transport_factory;
+  t_binary_protocol_factory c_protocol_factory;
+  t_simple_server c_server;
 
   // C++ client
   shared_ptr<TTransport> cpp_xport;
   shared_ptr<TProtocol> cpp_proto;
   shared_ptr<ThriftTestClient> cpp_client;
 
-  // C server
-  t_memory_buffer c_xport;
-  t_binary_protocol c_proto;
+  virtual void SetUp() override {
+    ASSERT_EQ(0, thrift_test_handler_init(&c_handler));
+    ASSERT_EQ(0, thrift_test_processor_init(&c_processor, &c_handler));
+    ASSERT_EQ(0, t_server_socket_init(&c_server_transport, "::", 0));
+    ASSERT_EQ(0, t_simple_transport_factory_init(&c_transport_factory));
+    ASSERT_EQ(0, t_binary_protocol_factory_init(&c_protocol_factory));
+    ASSERT_EQ(0, t_simple_server_init(&c_server, (struct t_processor*)&c_processor,
+                                      (struct t_server_transport*)&c_server_transport,
+                                      (struct t_transport_factory*)&c_transport_factory, nullptr,
+                                      (struct t_protocol_factory*)&c_protocol_factory, nullptr));
 
-  void SetUp(void) override {
-    memory = vector<uint8_t>(memory_size, 0);
-    ASSERT_EQ(0, t_memory_buffer_init(&c_xport, (void*)&memory.front(), memory.size()));
-    ASSERT_EQ(0, t_binary_protocol_init(&c_proto, (t_transport*)&c_xport, nullptr));
-    // TODO: create a ThriftTest 'handler' for the 'processor' (normally auto-generated)
-    // TODO: create a ThriftTest 'processor' for `t_simple_server` (normally auto-generated)
-    // TODO: create a t_memory_buffer 'server transport' for `t_simple_server` (not auto)
-    // TODO: create a t_memory_buffer 'transport factory' for `t_simple_server` (not auto)
-    // TODO: create a t_binary_protocol 'protocol factory' for `t_simple_server` (not auto)
-    cpp_xport = shared_ptr<TTransport>(new TWrappedCTransport((t_transport*)&c_xport));
-    cpp_proto = shared_ptr<TProtocol>(new TBinaryProtocol(cpp_xport));
-    cpp_client = shared_ptr<ThriftTestClient>(new ThriftTestClient(cpp_proto));
+    server_thread = thread([&]() {
+      clog << "calling server.serve()" << endl;
+      c_server.serve((t_server*)&c_server);
+      clog << "returned from server.serve()" << endl;
+    });
+
+    for (; !c_server.running;) {
+      usleep(10000);
+    }
+
+    cpp_xport = make_shared<TSocket>("::1", c_server_transport.port);
+    cpp_proto = make_shared<TBinaryProtocol>(cpp_xport);
+    cpp_client = make_shared<ThriftTestClient>(cpp_proto);
+
+    cpp_xport->open();
   }
 
-  void TearDown(void) override {}
+  virtual void TearDown() override {
+    if (t_server_is_valid((t_server*)&c_server)) {
+      c_server.stop((t_server*)&c_server);
+    }
+    server_thread.join();
+  }
 };
+
+TEST_F(ThriftTest, empty) {}
 
 TEST_F(ThriftTest, TestVoid) {
   cpp_client->testVoid();
+  sleep(5);
 }
 
+#if 0
 TEST_F(ThriftTest, TestString) {
   string actual;
   string expected;
@@ -372,3 +447,4 @@ TEST_F(ThriftTest, TestOneWay) {
 }
 
 // TODO: Test SecondService
+#endif

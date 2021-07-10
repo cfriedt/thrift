@@ -8,7 +8,8 @@
 #include <sys/un.h>
 #include <unistd.h>
 
-#include <thrift/c/transport/t_socket.h>
+#include "thrift/c/thrift.h"
+#include "thrift/c/transport/t_socket.h"
 
 extern int t_transport_init(struct t_transport* t);
 
@@ -54,16 +55,14 @@ bool t_socket_peek(struct t_transport* t) {
 
 int t_socket_open(struct t_transport* t) {
   int r;
-  struct addrinfo* res;
-  struct addrinfo* ai;
-  struct addrinfo hints = {};
-  socklen_t sa_len;
+  struct addrinfo* res = NULL;
   uint8_t af;
   union {
+    struct sockaddr sa;
     struct sockaddr_in sa4;
     struct sockaddr_in6 sa6;
     struct sockaddr_un sun;
-  } sa = {};
+  } sa;
   struct t_socket* const sock = (struct t_socket*)t;
 
   if (!t_transport_is_valid(t)) {
@@ -71,56 +70,41 @@ int t_socket_open(struct t_transport* t) {
   }
 
   if (sock->host == NULL) {
-    return EINVAL;
+    return -EINVAL;
   }
 
-  // try to resolve a UNIX-domain socket (a.k.a. named pipe)
-  if (sock->port == 0 && sock->path != NULL && sock->path[0] == '/') {
+  memset(&sa, 0, sizeof(sa));
+
+  r = thrift_c_addr_family(sock->host);
+  if (r < 0) {
+    return r;
+  }
+
+  af = r;
+
+  switch (af) {
+  case AF_UNIX:
     sa.sun.sun_family = AF_UNIX;
     strncpy(sa.sun.sun_path, sock->path, sizeof(sa.sun.sun_path));
     sa.sun.sun_len = sizeof(sa.sun);
-    af = AF_UNIX;
-    sa_len = sizeof(sa.sun);
+    break;
 
-    goto makesocket;
-  } else {
-
-    hints.ai_flags = AI_V4MAPPED;
-    hints.ai_family = AF_UNSPEC;
-    hints.ai_socktype = SOCK_STREAM;
-
-    r = getaddrinfo(sock->host, NULL, &hints, &res);
+  case AF_INET:
+  case AF_INET6:
+    r = getaddrinfo(sock->host, NULL, NULL, &res);
     if (r != 0) {
-      r = -EHOSTDOWN;
-      goto close_sock_sd;
+      r = -EINVAL;
+      goto out;
     }
 
-    // first, try to find an IPv6 address
-    for (ai = res; ai != NULL; ai = ai->ai_next) {
-      if (ai->ai_family == AF_INET6) {
-        memcpy(&sa.sa6, ai->ai_addr, ai->ai_addrlen);
-        af = AF_INET6;
-        sa_len = sizeof(sa.sa6);
-        sa.sa6.sin6_port = htons(sock->port);
-        goto makesocket;
-      }
-    }
-
-    for (ai = res; ai != NULL; ai = ai->ai_next) {
-      if (ai->ai_family == AF_INET) {
-        memcpy(&sa.sa4, ai->ai_addr, ai->ai_addrlen);
-        af = AF_INET;
-        sa_len = sizeof(sa.sa4);
-        sa.sa6.sin6_port = htons(sock->port);
-        goto makesocket;
-      }
-    }
-
-    r = -EAFNOSUPPORT;
-    goto free_res;
+    memcpy(&sa, res->ai_addr, res->ai_addrlen);
+    // same offset for  sin_port and sin6_port
+    sa.sa4.sin_port = htons(sock->port);
+    freeaddrinfo(res);
+    res = NULL;
+    break;
   }
 
-makesocket:
   r = socket(af, SOCK_STREAM, 0);
   if (r < 0) {
     r = -errno;
@@ -129,18 +113,14 @@ makesocket:
 
   sock->sd = r;
 
-  r = connect(sock->sd, (struct sockaddr*)&sa, sa_len);
+  r = connect(sock->sd, &sa.sa, sa.sa.sa_len);
   if (r < 0) {
     r = -errno;
     goto close_sock_sd;
   }
 
-  // success! have have opened our socket!
   r = 0;
   goto out;
-
-free_res:
-  freeaddrinfo(res);
 
 close_sock_sd:
   close(sock->sd);
@@ -252,4 +232,18 @@ int t_socket_init(struct t_socket* t, const char* host, uint16_t port) {
 
 int t_socket_init_path(struct t_socket* t, const char* path) {
   return t_socket_init(t, path, 0);
+}
+
+#include <stdio.h>
+int t_socket_init_fd(struct t_socket* t, int fd) {
+  int r;
+
+  r = t_socket_init(t, "", 0);
+  if (r < 0) {
+    return r;
+  }
+
+  t->sd = fd;
+
+  return 0;
 }

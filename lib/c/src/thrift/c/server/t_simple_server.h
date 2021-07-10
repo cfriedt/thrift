@@ -4,6 +4,7 @@
 
 #include <thrift/c/protocol/t_protocol_factory.h>
 #include <thrift/c/server/t_server.h>
+#include <thrift/c/transport/t_server_transport.h>
 #include <thrift/c/transport/t_transport_factory.h>
 
 #ifdef __cplusplus

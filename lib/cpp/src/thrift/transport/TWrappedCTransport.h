@@ -8,10 +8,36 @@ namespace apache {
 namespace thrift {
 namespace transport {
 
+#include <iomanip>
+#include <iostream>
+#include <sstream>
+#include <vector>
+std::string to_string(const std::vector<uint8_t>& v) {
+  std::stringstream ss;
+
+  for (size_t i = 0, n = v.size(); i < n; ++i) {
+    if (isprint(v[i])) {
+      ss << " " << v[i];
+    } else {
+      ss << std::hex << std::setw(2) << std::setfill('0') << int(v[i]);
+    }
+
+    if (i < n - 1) {
+      ss << ", ";
+    }
+  }
+
+  return ss.str();
+}
+
 class TWrappedCTransport : public TTransport {
 public:
   TWrappedCTransport() : TWrappedCTransport(nullptr){};
-  TWrappedCTransport(t_transport* xport) : xport(xport) {}
+  TWrappedCTransport(t_transport* xport) : xport(xport) {
+    if (!t_transport_is_valid(xport)) {
+      throw std::invalid_argument("C transport is invalid");
+    }
+  }
   virtual ~TWrappedCTransport() override = default;
 
   virtual bool isOpen() const override { return xport->is_open(xport); }
@@ -59,6 +85,9 @@ public:
   virtual void write_virt(const uint8_t* buf, uint32_t len) override {
     if (xport->write(xport, buf, len) < 0) {
       throw TTransportException();
+    } else {
+      auto x = std::vector<uint8_t>(buf, buf + len);
+      std::cout << "buf[" << len << "]: " << to_string(x) << std::endl;
     }
   }
   virtual uint32_t writeEnd() override {

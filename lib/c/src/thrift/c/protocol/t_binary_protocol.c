@@ -630,7 +630,7 @@ static int t_binary_protocol_factory_get_protocol(struct t_protocol_factory* fac
 
 int t_binary_protocol_factory_init_with_byte_order(struct t_binary_protocol_factory* factory,
                                                    const struct t_byte_order* byte_order) {
-  if (factory == NULL || t_byte_order_is_valid(byte_order)) {
+  if (factory == NULL || !t_byte_order_is_valid(byte_order)) {
     return -EINVAL;
   }
 
