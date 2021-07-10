@@ -6,6 +6,20 @@ noinst_LTLIBRARIES =
 check_PROGRAMS =
 
 check_PROGRAMS += \
+    bmp_alloc_test
+bmp_alloc_test_SOURCES = \
+    bmp_alloc_test.cpp
+bmp_alloc_test_CPPFLAGS = \
+    $(AM_CPPFLAGS) \
+    $(BOOST_CPPFLAGS) \
+    -I$(srcdir)/../src
+bmp_alloc_test_LDADD = \
+  $(top_builddir)/lib/c/libthrift_c.la \
+  $(BOOST_TEST_LDADD) \
+  $(BOOST_SYSTEM_LDADD) \
+  /opt/homebrew/Cellar/boost/1.76.0/lib/libboost_thread-mt.a
+
+check_PROGRAMS += \
     t_buffer_transports_test
 t_buffer_transports_test_SOURCES = \
     t_buffer_transports_test.cpp
