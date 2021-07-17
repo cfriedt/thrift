@@ -11,6 +11,11 @@
 #include "thrift/c/thrift.h"
 #include "thrift/c/transport/t_socket.h"
 
+#include <pthread.h>
+#include <stdio.h>
+#define D(fmt, args...)                                                                            \
+  printf("%p: %s(): %d: " fmt "\n", pthread_self(), __func__, __LINE__, ##args)
+
 extern int t_transport_init(struct t_transport* t);
 
 bool t_socket_is_open(struct t_transport* t) {
@@ -31,7 +36,8 @@ int t_socket_close(struct t_transport* t) {
     return -EINVAL;
   }
 
-  r = close(sock->sd);
+  D("calling shutdown()..");
+  r = shutdown(sock->sd, SHUT_RDWR);
   if (r < 0) {
     return -errno;
   }
@@ -42,6 +48,9 @@ int t_socket_close(struct t_transport* t) {
 
 bool t_socket_peek(struct t_transport* t) {
 
+  char x;
+  struct t_socket* const sock = (struct t_socket*)t;
+
   if (!t_transport_is_valid(t)) {
     return false;
   }
@@ -50,7 +59,8 @@ bool t_socket_peek(struct t_transport* t) {
     return false;
   }
 
-  return t->available_read(t) > 0;
+  D("calling recv()");
+  return recv(sock->sd, &x, 1, MSG_PEEK) > 0;
 }
 
 int t_socket_open(struct t_transport* t) {
@@ -142,6 +152,7 @@ int t_socket_read(struct t_transport* t, void* buf, uint32_t len) {
     return 0;
   }
 
+  D("calling recv()..");
   return recv(sock->sd, buf, len, 0);
 }
 

@@ -3,10 +3,9 @@
 #include <netdb.h>
 #include <netinet/in.h>
 #include <netinet/tcp.h>
+#include <poll.h>
 #include <stdio.h>
 #include <string.h>
-#include <sys/select.h>
-#include <sys/socket.h>
 #include <sys/un.h>
 #include <unistd.h>
 
@@ -22,7 +21,13 @@
 #define MAX(a, b) ((a) > (b) ? (a) : (b))
 #endif
 
+extern int t_server_transport_init(struct t_server_transport* t);
 extern int t_socket_init_fd(struct t_socket* t, int fd);
+
+#include <pthread.h>
+#include <stdio.h>
+#define D(fmt, args...)                                                                            \
+  printf("%p: %s(): %d: " fmt "\n", pthread_self(), __func__, __LINE__, ##args)
 
 static int t_server_socket_listen(struct t_server_transport* t) {
   struct t_server_socket* const tss = (struct t_server_socket*)t;
@@ -38,27 +43,26 @@ static struct t_socket temp;
 static int t_server_socket_accept(struct t_server_transport* t, struct t_transport** xport) {
   int r;
   int client_fd;
+  struct pollfd fds[2];
   struct t_socket* const ts = (struct t_socket*)&temp;
   struct t_server_socket* const tss = (struct t_server_socket*)t;
   static struct sockaddr_storage sa;
   socklen_t len;
-  int nfds;
-  fd_set rfds;
 
   if (t == NULL || xport == NULL) {
     return -EINVAL;
   }
 
-  FD_ZERO(&rfds);
-  FD_SET(tss->sd, &rfds);
-  FD_SET(tss->cancel[1], &rfds);
-  nfds = MAX(tss->cancel[1], tss->sd) + 1;
-  r = select(nfds, &rfds, NULL, NULL, NULL);
+  fds[0].fd = tss->sd;
+  fds[0].events = POLLIN;
+  fds[1].fd = tss->cancel[1];
+  fds[1].events = POLLIN;
+  r = poll(fds, 2, -1);
   if (r < 0) {
     return -errno;
   }
 
-  if (FD_ISSET(tss->cancel[1], &rfds)) {
+  if ((fds[1].revents & POLLIN) != 0) {
     return -EINTR;
   }
 
@@ -80,7 +84,8 @@ static int t_server_socket_accept(struct t_server_transport* t, struct t_transpo
   goto out;
 
 close_sock:
-  close(client_fd);
+  D("shutting down client socket");
+  shutdown(client_fd, SHUT_RDWR);
 
 out:
   return r;
@@ -89,16 +94,36 @@ out:
 int t_server_socket_close(struct t_server_transport* t) {
   struct t_server_socket* const tss = (struct t_server_socket*)t;
 
-  if (t == NULL) {
+  if (!t_server_transport_is_valid(t)) {
     return -EINVAL;
   }
 
-  write(tss->cancel[0], "x", 1);
-  close(tss->sd);
+  t->interrupt(t);
+  t->interrupt_children(t);
+
+  shutdown(tss->sd, SHUT_RDWR);
   close(tss->cancel[0]);
   close(tss->cancel[1]);
   tss->sd = -1;
   tss->cancel[0] = tss->cancel[1] = -1;
+
+  return 0;
+}
+
+int t_server_socket_interrupt(struct t_server_transport* t) {
+  int r;
+  struct t_server_socket* const tss = (struct t_server_socket*)t;
+
+  if (t == NULL) {
+    return -EINVAL;
+  }
+
+  r = write(tss->cancel[0], "x", 1);
+  if (r < 0) {
+    return -errno;
+  }
+
+  // FIXME: should wait until ! listening
 
   return 0;
 }
@@ -127,9 +152,18 @@ int t_server_socket_init(struct t_server_socket* t, const char* addr, uint16_t p
     return -EINVAL;
   }
 
+  r = t_server_transport_init((struct t_server_transport*)t);
+  if (r < 0) {
+    return r;
+  }
+
   t->listen = t_server_socket_listen;
   t->accept = t_server_socket_accept;
   t->close = t_server_socket_close;
+  t->interrupt = t_server_socket_interrupt;
+  // TODO: look at a callback-based approach to handling concurrent connections
+  // similar to what TServerSocket does
+  // t->interrupt_children = t_server_socket_interrupt_children;
 
   t->sd = -1;
   t->backlog = 1;

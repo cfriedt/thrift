@@ -11,7 +11,9 @@ extern "C" {
 #define T_SERVER_TRANSPORT_METHODS                                                                 \
   int (*listen)(struct t_server_transport * t);                                                    \
   int (*accept)(struct t_server_transport * t, struct t_transport * *xport);                       \
-  int (*close)(struct t_server_transport * t)
+  int (*close)(struct t_server_transport * t);                                                     \
+  int (*interrupt)(struct t_server_transport * t);                                                 \
+  int (*interrupt_children)(struct t_server_transport * t)
 
 struct t_server_transport;
 struct t_server_transport {

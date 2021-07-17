@@ -22,7 +22,18 @@
 #include "SecondService.h"
 #include "ThriftTest.h"
 
+#include "thrift_test_handler.h"
+#include "thrift_test_processor.h"
+
 #define container_of(p, t, f) ((t*)((uint8_t*)p - offsetof(t, f)))
+
+#include <pthread.h>
+#include <stdio.h>
+#define D(fmt, args...)                                                                            \
+  printf("%p: %s(): %d: " fmt "\n", pthread_self(), __func__, __LINE__, ##args)
+
+#define E(fmt, args...)                                                                            \
+  fprintf(stderr, "E: %s:%d: %s(): " fmt "\n", __FILE__, __LINE__, __func__, ##args)
 
 using namespace std;
 using namespace apache::thrift;
@@ -31,60 +42,13 @@ using namespace apache::thrift::transport;
 
 using namespace thrift::test;
 
-extern "C" {
-// TODO: create a ThriftTest 'handler' for the 'processor' (normally auto-generated)
-struct thrift_test_handler {
-  void (*testVoid)(void);
-  string testString(string thing);
-  bool (*testBool)(bool thing);
-  int8_t (*testByte)(int8_t thing);
-  int32_t (*testI32)(int32_t thing);
-  int64_t (*testI64)(int64_t thing);
-  double (*testDouble)(double thing);
-  // binary testBinary(binary thing);
-  Xtruct (*testStruct)(Xtruct thing);
-  Xtruct2 (*testNest)(Xtruct2 thing);
-  // map<i32,i32> testMap(1: map<i32,i32> thing);
-  // map<string,string> testStringMap(1: map<string,string> thing);
-  // set<i32> testSet(1 : set<i32> thing);
-  // list<i32> testList(1: list<i32> thing);
-  // Numberz testEnum(1 : Numberz thing);
-  // map<i32,map<i32,i32>> testMapMap(1: i32 hello),
-  // map<UserId, map<Numberz,Insanity>> testInsanity(1: Insanity argument)
-  // void testException(1: string arg) throws(1: Xception err1),
-  // Xtruct testMultiException(1: string arg0, 2: string arg1) throws(1: Xception err1, 2: Xception2
-  // err2)
+static void thrift_test_handler_testVoid(void) {
+  printf("testVoid\n");
+}
 
-  // oneway void testOneway(1:i32 secondsToSleep)
-};
-
-static int thrift_test_handler_init(struct thrift_test_handler* handler) {
-  (void)handler;
+static int thrift_test_handler_init(thrift_test_handler* h) {
+  h->testVoid = thrift_test_handler_testVoid;
   return 0;
-}
-
-// dispatch-style
-struct thrift_test_processor {
-  T_PROCESSOR_METHODS;
-  struct thrift_test_handler* handler;
-};
-
-static int thrift_test_processor_process(struct t_processor* p,
-                                         struct t_protocol* input_protocol,
-                                         struct t_protocol* output_protocol) {
-  (void)p;
-  (void)input_protocol;
-  (void)output_protocol;
-
-  return -ENOSYS;
-}
-
-static int thrift_test_processor_init(struct thrift_test_processor* p,
-                                      struct thrift_test_handler* handler) {
-  p->process = thrift_test_processor_process;
-  p->handler = handler;
-  return 0;
-}
 }
 
 class ThriftTest : public testing::Test {
@@ -115,6 +79,7 @@ protected:
   shared_ptr<ThriftTestClient> cpp_client;
 
   virtual void SetUp() override {
+
     ASSERT_EQ(0, thrift_test_handler_init(&c_handler));
     ASSERT_EQ(0, thrift_test_processor_init(&c_processor, &c_handler));
     ASSERT_EQ(0, t_server_socket_init(&c_server_transport, "::", 0));
@@ -126,9 +91,9 @@ protected:
                                       (struct t_protocol_factory*)&c_protocol_factory, nullptr));
 
     server_thread = thread([&]() {
-      clog << "calling server.serve()" << endl;
+      D("calling server.serve()");
       c_server.serve((t_server*)&c_server);
-      clog << "returned from server.serve()" << endl;
+      D("returned from server.serve()");
     });
 
     for (; !c_server.running;) {
@@ -138,14 +103,17 @@ protected:
     cpp_xport = make_shared<TSocket>("::1", c_server_transport.port);
     cpp_proto = make_shared<TBinaryProtocol>(cpp_xport);
     cpp_client = make_shared<ThriftTestClient>(cpp_proto);
-
     cpp_xport->open();
   }
 
   virtual void TearDown() override {
+    D("");
     if (t_server_is_valid((t_server*)&c_server)) {
+      D("calling server.stop()");
       c_server.stop((t_server*)&c_server);
     }
+
+    D("calling join()");
     server_thread.join();
   }
 };
@@ -154,7 +122,6 @@ TEST_F(ThriftTest, empty) {}
 
 TEST_F(ThriftTest, TestVoid) {
   cpp_client->testVoid();
-  sleep(5);
 }
 
 #if 0

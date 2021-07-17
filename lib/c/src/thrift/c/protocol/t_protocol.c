@@ -102,5 +102,5 @@ bool t_protocol_is_valid(const struct t_protocol* p) {
            || p->read_list_end == NULL || p->read_set_begin == NULL || p->read_set_end == NULL
            || p->read_bool == NULL || p->read_byte == NULL || p->read_i16 == NULL
            || p->read_i32 == NULL || p->read_i64 == NULL || p->read_double == NULL
-           || p->read_string == NULL);
+           || p->read_string == NULL || p->get_transport == NULL);
 }

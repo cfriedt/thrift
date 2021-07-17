@@ -5,7 +5,8 @@ pkgconfigdir = $(libdir)/pkgconfig
 
 lib_LTLIBRARIES = libthrift_c.la
 
-libthrift_c_la_SOURCES = src/thrift/c/processor/t_processor.c \
+libthrift_c_la_SOURCES = src/thrift/c/processor/t_dispatch_processor.c \
+                         src/thrift/c/processor/t_processor.c \
                          src/thrift/c/protocol/t_binary_protocol.c \
                          src/thrift/c/protocol/t_protocol.c \
                          src/thrift/c/protocol/t_protocol_factory.c \
@@ -39,7 +40,9 @@ include_thriftdir = $(includedir)/thrift/c
 #                         src/thrift/c/thrift_configuration.h
 
 include_processordir = $(include_thriftdir)/processor
-include_processor_HEADERS = src/thrift/c/processor/t_processor.h
+include_processor_HEADERS = \
+                            src/thrift/c/processor/t_dispatch_processor.h \
+                            src/thrift/c/processor/t_processor.h 
 
 include_protocoldir = $(include_thriftdir)/protocol
 include_protocol_HEADERS = src/thrift/c/protocol/t_binary_protocol.h \

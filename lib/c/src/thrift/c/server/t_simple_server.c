@@ -2,24 +2,24 @@
 #include <errno.h>
 
 #include "t_simple_server.h"
+#include "thrift/c/protocol/t_binary_protocol.h"
 
+#include <pthread.h>
 #include <stdio.h>
-#define D(fmt, args...) fprintf(stdout, fmt "\n", ##args)
+#define D(fmt, args...)                                                                            \
+  printf("%p: %s(): %d: " fmt "\n", pthread_self(), __func__, __LINE__, ##args)
 
 #define E(fmt, args...)                                                                            \
-  fprintf(stderr, "E: %s: %s(): %d: " fmt "\n", __FILE__, __func__, __LINE__, ##args)
+  fprintf(stderr, "E: %s:%d: %s(): " fmt "\n", __FILE__, __LINE__, __func__, ##args)
 
 static int t_simple_server_serve(struct t_server* server) {
   int r;
   struct t_simple_server* const s = (struct t_simple_server*)server;
+  struct t_binary_protocol _protocol;
 
   if (!t_server_is_valid(server)) {
     E("server is not valid");
     return -EINVAL;
-  }
-
-  if (s->running) {
-    return -EALREADY;
   }
 
   D("calling listen()");
@@ -30,22 +30,28 @@ static int t_simple_server_serve(struct t_server* server) {
   }
 
   s->running = true;
-
   for (; s->running;) {
     struct t_transport* t = NULL;
     struct t_transport* input_transport = NULL;
     struct t_transport* output_transport = NULL;
-    struct t_protocol* input_protocol = NULL;
+    struct t_protocol* input_protocol = (struct t_protocol*)&_protocol;
     struct t_protocol* output_protocol = NULL;
 
     D("calling accept()");
     r = s->server_transport->accept(s->server_transport, &t);
-    if (r < 0 || t == NULL) {
+    D("returned from accept()");
+    if (r < 0) {
       E("accept() failed: %d", r);
       goto close_server_transport;
     }
 
-    assert(t != NULL);
+    assert(t_transport_is_valid(t));
+
+    if (!s->running) {
+      D("no longer running");
+      t->close(t);
+      break;
+    }
 
     D("calling get_transport()");
     r = s->input_transport_factory->get_transport(s->input_transport_factory, t, &input_transport);
@@ -99,41 +105,46 @@ static int t_simple_server_serve(struct t_server* server) {
       D("calling peek()");
       if (!input_transport->peek(input_transport)) {
         E("peek failed()");
+        r = -EIO;
         break;
       }
 
       D("calling process()");
       r = s->processor->process(s->processor, input_protocol, output_protocol);
       if (r < 0) {
-        E("process failed(): %d", r);
+        E("process() failed(): %d", r);
         goto put_output_protocol;
       }
     }
 
   put_output_protocol:
-    D("calling put_protocol()");
-    s->output_protocol_factory->put_protocol(s->output_protocol_factory, output_protocol);
+    if (output_protocol != input_protocol) {
+      D("calling put_protocol()");
+      s->output_protocol_factory->put_protocol(s->output_protocol_factory, output_protocol);
+    }
 
   put_input_protocol:
     D("calling put_protocol()");
     s->input_protocol_factory->put_protocol(s->input_protocol_factory, input_protocol);
 
   put_output_transport:
-    D("calling put_transport()");
-    s->output_transport_factory->put_transport(s->output_transport_factory, output_transport);
+    if (output_transport != input_transport) {
+      D("calling put_transport()");
+      s->output_transport_factory->put_transport(s->output_transport_factory, output_transport);
+    }
 
   put_input_transport:
     D("calling put_transport()");
     s->input_transport_factory->put_transport(s->input_transport_factory, input_transport);
 
-  close_server_transport:
-    D("calling close()");
-    s->server_transport->close(s->server_transport);
-
     if (r < 0) {
       s->running = false;
     }
   }
+
+close_server_transport:
+  D("calling close()");
+  s->server_transport->close(s->server_transport);
 
   s->running = false;
   return r;
@@ -147,13 +158,11 @@ static int t_simple_server_stop(struct t_server* server) {
     return -EINVAL;
   }
 
-  if (!s->running) {
-    return 0;
-  }
-
-  D("calling close()");
-  s->server_transport->close(s->server_transport);
   s->running = false;
+  D("calling interrupt_children()");
+  s->server_transport->interrupt_children(s->server_transport);
+  D("calling interrupt()");
+  s->server_transport->interrupt(s->server_transport);
 
   return 0;
 }

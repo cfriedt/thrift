@@ -466,8 +466,30 @@ static int t_binary_protocol_read_list_begin(struct t_protocol* p,
 
 D_READI(8);
 D_READI(16);
-D_READI(32);
+// D_READI(32);
 D_READI(64);
+
+static int t_binary_protocol_read_i32(struct t_protocol* p, int32_t* x) {
+  struct t_binary_protocol* const p_ = (struct t_binary_protocol*)p;
+  int r;
+
+  if (p == NULL || x == NULL) {
+    return -EINVAL;
+  }
+
+  assert(p_->trans != NULL);
+
+  r = p_->trans->read_all(p_->trans, x, 32 / 8);
+  if (r < 0) {
+    return r;
+  }
+
+  assert(t_byte_order_is_valid(p_->byte_order));
+
+  *x = from32(*x);
+
+  return 32 / 8;
+}
 
 static inline int t_binary_protocol_read_bool(struct t_protocol* p, bool* x) {
   int r;
@@ -541,6 +563,16 @@ static int t_binary_protocol_read_string(struct t_protocol* p, uint32_t* size, c
   return 4 + *size;
 }
 
+static struct t_transport* t_binary_protocol_get_transport(struct t_protocol* p) {
+  struct t_binary_protocol* const p_ = (struct t_binary_protocol*)p;
+
+  if (p == NULL) {
+    return NULL;
+  }
+
+  return p_->trans;
+}
+
 int t_binary_protocol_init(struct t_binary_protocol* protocol,
                            struct t_transport* transport,
                            const struct t_byte_order* byte_order) {
@@ -598,10 +630,13 @@ int t_binary_protocol_init(struct t_binary_protocol* protocol,
   protocol->read_double = t_binary_protocol_read_double;
   protocol->read_string = t_binary_protocol_read_string;
 
+  protocol->get_transport = t_binary_protocol_get_transport;
+
   protocol->trans = transport;
   protocol->byte_order = byte_order;
 
-  return protocol->trans->open(protocol->trans);
+  // return protocol->trans->open(protocol->trans);
+  return 0;
 }
 
 static int t_binary_protocol_factory_put_protocol(struct t_protocol_factory* factory,

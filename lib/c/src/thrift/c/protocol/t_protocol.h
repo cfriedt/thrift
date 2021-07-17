@@ -71,7 +71,9 @@ bool t_byte_order_is_valid(const struct t_byte_order* bo);
   int (*read_i32)(struct t_protocol * p, int32_t * w);                                             \
   int (*read_i64)(struct t_protocol * p, int64_t * l);                                             \
   int (*read_double)(struct t_protocol * p, double* d);                                            \
-  int (*read_string)(struct t_protocol * p, uint32_t * size, char** s);
+  int (*read_string)(struct t_protocol * p, uint32_t * size, char** s);                            \
+                                                                                                   \
+  struct t_transport* (*get_transport)(struct t_protocol * p);
 
 struct t_protocol;
 struct t_protocol {
