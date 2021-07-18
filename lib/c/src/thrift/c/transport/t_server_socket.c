@@ -9,9 +9,9 @@
 #include <sys/un.h>
 #include <unistd.h>
 
-#include "t_server_socket.h"
-#include "t_socket.h"
 #include "thrift/c/thrift.h"
+#include "thrift/c/transport/t_server_socket.h"
+#include "thrift/c/transport/t_socket.h"
 
 #ifndef MIN
 #define MIN(a, b) ((a) < (b) ? (a) : (b))
@@ -23,11 +23,6 @@
 
 extern int t_server_transport_init(struct t_server_transport* t);
 extern int t_socket_init_fd(struct t_socket* t, int fd);
-
-#include <pthread.h>
-#include <stdio.h>
-#define D(fmt, args...)                                                                            \
-  printf("%p: %s(): %d: " fmt "\n", pthread_self(), __func__, __LINE__, ##args)
 
 static int t_server_socket_listen(struct t_server_transport* t) {
   struct t_server_socket* const tss = (struct t_server_socket*)t;

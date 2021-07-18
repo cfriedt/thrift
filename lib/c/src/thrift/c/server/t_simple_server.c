@@ -1,16 +1,10 @@
+
 #include <assert.h>
 #include <errno.h>
 
-#include "t_simple_server.h"
 #include "thrift/c/protocol/t_binary_protocol.h"
-
-#include <pthread.h>
-#include <stdio.h>
-#define D(fmt, args...)                                                                            \
-  printf("%p: %s(): %d: " fmt "\n", pthread_self(), __func__, __LINE__, ##args)
-
-#define E(fmt, args...)                                                                            \
-  fprintf(stderr, "E: %s:%d: %s(): " fmt "\n", __FILE__, __LINE__, __func__, ##args)
+#include "thrift/c/server/t_simple_server.h"
+#include "thrift/c/thrift.h"
 
 static int t_simple_server_serve(struct t_server* server) {
   int r;

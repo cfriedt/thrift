@@ -56,7 +56,7 @@ bool t_byte_order_is_valid(const struct t_byte_order* bo);
   int (*read_struct_begin)(struct t_protocol * p, uint32_t * len, char** name);                    \
   int (*read_struct_end)(struct t_protocol * p);                                                   \
   int (*read_field_begin)(struct t_protocol * p, uint32_t * len, char** name,                      \
-                          enum t_type* field_type, uint16_t* field_id);                            \
+                          enum t_type* field_type, int16_t* field_id);                             \
   int (*read_field_end)(struct t_protocol * p);                                                    \
   int (*read_map_begin)(struct t_protocol * p, enum t_type * ktype, enum t_type * vtype,           \
                         uint32_t * size);                                                          \
@@ -66,12 +66,13 @@ bool t_byte_order_is_valid(const struct t_byte_order* bo);
   int (*read_set_begin)(struct t_protocol * p, enum t_type * etype, uint32_t * size);              \
   int (*read_set_end)(struct t_protocol * p);                                                      \
   int (*read_bool)(struct t_protocol * p, bool* b);                                                \
-  int (*read_byte)(struct t_protocol * p, uint8_t * b);                                            \
+  int (*read_byte)(struct t_protocol * p, int8_t * b);                                             \
   int (*read_i16)(struct t_protocol * p, int16_t * s);                                             \
   int (*read_i32)(struct t_protocol * p, int32_t * w);                                             \
   int (*read_i64)(struct t_protocol * p, int64_t * l);                                             \
   int (*read_double)(struct t_protocol * p, double* d);                                            \
   int (*read_string)(struct t_protocol * p, uint32_t * size, char** s);                            \
+  int (*skip)(struct t_protocol * p, enum t_type ftype);                                           \
                                                                                                    \
   struct t_transport* (*get_transport)(struct t_protocol * p);
 

@@ -27,14 +27,6 @@
 
 #define container_of(p, t, f) ((t*)((uint8_t*)p - offsetof(t, f)))
 
-#include <pthread.h>
-#include <stdio.h>
-#define D(fmt, args...)                                                                            \
-  printf("%p: %s(): %d: " fmt "\n", pthread_self(), __func__, __LINE__, ##args)
-
-#define E(fmt, args...)                                                                            \
-  fprintf(stderr, "E: %s:%d: %s(): " fmt "\n", __FILE__, __LINE__, __func__, ##args)
-
 using namespace std;
 using namespace apache::thrift;
 using namespace apache::thrift::protocol;
@@ -121,7 +113,9 @@ protected:
 TEST_F(ThriftTest, empty) {}
 
 TEST_F(ThriftTest, TestVoid) {
+  D("calling testVoid()");
   cpp_client->testVoid();
+  D("returned from testVoid()");
 }
 
 #if 0

@@ -1,7 +1,8 @@
 #include <errno.h>
 #include <string.h>
 
-#include "t_dispatch_processor.h"
+#include "thrift/c/processor/t_dispatch_processor.h"
+#include "thrift/c/thrift.h"
 
 static int t_dispatch_processor_process(struct t_processor* proc,
                                         struct t_protocol* in,
@@ -18,13 +19,20 @@ static int t_dispatch_processor_process(struct t_processor* proc,
   }
 
   fname_len = tdp->method_name_buffer_size;
+  D("calling read_message_begin()");
   r = in->read_message_begin(in, &fname_len, &tdp->method_name_buffer, &mtype, &seqid);
-  char* const fname = tdp->method_name_buffer;
+  if (r < 0) {
+    E("read_message_begin() failed: %s", strerror(-r));
+    return r;
+  }
 
+  char* const fname = tdp->method_name_buffer;
   if (mtype != T_CALL && mtype != T_ONEWAY) {
+    E("received invalid message type %d from client", mtype);
     return -EINVAL;
   }
 
+  D("calling dispatch(%s)", fname);
   return tdp->dispatch(tdp, in, out, fname, fname_len, seqid);
 }
 
@@ -41,6 +49,9 @@ static int t_dispatch_processor_dispatch(struct t_dispatch_processor* proc,
   if (proc == NULL || in == NULL || out == NULL || fname == NULL) {
     return -EINVAL;
   }
+
+  // FIXME: this should really filter 'fname' better
+  D("received request to process method %s", fname);
 
   for (i = 0; i < proc->n_processors; ++i) {
     if (fname_len == proc->processors[i].method_name_size

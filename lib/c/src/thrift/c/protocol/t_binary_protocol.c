@@ -3,6 +3,7 @@
 #include <string.h>
 
 #include "thrift/c/protocol/t_binary_protocol.h"
+#include "thrift/c/thrift.h"
 #include "thrift/c/transport/t_transport.h"
 
 #define VERSION_1 0x80010000
@@ -340,7 +341,7 @@ static int t_binary_protocol_read_field_begin(struct t_protocol* p,
                                               uint16_t* field_id) {
   int rsize = 0;
   int r;
-  uint8_t byte;
+  int8_t byte;
 
   if (p == NULL || len == NULL || name == NULL || field_type == NULL || field_id == NULL) {
     return -EINVAL;
@@ -352,8 +353,12 @@ static int t_binary_protocol_read_field_begin(struct t_protocol* p,
   }
 
   rsize += r;
-
   *field_type = byte;
+  if (*field_type == T_STOP) {
+    D("read T_STOP");
+    *field_id = 0;
+    return rsize;
+  }
 
   r = p->read_i16(p, (int16_t*)field_id);
   if (r < 0) {
@@ -371,7 +376,7 @@ static int t_binary_protocol_read_map_begin(struct t_protocol* p,
                                             uint32_t* size) {
   int rsize = 0;
   int r;
-  uint8_t byte;
+  int8_t byte;
 
   if (p == NULL || ktype == NULL || vtype == NULL || size == NULL) {
     return -EINVAL;
@@ -411,7 +416,7 @@ static int t_binary_protocol_read_list_begin(struct t_protocol* p,
                                              uint32_t* size) {
   int rsize = 0;
   int r;
-  uint8_t byte;
+  int8_t byte;
 
   if (p == NULL || etype == NULL || size == NULL) {
     return -EINVAL;
@@ -573,6 +578,102 @@ static struct t_transport* t_binary_protocol_get_transport(struct t_protocol* p)
   return p_->trans;
 }
 
+static int t_binary_protocol_skip(struct t_protocol* prot, enum t_type type) {
+  if (prot == NULL) {
+    return -EINVAL;
+  }
+
+  switch (type) {
+  case T_BOOL: {
+    bool boolv;
+    return prot->read_bool(prot, &boolv);
+  }
+  case T_BYTE: {
+    int8_t bytev = 0;
+    return prot->read_byte(prot, &bytev);
+  }
+  case T_I16: {
+    int16_t i16;
+    return prot->read_i16(prot, &i16);
+  }
+  case T_I32: {
+    int32_t i32;
+    return prot->read_i32(prot, &i32);
+  }
+  case T_I64: {
+    int64_t i64;
+    return prot->read_i64(prot, &i64);
+  }
+  case T_DOUBLE: {
+    double dub;
+    return prot->read_double(prot, &dub);
+  }
+  case T_STRING: {
+    char* str = NULL;
+    uint32_t str_len = 0;
+    return prot->read_string(prot, &str_len, &str);
+  }
+  case T_STRUCT: {
+    int result = 0;
+    uint32_t name_len = 0;
+    char* name = NULL;
+    int16_t fid;
+    enum t_type ftype;
+    result += prot->read_struct_begin(prot, &name_len, &name);
+    while (true) {
+      result += prot->read_field_begin(prot, &name_len, &name, &ftype, &fid);
+      if (ftype == T_STOP) {
+        break;
+      }
+      result += prot->skip(prot, ftype);
+      result += prot->read_field_end(prot);
+    }
+    result += prot->read_struct_end(prot);
+    return result;
+  }
+  case T_MAP: {
+    uint32_t result = 0;
+    enum t_type keyType;
+    enum t_type valType;
+    uint32_t i, size;
+    result += prot->read_map_begin(prot, &keyType, &valType, &size);
+    for (i = 0; i < size; i++) {
+      result += prot->skip(prot, keyType);
+      result += prot->skip(prot, valType);
+    }
+    result += prot->read_map_end(prot);
+    return result;
+  }
+  case T_SET: {
+    uint32_t result = 0;
+    enum t_type elemType;
+    uint32_t i, size;
+    result += prot->read_set_begin(prot, &elemType, &size);
+    for (i = 0; i < size; i++) {
+      result += prot->skip(prot, elemType);
+    }
+    result += prot->read_set_end(prot);
+    return result;
+  }
+  case T_LIST: {
+    uint32_t result = 0;
+    enum t_type elemType;
+    uint32_t i, size;
+    result += prot->read_list_begin(prot, &elemType, &size);
+    for (i = 0; i < size; i++) {
+      result += prot->skip(prot, elemType);
+    }
+    result += prot->read_list_end(prot);
+    return result;
+  }
+  default:
+    break;
+  }
+
+  E("invalid t_type %d", type);
+  return -EINVAL;
+}
+
 int t_binary_protocol_init(struct t_binary_protocol* protocol,
                            struct t_transport* transport,
                            const struct t_byte_order* byte_order) {
@@ -629,6 +730,7 @@ int t_binary_protocol_init(struct t_binary_protocol* protocol,
   protocol->read_i64 = t_binary_protocol_read_i64;
   protocol->read_double = t_binary_protocol_read_double;
   protocol->read_string = t_binary_protocol_read_string;
+  protocol->skip = t_binary_protocol_skip;
 
   protocol->get_transport = t_binary_protocol_get_transport;
 

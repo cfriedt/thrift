@@ -428,7 +428,7 @@ BOOST_AUTO_TEST_CASE(test_t_binary_protocol_read_field_begin) {
   char* name = name_;
   uint32_t len = sizeof(name_);
   enum t_type field_type;
-  uint16_t field_id;
+  int16_t field_id;
 
   BOOST_CHECK_EQUAL(-EINVAL, p->read_field_begin(nullptr, &len, &name, &field_type, &field_id));
 
@@ -602,7 +602,7 @@ BOOST_AUTO_TEST_CASE(test_t_binary_protocol_read_byte) {
   BOOST_REQUIRE_EQUAL(0, t_memory_buffer_init(&memory_buffer, &buffer.front(), buffer.size()));
   BOOST_REQUIRE_EQUAL(0, t_binary_protocol_init(&_protocol, t, nullptr));
 
-  uint8_t val;
+  int8_t val;
   BOOST_CHECK_EQUAL(-EINVAL, p->read_byte(nullptr, &val));
   BOOST_CHECK_EQUAL(-EINVAL, p->read_byte(p, nullptr));
 
