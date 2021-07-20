@@ -47,6 +47,7 @@ bool t_socket_peek(struct t_transport* t) {
 
   int r;
   char x;
+  int n;
   struct pollfd fds[2];
   struct t_socket* const sock = (struct t_socket*)t;
 
@@ -58,23 +59,31 @@ bool t_socket_peek(struct t_transport* t) {
     return false;
   }
 
-  fds[0].fd = sock->sd;
-  fds[0].events = POLLIN;
-  /*
-  fds[1].fd = tss->cancel[1];
-  fds[1].events = POLLIN;
-  */
-  r = poll(fds, 2, -1);
+  n = 0;
+  D("polling socket %d", sock->sd);
+  fds[n].fd = sock->sd;
+  fds[n].events = POLLIN;
+  ++n;
+  if (sock->cancel != THRIFT_INVALID_SOCKET) {
+    D("polling socket %d", sock->cancel);
+    fds[n].fd = sock->cancel;
+    fds[n].events = POLLIN;
+    ++n;
+  }
+  r = poll(fds, n, -1);
   if (r < 0) {
     return -errno;
   }
 
-  if ((fds[1].revents & POLLIN) != 0) {
-    return -EINTR;
+  if (n > 1) {
+    if ((fds[1].revents & POLLIN) != 0) {
+      D("received interrupt");
+      return false;
+    }
   }
 
   if ((fds[0].revents & POLLIN) == 0) {
-    return -EINTR;
+    return false;
   }
 
   D("calling recv(MSG_PEEK)");
@@ -171,13 +180,14 @@ int t_socket_read(struct t_transport* t, void* buf, uint32_t len) {
   }
 
   D("calling recv(%p, %u)..", buf, len);
-  char* const b = (char*)buf;
   int r = recv(sock->sd, buf, len, 0);
   D("returned %d from recv()", r);
   if (r < 0) {
     return -errno;
   }
 
+#ifdef DEBUG
+  char* const b = (char*)buf;
   if (r > 0) {
     printf(": {");
     for (int i = 0; i < r; ++i) {
@@ -194,6 +204,7 @@ int t_socket_read(struct t_transport* t, void* buf, uint32_t len) {
 
     printf("}\n");
   }
+#endif
 
   return r;
 }

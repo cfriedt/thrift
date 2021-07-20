@@ -16,6 +16,7 @@ struct t_socket {
   };
   uint16_t port;
   int sd;
+  int cancel;
 };
 
 int t_socket_init(struct t_socket* transport, const char* host, uint16_t port);

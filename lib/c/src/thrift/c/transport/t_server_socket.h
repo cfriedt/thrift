@@ -17,7 +17,8 @@ struct t_server_socket {
   int sd;
   uint16_t port;
   uint16_t backlog;
-  int cancel[2];
+
+  int cancel[4];
 };
 
 int t_server_socket_init(struct t_server_socket* t, const char* addr, uint16_t port);

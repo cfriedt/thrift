@@ -11,12 +11,16 @@ extern "C" {
 #define ARRAY_SIZE(x) (sizeof(x) / sizeof((x)[0]))
 #endif
 
-#include <pthread.h>
+#ifdef THRIFT_C_DEBUG
 #include <stdio.h>
 #define D(fmt, args...) printf("D: %s:%d: %s(): " fmt "\n", __FILE__, __LINE__, __func__, ##args)
 
 #define E(fmt, args...)                                                                            \
   fprintf(stderr, "E: %s:%d: %s(): " fmt "\n", __FILE__, __LINE__, __func__, ##args)
+#else
+#define D(fmt, args...)
+#define E(fmt, args...)
+#endif
 
 // get the address family for a given string respresentation
 // "/path/to/foo" => AF_UNIX

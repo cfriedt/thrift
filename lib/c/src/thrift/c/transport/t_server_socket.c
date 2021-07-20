@@ -68,15 +68,32 @@ static int t_server_socket_accept(struct t_server_transport* t, struct t_transpo
   }
 
   client_fd = r;
-  r = t_socket_init_fd((struct t_socket*)ts, client_fd);
+
+  r = socketpair(AF_LOCAL, SOCK_STREAM, 0, &tss->cancel[2]);
   if (r < 0) {
+    r = -errno;
     goto close_sock;
   }
+
+  D("created socketpair [%d, %d]", tss->cancel[2], tss->cancel[3]);
+
+  r = t_socket_init_fd(ts, client_fd);
+  if (r < 0) {
+    goto close_pair;
+  }
+
+  ts->cancel = tss->cancel[3];
 
   *xport = (struct t_transport*)ts;
 
   r = 0;
   goto out;
+
+close_pair:
+  D("shutting down cancellation socketpair");
+  close(tss->cancel[2]);
+  close(tss->cancel[3]);
+  tss->cancel[2] = tss->cancel[2] = THRIFT_INVALID_SOCKET;
 
 close_sock:
   D("shutting down client socket");
@@ -86,7 +103,7 @@ out:
   return r;
 }
 
-int t_server_socket_close(struct t_server_transport* t) {
+static int t_server_socket_close(struct t_server_transport* t) {
   struct t_server_socket* const tss = (struct t_server_socket*)t;
 
   if (!t_server_transport_is_valid(t)) {
@@ -99,13 +116,15 @@ int t_server_socket_close(struct t_server_transport* t) {
   shutdown(tss->sd, SHUT_RDWR);
   close(tss->cancel[0]);
   close(tss->cancel[1]);
-  tss->sd = -1;
-  tss->cancel[0] = tss->cancel[1] = -1;
+  close(tss->cancel[2]);
+  close(tss->cancel[3]);
+  tss->sd = THRIFT_INVALID_SOCKET;
+  tss->cancel[0] = tss->cancel[1] = tss->cancel[2] = tss->cancel[3] = THRIFT_INVALID_SOCKET;
 
   return 0;
 }
 
-int t_server_socket_interrupt(struct t_server_transport* t) {
+static int t_server_socket_interrupt(struct t_server_transport* t) {
   int r;
   struct t_server_socket* const tss = (struct t_server_socket*)t;
 
@@ -119,6 +138,23 @@ int t_server_socket_interrupt(struct t_server_transport* t) {
   }
 
   // FIXME: should wait until ! listening
+
+  return 0;
+}
+
+static int t_server_socket_interrupt_children(struct t_server_transport* t) {
+  int r;
+  struct t_server_socket* const tss = (struct t_server_socket*)t;
+
+  if (t == NULL) {
+    return -EINVAL;
+  }
+
+  D("interrupting child on fd %d", tss->cancel[2]);
+  r = write(tss->cancel[2], "x", 1);
+  if (r < 0) {
+    return -errno;
+  }
 
   return 0;
 }
@@ -156,14 +192,12 @@ int t_server_socket_init(struct t_server_socket* t, const char* addr, uint16_t p
   t->accept = t_server_socket_accept;
   t->close = t_server_socket_close;
   t->interrupt = t_server_socket_interrupt;
-  // TODO: look at a callback-based approach to handling concurrent connections
-  // similar to what TServerSocket does
-  // t->interrupt_children = t_server_socket_interrupt_children;
+  t->interrupt_children = t_server_socket_interrupt_children;
 
-  t->sd = -1;
+  t->sd = THRIFT_INVALID_SOCKET;
   t->backlog = 1;
   t->port = port;
-  t->cancel[0] = t->cancel[1] = -1;
+  t->cancel[0] = t->cancel[1] = t->cancel[2] = t->cancel[3] = THRIFT_INVALID_SOCKET;
 
   memset(&sa, 0, sizeof(sa));
 
@@ -240,7 +274,7 @@ int t_server_socket_init(struct t_server_socket* t, const char* addr, uint16_t p
 
 close_socket:
   close(t->sd);
-  t->sd = -1;
+  t->sd = THRIFT_INVALID_SOCKET;
 
 out:
   return r;
