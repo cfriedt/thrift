@@ -62,6 +62,7 @@ BOOST_AUTO_TEST_CASE(test_t_binary_protocol_write_message_begin) {
   fill(buffer.begin(), buffer.end(), 0);
   BOOST_REQUIRE_EQUAL(0, t_memory_buffer_init(&memory_buffer, &buffer.front(), buffer.size()));
   BOOST_REQUIRE_EQUAL(0, t_binary_protocol_init(&_protocol, t, nullptr));
+  BOOST_REQUIRE_EQUAL(0, t->open(t));
 
   BOOST_CHECK_EQUAL(-EINVAL, p->write_message_begin(nullptr, "foo", T_CALL, 42));
   BOOST_CHECK_EQUAL(-EINVAL, p->write_message_begin(p, nullptr, T_CALL, 42));
@@ -70,6 +71,7 @@ BOOST_AUTO_TEST_CASE(test_t_binary_protocol_write_message_begin) {
   // reset memory buffer to the beginning to validate contents
   BOOST_REQUIRE_EQUAL(0, t_memory_buffer_init(&memory_buffer, &buffer.front(), buffer.size()));
   BOOST_REQUIRE_EQUAL(0, t_binary_protocol_init(&_protocol, t, nullptr));
+  BOOST_REQUIRE_EQUAL(0, t->open(t));
   BOOST_CHECK_EQUAL(15, p->write_message_begin(p, "foo", T_CALL, 42));
 
   vector<uint8_t> expected{0x80, 0x01, 0x00, T_CALL, 0x00, 0x00, 0x00, 3,
@@ -81,6 +83,7 @@ BOOST_AUTO_TEST_CASE(test_t_binary_protocol_write_message_begin) {
 BOOST_AUTO_TEST_CASE(test_t_binary_protocol_write_message_end) {
   BOOST_REQUIRE_EQUAL(0, t_memory_buffer_init(&memory_buffer, &buffer.front(), buffer.size()));
   BOOST_REQUIRE_EQUAL(0, t_binary_protocol_init(&_protocol, t, nullptr));
+  BOOST_REQUIRE_EQUAL(0, t->open(t));
 
   BOOST_CHECK_EQUAL(-EINVAL, p->write_message_end(nullptr));
   BOOST_CHECK_EQUAL(0, p->write_message_end(p));
@@ -89,6 +92,7 @@ BOOST_AUTO_TEST_CASE(test_t_binary_protocol_write_message_end) {
 BOOST_AUTO_TEST_CASE(test_t_binary_protocol_write_struct_begin) {
   BOOST_REQUIRE_EQUAL(0, t_memory_buffer_init(&memory_buffer, &buffer.front(), buffer.size()));
   BOOST_REQUIRE_EQUAL(0, t_binary_protocol_init(&_protocol, t, nullptr));
+  BOOST_REQUIRE_EQUAL(0, t->open(t));
 
   BOOST_CHECK_EQUAL(-EINVAL, p->write_struct_begin(nullptr, "foo"));
   BOOST_CHECK_EQUAL(0, p->write_struct_begin(p, nullptr));
@@ -98,6 +102,7 @@ BOOST_AUTO_TEST_CASE(test_t_binary_protocol_write_struct_begin) {
 BOOST_AUTO_TEST_CASE(test_t_binary_protocol_write_struct_end) {
   BOOST_REQUIRE_EQUAL(0, t_memory_buffer_init(&memory_buffer, &buffer.front(), buffer.size()));
   BOOST_REQUIRE_EQUAL(0, t_binary_protocol_init(&_protocol, t, nullptr));
+  BOOST_REQUIRE_EQUAL(0, t->open(t));
 
   BOOST_CHECK_EQUAL(-EINVAL, p->write_struct_end(nullptr));
   BOOST_CHECK_EQUAL(0, p->write_struct_end(p));
@@ -106,6 +111,7 @@ BOOST_AUTO_TEST_CASE(test_t_binary_protocol_write_struct_end) {
 BOOST_AUTO_TEST_CASE(test_t_binary_protocol_write_field_begin) {
   BOOST_REQUIRE_EQUAL(0, t_memory_buffer_init(&memory_buffer, &buffer.front(), buffer.size()));
   BOOST_REQUIRE_EQUAL(0, t_binary_protocol_init(&_protocol, t, nullptr));
+  BOOST_REQUIRE_EQUAL(0, t->open(t));
 
   BOOST_CHECK_EQUAL(-EINVAL, p->write_field_begin(nullptr, "foo", T_BYTE, 42));
   BOOST_CHECK_EQUAL(3, p->write_field_begin(p, nullptr, T_BYTE, 42));
@@ -114,6 +120,7 @@ BOOST_AUTO_TEST_CASE(test_t_binary_protocol_write_field_begin) {
   // reset memory buffer to the beginning to validate contents
   BOOST_REQUIRE_EQUAL(0, t_memory_buffer_init(&memory_buffer, &buffer.front(), buffer.size()));
   BOOST_REQUIRE_EQUAL(0, t_binary_protocol_init(&_protocol, t, nullptr));
+  BOOST_REQUIRE_EQUAL(0, t->open(t));
   BOOST_CHECK_EQUAL(3, p->write_field_begin(p, "foo", T_BYTE, 0xaabb));
 
   vector<uint8_t> expected{T_BYTE, 0xaa, 0xbb};
@@ -124,6 +131,7 @@ BOOST_AUTO_TEST_CASE(test_t_binary_protocol_write_field_begin) {
 BOOST_AUTO_TEST_CASE(test_t_binary_protocol_write_field_end) {
   BOOST_REQUIRE_EQUAL(0, t_memory_buffer_init(&memory_buffer, &buffer.front(), buffer.size()));
   BOOST_REQUIRE_EQUAL(0, t_binary_protocol_init(&_protocol, t, nullptr));
+  BOOST_REQUIRE_EQUAL(0, t->open(t));
 
   BOOST_CHECK_EQUAL(-EINVAL, p->write_field_end(nullptr));
   BOOST_CHECK_EQUAL(0, p->write_field_end(p));
@@ -132,6 +140,7 @@ BOOST_AUTO_TEST_CASE(test_t_binary_protocol_write_field_end) {
 BOOST_AUTO_TEST_CASE(test_t_binary_protocol_write_field_stop) {
   BOOST_REQUIRE_EQUAL(0, t_memory_buffer_init(&memory_buffer, &buffer.front(), buffer.size()));
   BOOST_REQUIRE_EQUAL(0, t_binary_protocol_init(&_protocol, t, nullptr));
+  BOOST_REQUIRE_EQUAL(0, t->open(t));
 
   BOOST_CHECK_EQUAL(-EINVAL, p->write_field_stop(nullptr));
   BOOST_CHECK_EQUAL(1, p->write_field_stop(p));
@@ -144,6 +153,7 @@ BOOST_AUTO_TEST_CASE(test_t_binary_protocol_write_field_stop) {
 BOOST_AUTO_TEST_CASE(test_t_binary_protocol_write_map_begin) {
   BOOST_REQUIRE_EQUAL(0, t_memory_buffer_init(&memory_buffer, &buffer.front(), buffer.size()));
   BOOST_REQUIRE_EQUAL(0, t_binary_protocol_init(&_protocol, t, nullptr));
+  BOOST_REQUIRE_EQUAL(0, t->open(t));
 
   BOOST_CHECK_EQUAL(-EINVAL, p->write_map_begin(nullptr, T_BYTE, T_BYTE, 42));
   BOOST_CHECK_EQUAL(6, p->write_map_begin(p, (enum t_type)42, T_BYTE, 42));
@@ -152,6 +162,7 @@ BOOST_AUTO_TEST_CASE(test_t_binary_protocol_write_map_begin) {
   // reset memory buffer to the beginning to validate contents
   BOOST_REQUIRE_EQUAL(0, t_memory_buffer_init(&memory_buffer, &buffer.front(), buffer.size()));
   BOOST_REQUIRE_EQUAL(0, t_binary_protocol_init(&_protocol, t, nullptr));
+  BOOST_REQUIRE_EQUAL(0, t->open(t));
   BOOST_CHECK_EQUAL(6, p->write_map_begin(p, T_BYTE, T_BYTE, 0xaabbccdd));
 
   vector<uint8_t> expected{T_BYTE, T_BYTE, 0xaa, 0xbb, 0xcc, 0xdd};
@@ -162,6 +173,7 @@ BOOST_AUTO_TEST_CASE(test_t_binary_protocol_write_map_begin) {
 BOOST_AUTO_TEST_CASE(test_t_binary_protocol_write_map_end) {
   BOOST_REQUIRE_EQUAL(0, t_memory_buffer_init(&memory_buffer, &buffer.front(), buffer.size()));
   BOOST_REQUIRE_EQUAL(0, t_binary_protocol_init(&_protocol, t, nullptr));
+  BOOST_REQUIRE_EQUAL(0, t->open(t));
 
   BOOST_CHECK_EQUAL(-EINVAL, p->write_map_end(nullptr));
   BOOST_CHECK_EQUAL(0, p->write_map_end(p));
@@ -170,6 +182,7 @@ BOOST_AUTO_TEST_CASE(test_t_binary_protocol_write_map_end) {
 BOOST_AUTO_TEST_CASE(test_t_binary_protocol_write_list_begin) {
   BOOST_REQUIRE_EQUAL(0, t_memory_buffer_init(&memory_buffer, &buffer.front(), buffer.size()));
   BOOST_REQUIRE_EQUAL(0, t_binary_protocol_init(&_protocol, t, nullptr));
+  BOOST_REQUIRE_EQUAL(0, t->open(t));
 
   BOOST_CHECK_EQUAL(-EINVAL, p->write_list_begin(nullptr, T_BYTE, 42));
   BOOST_CHECK_EQUAL(5, p->write_list_begin(p, (enum t_type)42, 42));
@@ -177,6 +190,7 @@ BOOST_AUTO_TEST_CASE(test_t_binary_protocol_write_list_begin) {
   // reset memory buffer to the beginning to validate contents
   BOOST_REQUIRE_EQUAL(0, t_memory_buffer_init(&memory_buffer, &buffer.front(), buffer.size()));
   BOOST_REQUIRE_EQUAL(0, t_binary_protocol_init(&_protocol, t, nullptr));
+  BOOST_REQUIRE_EQUAL(0, t->open(t));
   BOOST_CHECK_EQUAL(5, p->write_list_begin(p, T_BYTE, 0xaabbccdd));
 
   vector<uint8_t> expected{T_BYTE, 0xaa, 0xbb, 0xcc, 0xdd};
@@ -187,6 +201,7 @@ BOOST_AUTO_TEST_CASE(test_t_binary_protocol_write_list_begin) {
 BOOST_AUTO_TEST_CASE(test_t_binary_protocol_write_list_end) {
   BOOST_REQUIRE_EQUAL(0, t_memory_buffer_init(&memory_buffer, &buffer.front(), buffer.size()));
   BOOST_REQUIRE_EQUAL(0, t_binary_protocol_init(&_protocol, t, nullptr));
+  BOOST_REQUIRE_EQUAL(0, t->open(t));
 
   BOOST_CHECK_EQUAL(-EINVAL, p->write_list_end(nullptr));
   BOOST_CHECK_EQUAL(0, p->write_list_end(p));
@@ -195,6 +210,7 @@ BOOST_AUTO_TEST_CASE(test_t_binary_protocol_write_list_end) {
 BOOST_AUTO_TEST_CASE(test_t_binary_protocol_write_set_begin) {
   BOOST_REQUIRE_EQUAL(0, t_memory_buffer_init(&memory_buffer, &buffer.front(), buffer.size()));
   BOOST_REQUIRE_EQUAL(0, t_binary_protocol_init(&_protocol, t, nullptr));
+  BOOST_REQUIRE_EQUAL(0, t->open(t));
 
   BOOST_CHECK_EQUAL(-EINVAL, p->write_set_begin(nullptr, T_BYTE, 42));
   BOOST_CHECK_EQUAL(5, p->write_set_begin(p, (enum t_type)42, 42));
@@ -202,6 +218,7 @@ BOOST_AUTO_TEST_CASE(test_t_binary_protocol_write_set_begin) {
   // reset memory buffer to the beginning to validate contents
   BOOST_REQUIRE_EQUAL(0, t_memory_buffer_init(&memory_buffer, &buffer.front(), buffer.size()));
   BOOST_REQUIRE_EQUAL(0, t_binary_protocol_init(&_protocol, t, nullptr));
+  BOOST_REQUIRE_EQUAL(0, t->open(t));
   BOOST_CHECK_EQUAL(5, p->write_set_begin(p, T_BYTE, 0xaabbccdd));
 
   vector<uint8_t> expected{T_BYTE, 0xaa, 0xbb, 0xcc, 0xdd};
@@ -212,6 +229,7 @@ BOOST_AUTO_TEST_CASE(test_t_binary_protocol_write_set_begin) {
 BOOST_AUTO_TEST_CASE(test_t_binary_protocol_write_set_end) {
   BOOST_REQUIRE_EQUAL(0, t_memory_buffer_init(&memory_buffer, &buffer.front(), buffer.size()));
   BOOST_REQUIRE_EQUAL(0, t_binary_protocol_init(&_protocol, t, nullptr));
+  BOOST_REQUIRE_EQUAL(0, t->open(t));
 
   BOOST_CHECK_EQUAL(-EINVAL, p->write_set_end(nullptr));
   BOOST_CHECK_EQUAL(0, p->write_map_end(p));
@@ -222,6 +240,7 @@ BOOST_AUTO_TEST_CASE(test_t_binary_protocol_write_bool) {
 
   BOOST_REQUIRE_EQUAL(0, t_memory_buffer_init(&memory_buffer, &buffer.front(), buffer.size()));
   BOOST_REQUIRE_EQUAL(0, t_binary_protocol_init(&_protocol, t, nullptr));
+  BOOST_REQUIRE_EQUAL(0, t->open(t));
 
   BOOST_CHECK_EQUAL(-EINVAL, p->write_bool(nullptr, true));
 
@@ -236,6 +255,7 @@ BOOST_AUTO_TEST_CASE(test_t_binary_protocol_write_bool) {
   // reset memory buffer
   BOOST_REQUIRE_EQUAL(0, t_memory_buffer_init(&memory_buffer, &buffer.front(), buffer.size()));
   BOOST_REQUIRE_EQUAL(0, t_binary_protocol_init(&_protocol, t, nullptr));
+  BOOST_REQUIRE_EQUAL(0, t->open(t));
   BOOST_CHECK_EQUAL(1, p->write_bool(p, true));
   expected = vector<uint8_t>{1};
   actual = vector<uint8_t>(buffer.begin(), buffer.begin() + 1);
@@ -245,6 +265,7 @@ BOOST_AUTO_TEST_CASE(test_t_binary_protocol_write_bool) {
   // reset memory buffer
   BOOST_REQUIRE_EQUAL(0, t_memory_buffer_init(&memory_buffer, &buffer.front(), buffer.size()));
   BOOST_REQUIRE_EQUAL(0, t_binary_protocol_init(&_protocol, t, nullptr));
+  BOOST_REQUIRE_EQUAL(0, t->open(t));
   BOOST_CHECK_EQUAL(1, p->write_bool(p, false));
   expected = vector<uint8_t>{0};
   actual = vector<uint8_t>(buffer.begin(), buffer.begin() + 1);
@@ -254,12 +275,14 @@ BOOST_AUTO_TEST_CASE(test_t_binary_protocol_write_bool) {
 BOOST_AUTO_TEST_CASE(test_t_binary_protocol_write_byte) {
   BOOST_REQUIRE_EQUAL(0, t_memory_buffer_init(&memory_buffer, &buffer.front(), buffer.size()));
   BOOST_REQUIRE_EQUAL(0, t_binary_protocol_init(&_protocol, t, nullptr));
+  BOOST_REQUIRE_EQUAL(0, t->open(t));
 
   BOOST_CHECK_EQUAL(-EINVAL, p->write_byte(nullptr, 42));
 
   // reset memory buffer to the beginning to validate contents
   BOOST_REQUIRE_EQUAL(0, t_memory_buffer_init(&memory_buffer, &buffer.front(), buffer.size()));
   BOOST_REQUIRE_EQUAL(0, t_binary_protocol_init(&_protocol, t, nullptr));
+  BOOST_REQUIRE_EQUAL(0, t->open(t));
   BOOST_CHECK_EQUAL(1, p->write_byte(p, 42));
 
   vector<uint8_t> expected{42};
@@ -270,12 +293,14 @@ BOOST_AUTO_TEST_CASE(test_t_binary_protocol_write_byte) {
 BOOST_AUTO_TEST_CASE(test_t_binary_protocol_write_i16) {
   BOOST_REQUIRE_EQUAL(0, t_memory_buffer_init(&memory_buffer, &buffer.front(), buffer.size()));
   BOOST_REQUIRE_EQUAL(0, t_binary_protocol_init(&_protocol, t, nullptr));
+  BOOST_REQUIRE_EQUAL(0, t->open(t));
 
   BOOST_CHECK_EQUAL(-EINVAL, p->write_i16(nullptr, 42));
 
   // reset memory buffer to the beginning to validate contents
   BOOST_REQUIRE_EQUAL(0, t_memory_buffer_init(&memory_buffer, &buffer.front(), buffer.size()));
   BOOST_REQUIRE_EQUAL(0, t_binary_protocol_init(&_protocol, t, nullptr));
+  BOOST_REQUIRE_EQUAL(0, t->open(t));
   BOOST_CHECK_EQUAL(2, p->write_i16(p, 0xaabb));
 
   vector<uint8_t> expected{0xaa, 0xbb};
@@ -286,12 +311,14 @@ BOOST_AUTO_TEST_CASE(test_t_binary_protocol_write_i16) {
 BOOST_AUTO_TEST_CASE(test_t_binary_protocol_write_i32) {
   BOOST_REQUIRE_EQUAL(0, t_memory_buffer_init(&memory_buffer, &buffer.front(), buffer.size()));
   BOOST_REQUIRE_EQUAL(0, t_binary_protocol_init(&_protocol, t, nullptr));
+  BOOST_REQUIRE_EQUAL(0, t->open(t));
 
   BOOST_CHECK_EQUAL(-EINVAL, p->write_i32(nullptr, 42));
 
   // reset memory buffer to the beginning to validate contents
   BOOST_REQUIRE_EQUAL(0, t_memory_buffer_init(&memory_buffer, &buffer.front(), buffer.size()));
   BOOST_REQUIRE_EQUAL(0, t_binary_protocol_init(&_protocol, t, nullptr));
+  BOOST_REQUIRE_EQUAL(0, t->open(t));
   BOOST_CHECK_EQUAL(4, p->write_i32(p, 0xaabbccdd));
 
   vector<uint8_t> expected{0xaa, 0xbb, 0xcc, 0xdd};
@@ -302,12 +329,14 @@ BOOST_AUTO_TEST_CASE(test_t_binary_protocol_write_i32) {
 BOOST_AUTO_TEST_CASE(test_t_binary_protocol_write_i64) {
   BOOST_REQUIRE_EQUAL(0, t_memory_buffer_init(&memory_buffer, &buffer.front(), buffer.size()));
   BOOST_REQUIRE_EQUAL(0, t_binary_protocol_init(&_protocol, t, nullptr));
+  BOOST_REQUIRE_EQUAL(0, t->open(t));
 
   BOOST_CHECK_EQUAL(-EINVAL, p->write_i64(nullptr, 42));
 
   // reset memory buffer to the beginning to validate contents
   BOOST_REQUIRE_EQUAL(0, t_memory_buffer_init(&memory_buffer, &buffer.front(), buffer.size()));
   BOOST_REQUIRE_EQUAL(0, t_binary_protocol_init(&_protocol, t, nullptr));
+  BOOST_REQUIRE_EQUAL(0, t->open(t));
   BOOST_CHECK_EQUAL(8, p->write_i64(p, 0xaabbccddeeff0011));
 
   vector<uint8_t> expected{0xaa, 0xbb, 0xcc, 0xdd, 0xee, 0xff, 0x00, 0x11};
@@ -318,12 +347,14 @@ BOOST_AUTO_TEST_CASE(test_t_binary_protocol_write_i64) {
 BOOST_AUTO_TEST_CASE(test_t_binary_protocol_write_double) {
   BOOST_REQUIRE_EQUAL(0, t_memory_buffer_init(&memory_buffer, &buffer.front(), buffer.size()));
   BOOST_REQUIRE_EQUAL(0, t_binary_protocol_init(&_protocol, t, nullptr));
+  BOOST_REQUIRE_EQUAL(0, t->open(t));
 
   BOOST_CHECK_EQUAL(-EINVAL, p->write_double(nullptr, M_PI));
 
   // reset memory buffer to the beginning to validate contents
   BOOST_REQUIRE_EQUAL(0, t_memory_buffer_init(&memory_buffer, &buffer.front(), buffer.size()));
   BOOST_REQUIRE_EQUAL(0, t_binary_protocol_init(&_protocol, t, nullptr));
+  BOOST_REQUIRE_EQUAL(0, t->open(t));
   BOOST_CHECK_EQUAL(8, p->write_double(p, M_PI));
 
   vector<uint8_t> expected{0x40, 0x09, 0x21, 0xfb, 0x54, 0x44, 0x2d, 0x18};
@@ -334,6 +365,7 @@ BOOST_AUTO_TEST_CASE(test_t_binary_protocol_write_double) {
 BOOST_AUTO_TEST_CASE(test_t_binary_protocol_write_string) {
   BOOST_REQUIRE_EQUAL(0, t_memory_buffer_init(&memory_buffer, &buffer.front(), buffer.size()));
   BOOST_REQUIRE_EQUAL(0, t_binary_protocol_init(&_protocol, t, nullptr));
+  BOOST_REQUIRE_EQUAL(0, t->open(t));
 
   BOOST_CHECK_EQUAL(-EINVAL, p->write_string(nullptr, -1, "foo"));
   BOOST_CHECK_EQUAL(4, p->write_string(p, 0, "foo"));
@@ -341,6 +373,7 @@ BOOST_AUTO_TEST_CASE(test_t_binary_protocol_write_string) {
   // reset memory buffer to the beginning to validate contents
   BOOST_REQUIRE_EQUAL(0, t_memory_buffer_init(&memory_buffer, &buffer.front(), buffer.size()));
   BOOST_REQUIRE_EQUAL(0, t_binary_protocol_init(&_protocol, t, nullptr));
+  BOOST_REQUIRE_EQUAL(0, t->open(t));
   BOOST_CHECK_EQUAL(7, p->write_string(p, 3, "foo"));
 
   vector<uint8_t> expected{0, 0, 0, 3, 'f', 'o', 'o'};
@@ -355,6 +388,7 @@ BOOST_AUTO_TEST_CASE(test_t_binary_protocol_write_string) {
 BOOST_AUTO_TEST_CASE(test_t_binary_protocol_read_message_begin) {
   BOOST_REQUIRE_EQUAL(0, t_memory_buffer_init(&memory_buffer, &buffer.front(), buffer.size()));
   BOOST_REQUIRE_EQUAL(0, t_binary_protocol_init(&_protocol, t, nullptr));
+  BOOST_REQUIRE_EQUAL(0, t->open(t));
 
   // const char **name, enum t_message_type *message_type, uint32_t *seq
   char name_[64];
@@ -399,6 +433,7 @@ BOOST_AUTO_TEST_CASE(test_t_binary_protocol_read_message_begin) {
 BOOST_AUTO_TEST_CASE(test_t_binary_protocol_read_message_end) {
   BOOST_REQUIRE_EQUAL(0, t_memory_buffer_init(&memory_buffer, &buffer.front(), buffer.size()));
   BOOST_REQUIRE_EQUAL(0, t_binary_protocol_init(&_protocol, t, nullptr));
+  BOOST_REQUIRE_EQUAL(0, t->open(t));
 
   BOOST_CHECK_EQUAL(-EINVAL, p->read_message_end(nullptr));
   BOOST_CHECK_EQUAL(0, p->read_message_end(p));
@@ -407,6 +442,7 @@ BOOST_AUTO_TEST_CASE(test_t_binary_protocol_read_message_end) {
 BOOST_AUTO_TEST_CASE(test_t_binary_protocol_read_struct_begin) {
   BOOST_REQUIRE_EQUAL(0, t_memory_buffer_init(&memory_buffer, &buffer.front(), buffer.size()));
   BOOST_REQUIRE_EQUAL(0, t_binary_protocol_init(&_protocol, t, nullptr));
+  BOOST_REQUIRE_EQUAL(0, t->open(t));
 
   BOOST_CHECK_EQUAL(-EINVAL, p->read_struct_begin(nullptr, nullptr, nullptr));
   BOOST_CHECK_EQUAL(0, p->read_struct_begin(p, nullptr, nullptr));
@@ -415,6 +451,7 @@ BOOST_AUTO_TEST_CASE(test_t_binary_protocol_read_struct_begin) {
 BOOST_AUTO_TEST_CASE(test_t_binary_protocol_read_struct_end) {
   BOOST_REQUIRE_EQUAL(0, t_memory_buffer_init(&memory_buffer, &buffer.front(), buffer.size()));
   BOOST_REQUIRE_EQUAL(0, t_binary_protocol_init(&_protocol, t, nullptr));
+  BOOST_REQUIRE_EQUAL(0, t->open(t));
 
   BOOST_CHECK_EQUAL(-EINVAL, p->read_struct_end(nullptr));
   BOOST_CHECK_EQUAL(0, p->read_struct_end(p));
@@ -423,6 +460,7 @@ BOOST_AUTO_TEST_CASE(test_t_binary_protocol_read_struct_end) {
 BOOST_AUTO_TEST_CASE(test_t_binary_protocol_read_field_begin) {
   BOOST_REQUIRE_EQUAL(0, t_memory_buffer_init(&memory_buffer, &buffer.front(), buffer.size()));
   BOOST_REQUIRE_EQUAL(0, t_binary_protocol_init(&_protocol, t, nullptr));
+  BOOST_REQUIRE_EQUAL(0, t->open(t));
 
   char name_[64];
   char* name = name_;
@@ -442,12 +480,13 @@ BOOST_AUTO_TEST_CASE(test_t_binary_protocol_read_field_begin) {
   BOOST_CHECK_EQUAL(3, p->read_field_begin(p, &len, &name, &field_type, &field_id));
 
   BOOST_CHECK_EQUAL(T_BYTE, field_type);
-  BOOST_CHECK_EQUAL(0xaabb, field_id);
+  BOOST_CHECK_EQUAL(int16_t(0xaabb), field_id);
 }
 
 BOOST_AUTO_TEST_CASE(test_t_binary_protocol_read_field_end) {
   BOOST_REQUIRE_EQUAL(0, t_memory_buffer_init(&memory_buffer, &buffer.front(), buffer.size()));
   BOOST_REQUIRE_EQUAL(0, t_binary_protocol_init(&_protocol, t, nullptr));
+  BOOST_REQUIRE_EQUAL(0, t->open(t));
 
   BOOST_CHECK_EQUAL(-EINVAL, p->read_field_end(nullptr));
   BOOST_CHECK_EQUAL(0, p->read_field_end(p));
@@ -456,6 +495,7 @@ BOOST_AUTO_TEST_CASE(test_t_binary_protocol_read_field_end) {
 BOOST_AUTO_TEST_CASE(test_t_binary_protocol_read_map_begin) {
   BOOST_REQUIRE_EQUAL(0, t_memory_buffer_init(&memory_buffer, &buffer.front(), buffer.size()));
   BOOST_REQUIRE_EQUAL(0, t_binary_protocol_init(&_protocol, t, nullptr));
+  BOOST_REQUIRE_EQUAL(0, t->open(t));
 
   enum t_type ktype;
   enum t_type vtype;
@@ -486,6 +526,7 @@ BOOST_AUTO_TEST_CASE(test_t_binary_protocol_read_map_begin) {
 BOOST_AUTO_TEST_CASE(test_t_binary_protocol_read_map_end) {
   BOOST_REQUIRE_EQUAL(0, t_memory_buffer_init(&memory_buffer, &buffer.front(), buffer.size()));
   BOOST_REQUIRE_EQUAL(0, t_binary_protocol_init(&_protocol, t, nullptr));
+  BOOST_REQUIRE_EQUAL(0, t->open(t));
 
   BOOST_CHECK_EQUAL(-EINVAL, p->read_map_end(nullptr));
   BOOST_CHECK_EQUAL(0, p->read_map_end(p));
@@ -494,6 +535,7 @@ BOOST_AUTO_TEST_CASE(test_t_binary_protocol_read_map_end) {
 BOOST_AUTO_TEST_CASE(test_t_binary_protocol_read_list_begin) {
   BOOST_REQUIRE_EQUAL(0, t_memory_buffer_init(&memory_buffer, &buffer.front(), buffer.size()));
   BOOST_REQUIRE_EQUAL(0, t_binary_protocol_init(&_protocol, t, nullptr));
+  BOOST_REQUIRE_EQUAL(0, t->open(t));
 
   enum t_type etype;
   uint32_t size;
@@ -520,6 +562,7 @@ BOOST_AUTO_TEST_CASE(test_t_binary_protocol_read_list_begin) {
 BOOST_AUTO_TEST_CASE(test_t_binary_protocol_read_list_end) {
   BOOST_REQUIRE_EQUAL(0, t_memory_buffer_init(&memory_buffer, &buffer.front(), buffer.size()));
   BOOST_REQUIRE_EQUAL(0, t_binary_protocol_init(&_protocol, t, nullptr));
+  BOOST_REQUIRE_EQUAL(0, t->open(t));
 
   BOOST_CHECK_EQUAL(-EINVAL, p->read_list_end(nullptr));
   BOOST_CHECK_EQUAL(0, p->read_list_end(p));
@@ -528,6 +571,7 @@ BOOST_AUTO_TEST_CASE(test_t_binary_protocol_read_list_end) {
 BOOST_AUTO_TEST_CASE(test_t_binary_protocol_read_set_begin) {
   BOOST_REQUIRE_EQUAL(0, t_memory_buffer_init(&memory_buffer, &buffer.front(), buffer.size()));
   BOOST_REQUIRE_EQUAL(0, t_binary_protocol_init(&_protocol, t, nullptr));
+  BOOST_REQUIRE_EQUAL(0, t->open(t));
 
   enum t_type etype;
   uint32_t size;
@@ -554,6 +598,7 @@ BOOST_AUTO_TEST_CASE(test_t_binary_protocol_read_set_begin) {
 BOOST_AUTO_TEST_CASE(test_t_binary_protocol_read_set_end) {
   BOOST_REQUIRE_EQUAL(0, t_memory_buffer_init(&memory_buffer, &buffer.front(), buffer.size()));
   BOOST_REQUIRE_EQUAL(0, t_binary_protocol_init(&_protocol, t, nullptr));
+  BOOST_REQUIRE_EQUAL(0, t->open(t));
 
   BOOST_CHECK_EQUAL(-EINVAL, p->read_set_end(nullptr));
   BOOST_CHECK_EQUAL(0, p->read_set_end(p));
@@ -562,6 +607,7 @@ BOOST_AUTO_TEST_CASE(test_t_binary_protocol_read_set_end) {
 BOOST_AUTO_TEST_CASE(test_t_binary_protocol_read_bool) {
   BOOST_REQUIRE_EQUAL(0, t_memory_buffer_init(&memory_buffer, &buffer.front(), buffer.size()));
   BOOST_REQUIRE_EQUAL(0, t_binary_protocol_init(&_protocol, t, nullptr));
+  BOOST_REQUIRE_EQUAL(0, t->open(t));
 
   bool val;
   BOOST_CHECK_EQUAL(-EINVAL, p->read_bool(nullptr, &val));
@@ -570,6 +616,7 @@ BOOST_AUTO_TEST_CASE(test_t_binary_protocol_read_bool) {
   val = false;
   BOOST_REQUIRE_EQUAL(0, t_memory_buffer_init(&memory_buffer, &buffer.front(), buffer.size()));
   BOOST_REQUIRE_EQUAL(0, t_binary_protocol_init(&_protocol, t, nullptr));
+  BOOST_REQUIRE_EQUAL(0, t->open(t));
   buffer[0] = true;
   memory_buffer.rBound_++;
   memory_buffer.wBase_++;
@@ -580,6 +627,7 @@ BOOST_AUTO_TEST_CASE(test_t_binary_protocol_read_bool) {
   val = false;
   BOOST_REQUIRE_EQUAL(0, t_memory_buffer_init(&memory_buffer, &buffer.front(), buffer.size()));
   BOOST_REQUIRE_EQUAL(0, t_binary_protocol_init(&_protocol, t, nullptr));
+  BOOST_REQUIRE_EQUAL(0, t->open(t));
   buffer[0] = 42;
   memory_buffer.rBound_++;
   memory_buffer.wBase_++;
@@ -591,6 +639,7 @@ BOOST_AUTO_TEST_CASE(test_t_binary_protocol_read_bool) {
   val = true;
   BOOST_REQUIRE_EQUAL(0, t_memory_buffer_init(&memory_buffer, &buffer.front(), buffer.size()));
   BOOST_REQUIRE_EQUAL(0, t_binary_protocol_init(&_protocol, t, nullptr));
+  BOOST_REQUIRE_EQUAL(0, t->open(t));
   buffer[0] = false;
   memory_buffer.rBound_++;
   memory_buffer.wBase_++;
@@ -601,6 +650,7 @@ BOOST_AUTO_TEST_CASE(test_t_binary_protocol_read_bool) {
 BOOST_AUTO_TEST_CASE(test_t_binary_protocol_read_byte) {
   BOOST_REQUIRE_EQUAL(0, t_memory_buffer_init(&memory_buffer, &buffer.front(), buffer.size()));
   BOOST_REQUIRE_EQUAL(0, t_binary_protocol_init(&_protocol, t, nullptr));
+  BOOST_REQUIRE_EQUAL(0, t->open(t));
 
   int8_t val;
   BOOST_CHECK_EQUAL(-EINVAL, p->read_byte(nullptr, &val));
@@ -617,6 +667,7 @@ BOOST_AUTO_TEST_CASE(test_t_binary_protocol_read_byte) {
 BOOST_AUTO_TEST_CASE(test_t_binary_protocol_read_i16) {
   BOOST_REQUIRE_EQUAL(0, t_memory_buffer_init(&memory_buffer, &buffer.front(), buffer.size()));
   BOOST_REQUIRE_EQUAL(0, t_binary_protocol_init(&_protocol, t, nullptr));
+  BOOST_REQUIRE_EQUAL(0, t->open(t));
 
   int16_t val;
   BOOST_CHECK_EQUAL(-EINVAL, p->read_i16(nullptr, &val));
@@ -634,6 +685,7 @@ BOOST_AUTO_TEST_CASE(test_t_binary_protocol_read_i16) {
 BOOST_AUTO_TEST_CASE(test_t_binary_protocol_read_i32) {
   BOOST_REQUIRE_EQUAL(0, t_memory_buffer_init(&memory_buffer, &buffer.front(), buffer.size()));
   BOOST_REQUIRE_EQUAL(0, t_binary_protocol_init(&_protocol, t, nullptr));
+  BOOST_REQUIRE_EQUAL(0, t->open(t));
 
   int32_t val;
   BOOST_CHECK_EQUAL(-EINVAL, p->read_i32(nullptr, &val));
@@ -653,6 +705,7 @@ BOOST_AUTO_TEST_CASE(test_t_binary_protocol_read_i32) {
 BOOST_AUTO_TEST_CASE(test_t_binary_protocol_read_i64) {
   BOOST_REQUIRE_EQUAL(0, t_memory_buffer_init(&memory_buffer, &buffer.front(), buffer.size()));
   BOOST_REQUIRE_EQUAL(0, t_binary_protocol_init(&_protocol, t, nullptr));
+  BOOST_REQUIRE_EQUAL(0, t->open(t));
 
   int64_t val;
   BOOST_CHECK_EQUAL(-EINVAL, p->read_i64(nullptr, &val));
@@ -676,6 +729,7 @@ BOOST_AUTO_TEST_CASE(test_t_binary_protocol_read_i64) {
 BOOST_AUTO_TEST_CASE(test_t_binary_protocol_read_double) {
   BOOST_REQUIRE_EQUAL(0, t_memory_buffer_init(&memory_buffer, &buffer.front(), buffer.size()));
   BOOST_REQUIRE_EQUAL(0, t_binary_protocol_init(&_protocol, t, nullptr));
+  BOOST_REQUIRE_EQUAL(0, t->open(t));
 
   double val = 0;
   BOOST_CHECK_EQUAL(-EINVAL, p->read_double(nullptr, &val));
@@ -699,6 +753,7 @@ BOOST_AUTO_TEST_CASE(test_t_binary_protocol_read_double) {
 BOOST_AUTO_TEST_CASE(test_t_binary_protocol_read_string) {
   BOOST_REQUIRE_EQUAL(0, t_memory_buffer_init(&memory_buffer, &buffer.front(), buffer.size()));
   BOOST_REQUIRE_EQUAL(0, t_binary_protocol_init(&_protocol, t, nullptr));
+  BOOST_REQUIRE_EQUAL(0, t->open(t));
 
   char val_[64];
   char* val = val_;
@@ -724,6 +779,7 @@ BOOST_AUTO_TEST_CASE(test_t_binary_protocol_read_string) {
 
   BOOST_REQUIRE_EQUAL(0, t_memory_buffer_init(&memory_buffer, &buffer.front(), buffer.size()));
   BOOST_REQUIRE_EQUAL(0, t_binary_protocol_init(&_protocol, t, nullptr));
+  BOOST_REQUIRE_EQUAL(0, t->open(t));
   memset(val_, 0, sizeof(val_));
   buffer[0] = 0;
   buffer[1] = 0;
@@ -739,6 +795,7 @@ BOOST_AUTO_TEST_CASE(test_t_binary_protocol_read_string) {
 
   BOOST_REQUIRE_EQUAL(0, t_memory_buffer_init(&memory_buffer, &buffer.front(), buffer.size()));
   BOOST_REQUIRE_EQUAL(0, t_binary_protocol_init(&_protocol, t, nullptr));
+  BOOST_REQUIRE_EQUAL(0, t->open(t));
   memset(val_, 0, sizeof(val_));
   buffer[0] = 0;
   buffer[1] = 0;
@@ -758,6 +815,7 @@ BOOST_AUTO_TEST_CASE(test_t_binary_protocol_read_string) {
 
   BOOST_REQUIRE_EQUAL(0, t_memory_buffer_init(&memory_buffer, &buffer.front(), buffer.size()));
   BOOST_REQUIRE_EQUAL(0, t_binary_protocol_init(&_protocol, t, nullptr));
+  BOOST_REQUIRE_EQUAL(0, t->open(t));
   memset(val_, 0, sizeof(val_));
   buffer[0] = 0;
   buffer[1] = 0;

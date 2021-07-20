@@ -219,8 +219,29 @@ static int t_binary_protocol_write_list_begin(struct t_protocol* p,
 
 D_WRITEI(8);
 D_WRITEI(16);
-D_WRITEI(32);
+// D_WRITEI(32);
 D_WRITEI(64);
+
+static int t_binary_protocol_write_i32(struct t_protocol* p, int32_t x) {
+  struct t_binary_protocol* const p_ = (struct t_binary_protocol*)p;
+  int r;
+
+  if (p == NULL) {
+    return -EINVAL;
+  }
+
+  assert(p_->trans != NULL);
+  assert(t_byte_order_is_valid(p_->byte_order));
+
+  x = to32(x);
+
+  r = p_->trans->write_all(p_->trans, &x, 32 / 8);
+  if (r < 0) {
+    return r;
+  }
+
+  return 32 / 8;
+}
 
 static inline int t_binary_protocol_write_double(struct t_protocol* p, double x) {
   union bitwise_cast {
@@ -471,30 +492,8 @@ static int t_binary_protocol_read_list_begin(struct t_protocol* p,
 
 D_READI(8);
 D_READI(16);
-// D_READI(32);
+D_READI(32);
 D_READI(64);
-
-static int t_binary_protocol_read_i32(struct t_protocol* p, int32_t* x) {
-  struct t_binary_protocol* const p_ = (struct t_binary_protocol*)p;
-  int r;
-
-  if (p == NULL || x == NULL) {
-    return -EINVAL;
-  }
-
-  assert(p_->trans != NULL);
-
-  r = p_->trans->read_all(p_->trans, x, 32 / 8);
-  if (r < 0) {
-    return r;
-  }
-
-  assert(t_byte_order_is_valid(p_->byte_order));
-
-  *x = from32(*x);
-
-  return 32 / 8;
-}
 
 static inline int t_binary_protocol_read_bool(struct t_protocol* p, bool* x) {
   int r;
