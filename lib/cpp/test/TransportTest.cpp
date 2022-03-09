@@ -22,7 +22,11 @@
 #include <stdlib.h>
 #include <time.h>
 #ifdef HAVE_SYS_SOCKET_H
+#if CONFIG_SOC_POSIX
 #include <sys/socket.h>
+#else
+#include <posix/sys/socket.h>
+#endif
 #endif
 #include <sstream>
 #include <fstream>
