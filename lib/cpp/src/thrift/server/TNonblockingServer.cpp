@@ -37,7 +37,11 @@
 #endif
 
 #ifdef HAVE_SYS_SOCKET_H
+#if CONFIG_SOC_POSIX
 #include <sys/socket.h>
+#else
+#include <posix/sys/socket.h>
+#endif
 #endif
 
 #ifdef HAVE_NETINET_IN_H

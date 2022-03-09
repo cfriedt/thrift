@@ -24,7 +24,11 @@
 #include <stdexcept>
 #include <sys/types.h>
 #ifdef HAVE_SYS_SOCKET_H
+#if CONFIG_SOC_POSIX
 #include <sys/socket.h>
+#else
+#include <posix/sys/socket.h>
+#endif
 #endif
 #ifdef HAVE_SYS_UN_H
 #include <sys/un.h>
