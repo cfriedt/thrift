@@ -35,7 +35,11 @@
 #include <memory>
 
 #ifdef HAVE_NETINET_IN_H
+#ifdef CONFIG_SOC_POSIX
 #include <netinet/in.h>
+#else
+#include <posix/netinet/in.h>
+#endif
 #endif
 #include <sys/types.h>
 #include <string>
