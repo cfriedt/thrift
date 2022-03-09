@@ -86,87 +86,20 @@ static inline To bitwise_cast(From from) {
 #include <sys/param.h>
 #endif
 
-#ifndef __THRIFT_BYTE_ORDER
-# if defined(BYTE_ORDER) && defined(LITTLE_ENDIAN) && defined(BIG_ENDIAN)
-#  define __THRIFT_BYTE_ORDER BYTE_ORDER
-#  define __THRIFT_LITTLE_ENDIAN LITTLE_ENDIAN
-#  define __THRIFT_BIG_ENDIAN BIG_ENDIAN
-# else
-#  include <boost/predef/other/endian.h>
-#  if BOOST_ENDIAN_BIG_BYTE
-#    define __THRIFT_BYTE_ORDER 4321
-#    define __THRIFT_LITTLE_ENDIAN 0
-#    define __THRIFT_BIG_ENDIAN __THRIFT_BYTE_ORDER
-#  elif BOOST_ENDIAN_LITTLE_BYTE
-#    define __THRIFT_BYTE_ORDER 1234
-#    define __THRIFT_LITTLE_ENDIAN __THRIFT_BYTE_ORDER
-#    define __THRIFT_BIG_ENDIAN 0
-#  endif
-#  ifdef BOOST_LITTLE_ENDIAN
-#  else
-#  endif
-# endif
-#endif
+#include <sys/byteorder.h>
 
-#if __THRIFT_BYTE_ORDER == __THRIFT_BIG_ENDIAN
-# if !defined(THRIFT_ntohll)
-#  define THRIFT_ntohll(n) (n)
-#  define THRIFT_htonll(n) (n)
-# endif
-# if defined(__GNUC__) && defined(__GLIBC__)
-#  include <byteswap.h>
-#  define THRIFT_htolell(n) bswap_64(n)
-#  define THRIFT_letohll(n) bswap_64(n)
-#  define THRIFT_htolel(n) bswap_32(n)
-#  define THRIFT_letohl(n) bswap_32(n)
-#  define THRIFT_htoles(n) bswap_16(n)
-#  define THRIFT_letohs(n) bswap_16(n)
-# else /* GNUC & GLIBC */
-#  define bswap_64(n) \
-      ( (((n) & 0xff00000000000000ull) >> 56) \
-      | (((n) & 0x00ff000000000000ull) >> 40) \
-      | (((n) & 0x0000ff0000000000ull) >> 24) \
-      | (((n) & 0x000000ff00000000ull) >> 8)  \
-      | (((n) & 0x00000000ff000000ull) << 8)  \
-      | (((n) & 0x0000000000ff0000ull) << 24) \
-      | (((n) & 0x000000000000ff00ull) << 40) \
-      | (((n) & 0x00000000000000ffull) << 56) )
-#  define bswap_32(n) \
-      ( (((n) & 0xff000000ul) >> 24) \
-      | (((n) & 0x00ff0000ul) >> 8)  \
-      | (((n) & 0x0000ff00ul) << 8)  \
-      | (((n) & 0x000000fful) << 24) )
-#  define bswap_16(n) \
-      ( (((n) & ((unsigned short)0xff00ul)) >> 8)  \
-      | (((n) & ((unsigned short)0x00fful)) << 8)  )
-#  define THRIFT_htolell(n) bswap_64(n)
-#  define THRIFT_letohll(n) bswap_64(n)
-#  define THRIFT_htolel(n) bswap_32(n)
-#  define THRIFT_letohl(n) bswap_32(n)
-#  define THRIFT_htoles(n) bswap_16(n)
-#  define THRIFT_letohs(n) bswap_16(n)
-# endif /* GNUC & GLIBC */
-#elif __THRIFT_BYTE_ORDER == __THRIFT_LITTLE_ENDIAN
-#  define THRIFT_htolell(n) (n)
-#  define THRIFT_letohll(n) (n)
-#  define THRIFT_htolel(n) (n)
-#  define THRIFT_letohl(n) (n)
-#  define THRIFT_htoles(n) (n)
-#  define THRIFT_letohs(n) (n)
-# if defined(__GNUC__) && defined(__GLIBC__)
-#  include <byteswap.h>
-#  define THRIFT_ntohll(n) bswap_64(n)
-#  define THRIFT_htonll(n) bswap_64(n)
-# elif defined(_MSC_VER) /* Microsoft Visual C++ */
-#  define THRIFT_ntohll(n) ( _byteswap_uint64((uint64_t)n) )
-#  define THRIFT_htonll(n) ( _byteswap_uint64((uint64_t)n) )
-# elif !defined(THRIFT_ntohll) /* Not GNUC/GLIBC or MSVC */
-#  define THRIFT_ntohll(n) ( (((uint64_t)ntohl((uint32_t)n)) << 32) + ntohl((uint32_t)(n >> 32)) )
-#  define THRIFT_htonll(n) ( (((uint64_t)htonl((uint32_t)n)) << 32) + htonl((uint32_t)(n >> 32)) )
-# endif /* GNUC/GLIBC or MSVC or something else */
-#else /* __THRIFT_BYTE_ORDER */
-# error "Can't define THRIFT_htonll or THRIFT_ntohll!"
-#endif
+#define __THRIFT_BYTE_ORDER __BYTE_ORDER__
+#define __THRIFT_LITTLE_ENDIAN __ORDER_LITTLE_ENDIAN__
+#define __THRIFT_BIG_ENDIAN __ORDER_BIG_ENDIAN__
+
+#define THRIFT_htolell(n) sys_cpu_to_le64(n)
+#define THRIFT_letohll(n) sys_le64_to_cpu(n)
+#define THRIFT_htolel(n) sys_cpu_to_le32(n)
+#define THRIFT_letohl(n) sys_le32_to_cpu(n)
+#define THRIFT_htoles(n) sys_cpu_to_le16(n)
+#define THRIFT_letohs(n) sys_le16_to_cpu(n)
+#define THRIFT_ntohll(n) sys_be64_to_cpu(n)
+#define THRIFT_htonll(n) sys_cpu_to_be64(n)
 
 namespace apache {
 namespace thrift {
