@@ -38,7 +38,11 @@
 #endif
 #include <sys/types.h>
 #ifdef HAVE_NETINET_IN_H
+#ifdef CONFIG_SOC_POSIX
 #include <netinet/in.h>
+#else
+#include <posix/netinet/in.h>
+#endif
 #include <netinet/tcp.h>
 #endif
 #ifdef HAVE_UNISTD_H
