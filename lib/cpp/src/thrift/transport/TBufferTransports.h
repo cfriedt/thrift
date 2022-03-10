@@ -23,7 +23,6 @@
 #include <cstdlib>
 #include <cstring>
 #include <limits>
-#include <boost/scoped_array.hpp>
 
 #include <thrift/transport/TTransport.h>
 #include <thrift/transport/TVirtualTransport.h>
@@ -151,7 +150,11 @@ protected:
    * the concrete class to set up pointers correctly.
    */
   TBufferBase(std::shared_ptr<TConfiguration> config = nullptr)
-    : TVirtualTransport(config), rBase_(nullptr), rBound_(nullptr), wBase_(nullptr), wBound_(nullptr) {}
+    : TVirtualTransport(config),
+      rBase_(nullptr),
+      rBound_(nullptr),
+      wBase_(nullptr),
+      wBound_(nullptr) {}
 
   /// Convenience mutator for setting the read buffer.
   void setReadBuffer(uint8_t* buf, uint32_t len) {
@@ -189,36 +192,41 @@ public:
   static const int DEFAULT_BUFFER_SIZE = 512;
 
   /// Use default buffer sizes.
-  TBufferedTransport(std::shared_ptr<TTransport> transport, std::shared_ptr<TConfiguration> config = nullptr)
+  TBufferedTransport(std::shared_ptr<TTransport> transport,
+                     std::shared_ptr<TConfiguration> config = nullptr)
     : TVirtualTransport(config),
       transport_(transport),
       rBufSize_(DEFAULT_BUFFER_SIZE),
       wBufSize_(DEFAULT_BUFFER_SIZE),
-      rBuf_(new uint8_t[rBufSize_]),
-      wBuf_(new uint8_t[wBufSize_]) {
+      rBuf_(rBufSize_),
+      wBuf_(wBufSize_) {
     initPointers();
   }
 
   /// Use specified buffer sizes.
-  TBufferedTransport(std::shared_ptr<TTransport> transport, uint32_t sz, std::shared_ptr<TConfiguration> config = nullptr)
+  TBufferedTransport(std::shared_ptr<TTransport> transport,
+                     uint32_t sz,
+                     std::shared_ptr<TConfiguration> config = nullptr)
     : TVirtualTransport(config),
       transport_(transport),
       rBufSize_(sz),
       wBufSize_(sz),
-      rBuf_(new uint8_t[rBufSize_]),
-      wBuf_(new uint8_t[wBufSize_]) {
+      rBuf_(rBufSize_),
+      wBuf_(wBufSize_) {
     initPointers();
   }
 
   /// Use specified read and write buffer sizes.
-  TBufferedTransport(std::shared_ptr<TTransport> transport, uint32_t rsz, uint32_t wsz,
+  TBufferedTransport(std::shared_ptr<TTransport> transport,
+                     uint32_t rsz,
+                     uint32_t wsz,
                      std::shared_ptr<TConfiguration> config = nullptr)
     : TVirtualTransport(config),
       transport_(transport),
       rBufSize_(rsz),
       wBufSize_(wsz),
-      rBuf_(new uint8_t[rBufSize_]),
-      wBuf_(new uint8_t[wBufSize_]) {
+      rBuf_(rBufSize_),
+      wBuf_(wBufSize_) {
     initPointers();
   }
 
@@ -228,7 +236,7 @@ public:
 
   bool peek() override {
     if (rBase_ == rBound_) {
-      setReadBuffer(rBuf_.get(), transport_->read(rBuf_.get(), rBufSize_));
+      setReadBuffer(&rBuf_.front(), transport_->read(&rBuf_.front(), rBufSize_));
     }
     return (rBound_ > rBase_);
   }
@@ -272,8 +280,8 @@ public:
 
 protected:
   void initPointers() {
-    setReadBuffer(rBuf_.get(), 0);
-    setWriteBuffer(wBuf_.get(), wBufSize_);
+    setReadBuffer(&rBuf_.front(), 0);
+    setWriteBuffer(&wBuf_.front(), wBufSize_);
     // Write size never changes.
   }
 
@@ -281,8 +289,8 @@ protected:
 
   uint32_t rBufSize_;
   uint32_t wBufSize_;
-  boost::scoped_array<uint8_t> rBuf_;
-  boost::scoped_array<uint8_t> wBuf_;
+  std::vector<uint8_t> rBuf_;
+  std::vector<uint8_t> wBuf_;
 };
 
 /**
@@ -322,18 +330,19 @@ public:
       rBufSize_(0),
       wBufSize_(DEFAULT_BUFFER_SIZE),
       rBuf_(),
-      wBuf_(new uint8_t[wBufSize_]),
+      wBuf_(wBufSize_),
       bufReclaimThresh_((std::numeric_limits<uint32_t>::max)()) {
     initPointers();
   }
 
-  TFramedTransport(std::shared_ptr<TTransport> transport, std::shared_ptr<TConfiguration> config = nullptr)
+  TFramedTransport(std::shared_ptr<TTransport> transport,
+                   std::shared_ptr<TConfiguration> config = nullptr)
     : TVirtualTransport(config),
       transport_(transport),
       rBufSize_(0),
       wBufSize_(DEFAULT_BUFFER_SIZE),
       rBuf_(),
-      wBuf_(new uint8_t[wBufSize_]),
+      wBuf_(wBufSize_),
       bufReclaimThresh_((std::numeric_limits<uint32_t>::max)()),
       maxFrameSize_(configuration_->getMaxFrameSize()) {
     initPointers();
@@ -348,7 +357,7 @@ public:
       rBufSize_(0),
       wBufSize_(sz),
       rBuf_(),
-      wBuf_(new uint8_t[wBufSize_]),
+      wBuf_(wBufSize_),
       bufReclaimThresh_(bufReclaimThresh),
       maxFrameSize_(configuration_->getMaxFrameSize()) {
     initPointers();
@@ -411,7 +420,7 @@ protected:
 
   void initPointers() {
     setReadBuffer(nullptr, 0);
-    setWriteBuffer(wBuf_.get(), wBufSize_);
+    setWriteBuffer(&wBuf_.front(), wBufSize_);
 
     // Pad the buffer so we can insert the size later.
     int32_t pad = 0;
@@ -422,8 +431,8 @@ protected:
 
   uint32_t rBufSize_;
   uint32_t wBufSize_;
-  boost::scoped_array<uint8_t> rBuf_;
-  boost::scoped_array<uint8_t> wBuf_;
+  std::vector<uint8_t> rBuf_;
+  std::vector<uint8_t> wBuf_;
   uint32_t bufReclaimThresh_;
   uint32_t maxFrameSize_;
 };
@@ -466,7 +475,7 @@ private:
       assert(owner);
       buf = (uint8_t*)std::malloc(size);
       if (buf == nullptr) {
-	throw std::bad_alloc();
+        throw std::bad_alloc();
       }
     }
 
@@ -514,8 +523,7 @@ public:
    * Construct a TMemoryBuffer with a default-sized buffer,
    * owned by the TMemoryBuffer object.
    */
-  TMemoryBuffer(std::shared_ptr<TConfiguration> config = nullptr)
-    : TVirtualTransport(config) {
+  TMemoryBuffer(std::shared_ptr<TConfiguration> config = nullptr) : TVirtualTransport(config) {
     initCommon(nullptr, defaultSize, true, 0);
   }
 
@@ -540,7 +548,10 @@ public:
    * @param sz     The size of @c buf.
    * @param policy See @link MemoryPolicy @endlink .
    */
-  TMemoryBuffer(uint8_t* buf, uint32_t sz, MemoryPolicy policy = OBSERVE, std::shared_ptr<TConfiguration> config = nullptr)
+  TMemoryBuffer(uint8_t* buf,
+                uint32_t sz,
+                MemoryPolicy policy = OBSERVE,
+                std::shared_ptr<TConfiguration> config = nullptr)
     : TVirtualTransport(config) {
     if (buf == nullptr && sz != 0) {
       throw TTransportException(TTransportException::BAD_ARGS,
@@ -697,15 +708,11 @@ public:
 
   //! \brief Get the current buffer size
   //! \returns the current buffer size
-  uint32_t getBufferSize() const {
-    return bufferSize_;
-  }
+  uint32_t getBufferSize() const { return bufferSize_; }
 
   //! \brief Get the current maximum buffer size
   //! \returns the current maximum buffer size
-  uint32_t getMaxBufferSize() const {
-    return maxBufferSize_;
-  }
+  uint32_t getMaxBufferSize() const { return maxBufferSize_; }
 
   //! \brief Change the maximum buffer size
   //! \param[in]  maxSize  the new maximum buffer size allowed to grow to
@@ -759,8 +766,8 @@ protected:
   // Don't forget to update constrctors, initCommon, and swap if
   // you add new members.
 };
-}
-}
-} // apache::thrift::transport
+} // namespace transport
+} // namespace thrift
+} // namespace apache
 
 #endif // #ifndef _THRIFT_TRANSPORT_TBUFFERTRANSPORTS_H_
