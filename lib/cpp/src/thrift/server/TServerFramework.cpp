@@ -26,7 +26,7 @@ namespace apache {
 namespace thrift {
 namespace server {
 
-using apache::thrift::concurrency::Synchronized;
+//using apache::thrift::concurrency::Synchronized;
 using apache::thrift::protocol::TProtocol;
 using apache::thrift::protocol::TProtocolFactory;
 using std::bind;
@@ -136,9 +136,9 @@ void TServerFramework::serve() {
       // clients allowed, wait for one or more clients to drain before
       // accepting another.
       {
-        Synchronized sync(mon_);
+        //Synchronized sync(mon_);
         while (clients_ >= limit_) {
-          mon_.wait();
+          //mon_.wait();
         }
       }
 
@@ -188,17 +188,17 @@ void TServerFramework::serve() {
 }
 
 int64_t TServerFramework::getConcurrentClientLimit() const {
-  Synchronized sync(mon_);
+  //Synchronized sync(mon_);
   return limit_;
 }
 
 int64_t TServerFramework::getConcurrentClientCount() const {
-  Synchronized sync(mon_);
+  //Synchronized sync(mon_);
   return clients_;
 }
 
 int64_t TServerFramework::getConcurrentClientCountHWM() const {
-  Synchronized sync(mon_);
+  //Synchronized sync(mon_);
   return hwm_;
 }
 
@@ -206,10 +206,10 @@ void TServerFramework::setConcurrentClientLimit(int64_t newLimit) {
   if (newLimit < 1) {
     throw std::invalid_argument("newLimit must be greater than zero");
   }
-  Synchronized sync(mon_);
+  //Synchronized sync(mon_);
   limit_ = newLimit;
   if (limit_ - clients_ > 0) {
-    mon_.notify();
+    //mon_.notify();
   }
 }
 
@@ -222,7 +222,7 @@ void TServerFramework::stop() {
 
 void TServerFramework::newlyConnectedClient(const shared_ptr<TConnectedClient>& pClient) {
   {
-    Synchronized sync(mon_);
+    //Synchronized sync(mon_);
     ++clients_;
     hwm_ = (std::max)(hwm_, clients_);
   }
@@ -232,11 +232,13 @@ void TServerFramework::newlyConnectedClient(const shared_ptr<TConnectedClient>& 
 
 void TServerFramework::disposeConnectedClient(TConnectedClient* pClient) {
   onClientDisconnected(pClient);
-  delete pClient;
+  // XXX: causes a warning
+  // warning: deleting object of polymorphic class type 'apache::thrift::server::TConnectedClient' which has non-virtual destructor might cause undefined behavior [-Wdelete-non-virtual-dtor]
+  //delete pClient;
 
-  Synchronized sync(mon_);
+  //Synchronized sync(mon_);
   if (limit_ - --clients_ > 0) {
-    mon_.notify();
+    //mon_.notify();
   }
 }
 
