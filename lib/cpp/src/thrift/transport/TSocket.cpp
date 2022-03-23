@@ -722,6 +722,7 @@ void TSocket::setLinger(bool on, int linger) {
     return;
   }
 
+#if 0
 #ifndef _WIN32
   struct linger l = {(lingerOn_ ? 1 : 0), lingerVal_};
 #else
@@ -734,6 +735,7 @@ void TSocket::setLinger(bool on, int linger) {
         = THRIFT_GET_SOCKET_ERROR; // Copy THRIFT_GET_SOCKET_ERROR because we're allocating memory.
     GlobalOutput.perror("TSocket::setLinger() setsockopt() " + getSocketInfo(), errno_copy);
   }
+#endif
 }
 
 void TSocket::setNoDelay(bool noDelay) {
