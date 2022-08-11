@@ -86,7 +86,7 @@ static inline To bitwise_cast(From from) {
 #include <sys/param.h>
 #endif
 
-#include <sys/byteorder.h>
+#include <zephyr/sys/byteorder.h>
 
 #define __THRIFT_BYTE_ORDER __BYTE_ORDER__
 #define __THRIFT_LITTLE_ENDIAN __ORDER_LITTLE_ENDIAN__
