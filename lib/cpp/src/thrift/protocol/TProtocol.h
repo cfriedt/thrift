@@ -35,7 +35,11 @@
 #include <memory>
 
 #ifdef HAVE_NETINET_IN_H
+#ifdef __ZEPHYR__
+#include <zephyr/posix/netinet/in.h>
+#else
 #include <netinet/in.h>
+#endif
 #endif
 #include <sys/types.h>
 #include <string>

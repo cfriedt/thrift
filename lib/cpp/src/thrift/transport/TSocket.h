@@ -28,13 +28,21 @@
 #include <thrift/transport/PlatformSocket.h>
 
 #ifdef HAVE_ARPA_INET_H
+#ifdef __ZEPHYR__
+#include <zephyr/posix/arpa/inet.h>
+#else
 #include <arpa/inet.h>
+#endif
 #endif
 #ifdef HAVE_SYS_TIME_H
 #include <sys/time.h>
 #endif
 #ifdef HAVE_NETDB_H
+#ifdef __ZEPHYR__
+#include <zephyr/posix/netdb.h>
+#else
 #include <netdb.h>
+#endif
 #endif
 
 namespace apache {

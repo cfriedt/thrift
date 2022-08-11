@@ -107,6 +107,7 @@
 #  define THRIFT_LSEEK lseek
 #  define THRIFT_WRITE write
 #  define THRIFT_READ read
+int ioctl(int fd, unsigned long request, ...);
 #  define THRIFT_IOCTL_SOCKET ioctl
 #  define THRIFT_IOCTL_SOCKET_NUM_BYTES_TYPE int
 #  define THRIFT_STAT stat
