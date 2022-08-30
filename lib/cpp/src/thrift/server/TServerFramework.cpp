@@ -20,6 +20,7 @@
 #include <algorithm>
 #include <stdexcept>
 #include <stdint.h>
+#include <functional>
 #include <thrift/server/TServerFramework.h>
 
 namespace apache {
