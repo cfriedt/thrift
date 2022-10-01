@@ -274,6 +274,7 @@ void TServerSocket::_setup_sockopts() {
   }
 
   // Set TCP buffer sizes
+#if 0
   if (tcpSendBuffer_ > 0) {
     if (-1 == setsockopt(serverSocket_,
                          SOL_SOCKET,
@@ -303,8 +304,10 @@ void TServerSocket::_setup_sockopts() {
                                 errno_copy);
     }
   }
+#endif
 
   // Turn linger off, don't want to block on calls to close
+#if 0
   struct linger ling = {0, 0};
   if (-1 == setsockopt(serverSocket_, SOL_SOCKET, SO_LINGER, cast_sockopt(&ling), sizeof(ling))) {
     int errno_copy = THRIFT_GET_SOCKET_ERROR;
@@ -312,6 +315,7 @@ void TServerSocket::_setup_sockopts() {
     close();
     throw TTransportException(TTransportException::NOT_OPEN, "Could not set SO_LINGER", errno_copy);
   }
+#endif
 
 #ifdef SO_NOSIGPIPE
   if (-1 == setsockopt(serverSocket_, SOL_SOCKET, SO_NOSIGPIPE, &one, sizeof(one))) {
