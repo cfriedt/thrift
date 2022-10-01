@@ -18,6 +18,7 @@
  */
 
 #include <cassert>
+#include <cmath>
 #include <algorithm>
 
 #include <thrift/transport/TBufferTransports.h>
@@ -371,7 +372,7 @@ void TMemoryBuffer::ensureCanWrite(uint32_t len) {
   }
 
   // Always grow to the next bigger power of two:
-  const double suggested_buffer_size = std::exp2(std::ceil(std::log2(required_buffer_size)));
+  const double suggested_buffer_size = exp2(std::ceil(log2(required_buffer_size)));
   // Unless the power of two exceeds maxBufferSize_:
   const uint64_t new_size = static_cast<uint64_t>((std::min)(suggested_buffer_size, static_cast<double>(maxBufferSize_)));
 
