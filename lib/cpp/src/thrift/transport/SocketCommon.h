@@ -25,7 +25,11 @@
 #include <thrift/thrift-config.h>
 
 #ifdef HAVE_UNISTD_H
+#ifdef __ZEPHYR__
+#include <zephyr/posix/unistd.h>
+#else
 #include <unistd.h>
+#endif
 #endif
 #ifdef HAVE_SYS_UN_H
 #include <sys/un.h>
@@ -34,7 +38,11 @@
 #include <afunix.h>
 #endif
 #ifdef HAVE_SYS_SOCKET_H
+#ifdef __ZEPHYR__
+#include <zephyr/posix/sys/socket.h>
+#else
 #include <sys/socket.h>
+#endif
 #endif
 
 #include <string>

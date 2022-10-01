@@ -27,10 +27,18 @@
 
 #include <sys/types.h>
 #ifdef HAVE_SYS_SOCKET_H
+#ifdef __ZEPHYR__
+#include <zephyr/posix/sys/socket.h>
+#else
 #include <sys/socket.h>
 #endif
+#endif
 #ifdef HAVE_NETDB_H
+#ifdef __ZEPHYR__
+#include <zephyr/posix/netdb.h>
+#else
 #include <netdb.h>
+#endif
 #endif
 
 #include <thrift/transport/PlatformSocket.h>
@@ -112,7 +120,11 @@ private:
     } else {
       throw std::system_error{THRIFT_GET_SOCKET_ERROR, std::system_category()};
 #else
+#ifdef __ZEPHYR__
+    } else if (ret == DNS_EAI_SYSTEM) {
+#else
     } else if (ret == EAI_SYSTEM) {
+#endif
       throw std::system_error{THRIFT_GET_SOCKET_ERROR, std::system_category()};
     } else {
       throw std::system_error{ret, gai_error()};

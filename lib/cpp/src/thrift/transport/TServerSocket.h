@@ -28,10 +28,18 @@
 
 #include <sys/types.h>
 #ifdef HAVE_SYS_SOCKET_H
+#ifdef __ZEPHYR__
+#include <zephyr/posix/sys/socket.h>
+#else
 #include <sys/socket.h>
 #endif
+#endif
 #ifdef HAVE_NETDB_H
+#ifdef __ZEPHYR__
+#include <zephyr/posix/netdb.h>
+#else
 #include <netdb.h>
+#endif
 #endif
 
 namespace apache {

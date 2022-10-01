@@ -22,13 +22,29 @@
 #include <cstring>
 #include <sstream>
 #ifdef HAVE_SYS_IOCTL_H
+#ifdef __ZEPHYR__
+#include <errno.h>
+#include <zephyr/posix/sys/ioctl.h>
+__attribute__((weak))
+int ioctl(int fd, unsigned long request, ...)
+{
+  (void)fd;
+  (void)request;
+  return -ENOSYS;
+}
+#else
 #include <sys/ioctl.h>
+#endif
 #ifdef __sun
 #include <sys/filio.h>
 #endif // __sun
 #endif
 #ifdef HAVE_SYS_SOCKET_H
+#ifdef __ZEPHYR__
+#include <zephyr/posix/sys/socket.h>
+#else
 #include <sys/socket.h>
+#endif
 #endif
 #ifdef HAVE_SYS_UN_H
 #include <sys/un.h>
@@ -38,11 +54,20 @@
 #endif
 #include <sys/types.h>
 #ifdef HAVE_NETINET_IN_H
+#ifdef __ZEPHYR__
+#include <zephyr/posix/netinet/in.h>
+#include <zephyr/posix/netinet/tcp.h>
+#else
 #include <netinet/in.h>
 #include <netinet/tcp.h>
 #endif
+#endif
 #ifdef HAVE_UNISTD_H
+#ifdef __ZEPHYR__
+#include <zephyr/posix/unistd.h>
+#else
 #include <unistd.h>
+#endif
 #endif
 #include <fcntl.h>
 
@@ -458,7 +483,11 @@ void TSocket::local_open() {
 #ifdef _WIN32
       error == WSANO_DATA
 #else
+#ifdef __ZEPHYR__
+      error == DNS_EAI_NODATA
+#else
       error == EAI_NODATA
+#endif
 #endif
     ) {
     hints.ai_flags &= ~AI_ADDRCONFIG;

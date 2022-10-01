@@ -29,7 +29,11 @@
 
 #include <sys/types.h>
 #ifdef HAVE_NETINET_IN_H
+#ifdef __ZEPHYR__
+#include <zephyr/posix/netinet/in.h>
+#else
 #include <netinet/in.h>
+#endif
 #endif
 #ifdef HAVE_INTTYPES_H
 #include <inttypes.h>
